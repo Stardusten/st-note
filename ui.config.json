@@ -1,0 +1,15 @@
+{
+  "$schema": "https://solid-ui.com/schema.json",
+  "tsx": true,
+  "style": "new-york",
+  "tailwind": {
+    "css": "src/renderer/src/assets/solid-ui.css",
+    "config": "tailwind.config.cjs",
+    "prefix": ""
+  },
+  "aliases": {
+    "@renderer": "src/renderer/src",
+    "components": "@renderer/ui/solidui",
+    "utils": "@renderer/lib/common/utils/tailwindcss"
+  }
+}
