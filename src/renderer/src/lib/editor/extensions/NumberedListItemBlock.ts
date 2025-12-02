@@ -1,11 +1,11 @@
 import { Node, mergeAttributes } from "@tiptap/core"
 import { InputRule } from "@tiptap/core"
-import { Plugin, PluginKey } from "@tiptap/pm/state"
+import { Node as PmNode } from "@tiptap/pm/model"
+import { Plugin, PluginKey, Transaction } from "@tiptap/pm/state"
 import { Decoration, DecorationSet } from "@tiptap/pm/view"
 
 export type NumberedListItemBlockOptions = {
   maxIndent: number
-  indentSize: number
 }
 
 declare module "@tiptap/core" {
@@ -17,44 +17,85 @@ declare module "@tiptap/core" {
   }
 }
 
-const calculateListIndex = (
-  doc: any,
-  pos: number,
-  indent: number
-): number => {
-  let index = 1
-  const resolvedPos = doc.resolve(pos)
-
-  for (let i = resolvedPos.index(0) - 1; i >= 0; i--) {
-    const prevNode = resolvedPos.node(0).child(i)
-    if (prevNode.type.name !== "numberedListItem") break
-    const prevIndent = prevNode.attrs.indent || 0
-    if (prevIndent < indent) break
-    if (prevIndent === indent) index++
-  }
-
-  return index
+const splitBlockKeepType = (tr: Transaction, pos: number): boolean => {
+  const $pos = tr.doc.resolve(pos)
+  const parent = $pos.parent
+  const type = parent.type
+  const attrs = { ...parent.attrs, start: undefined }
+  tr.split(pos, 1, [{ type, attrs }])
+  return true
 }
 
-const numberedListIndexPlugin = new Plugin({
+const calculateIndices = (doc: PmNode): Map<number, number> => {
+  const indices = new Map<number, number>()
+  const counters: number[] = []
+  let lastWasNumbered = false
+
+  doc.descendants((node, pos) => {
+    if (node.type.name === "numberedListItem") {
+      const indent = node.attrs.indent || 0
+      const start = node.attrs.start
+
+      if (!lastWasNumbered) counters.length = 0
+
+      while (counters.length <= indent) counters.push(0)
+      if (counters.length > indent + 1) counters.length = indent + 1
+
+      if (start !== undefined) {
+        counters[indent] = start
+      } else {
+        counters[indent]++
+      }
+
+      indices.set(pos, counters[indent])
+      lastWasNumbered = true
+      return false
+    } else if (node.isBlock && node.type.name !== "doc") {
+      lastWasNumbered = false
+      return false
+    }
+    return true
+  })
+
+  return indices
+}
+
+const createDecorations = (doc: PmNode): DecorationSet => {
+  const decorations: Decoration[] = []
+  const indices = calculateIndices(doc)
+
+  indices.forEach((index, pos) => {
+    const node = doc.nodeAt(pos)
+    if (node) {
+      decorations.push(
+        Decoration.node(pos, pos + node.nodeSize, {
+          "data-index": String(index)
+        })
+      )
+    }
+  })
+
+  return DecorationSet.create(doc, decorations)
+}
+
+const numberedListIndexPlugin = new Plugin<DecorationSet>({
   key: new PluginKey("numberedListIndex"),
+
+  state: {
+    init(_, state) {
+      return createDecorations(state.doc)
+    },
+    apply(tr, oldDecorations) {
+      if (!tr.docChanged) {
+        return oldDecorations.map(tr.mapping, tr.doc)
+      }
+      return createDecorations(tr.doc)
+    }
+  },
+
   props: {
     decorations(state) {
-      const decorations: Decoration[] = []
-      const { doc } = state
-
-      doc.descendants((node, pos) => {
-        if (node.type.name === "numberedListItem") {
-          const indent = node.attrs.indent || 0
-          const index = calculateListIndex(doc, pos, indent)
-          const widget = document.createElement("span")
-          widget.className = "bn-list-index"
-          widget.textContent = `${index}.`
-          decorations.push(Decoration.widget(pos + 1, widget, { side: -1 }))
-        }
-      })
-
-      return DecorationSet.create(doc, decorations)
+      return this.getState(state) ?? DecorationSet.empty
     }
   }
 })
@@ -65,23 +106,25 @@ export const NumberedListItemBlock = Node.create<NumberedListItemBlockOptions>({
   content: "inline*",
 
   addOptions() {
-    return {
-      maxIndent: 10,
-      indentSize: 24
-    }
+    return { maxIndent: 10 }
   },
 
   addAttributes() {
     return {
       indent: {
         default: 0,
-        parseHTML: (element) => {
-          const indent = element.getAttribute("data-indent")
-          return indent ? parseInt(indent, 10) : 0
+        parseHTML: (el) => parseInt(el.getAttribute("data-indent") || "0", 10),
+        renderHTML: (attrs) => ({ "data-indent": attrs.indent || 0 })
+      },
+      start: {
+        default: undefined,
+        parseHTML: (el) => {
+          const start = el.getAttribute("data-start")
+          return start ? parseInt(start, 10) : undefined
         },
-        renderHTML: (attributes) => {
-          if (!attributes.indent) return { "data-indent": 0 }
-          return { "data-indent": attributes.indent }
+        renderHTML: (attrs) => {
+          if (!attrs.start) return {}
+          return { "data-start": attrs.start }
         }
       }
     }
@@ -124,11 +167,12 @@ export const NumberedListItemBlock = Node.create<NumberedListItemBlockOptions>({
     return [
       new InputRule({
         find: /^(\d+)\.\s$/,
-        handler: ({ state, range, chain }) => {
+        handler: ({ state, range, chain, match }) => {
           const indent = state.doc.resolve(range.from).parent.attrs.indent || 0
+          const start = parseInt(match[1], 10)
           chain()
             .deleteRange(range)
-            .setNode(this.name, { indent })
+            .setNode(this.name, { indent, start: start !== 1 ? start : undefined })
             .run()
         }
       })
@@ -138,26 +182,37 @@ export const NumberedListItemBlock = Node.create<NumberedListItemBlockOptions>({
   addKeyboardShortcuts() {
     return {
       "Mod-Shift-7": () => this.editor.commands.toggleNumberedListItem(),
-      Enter: () => {
-        if (!this.editor.isActive(this.name)) return false
-        const { state } = this.editor
-        const { $from, empty } = state.selection
+      Enter: ({ editor }) => {
+        if (!editor.isActive(this.name)) return false
+
+        const { state, view } = editor
+        const { selection } = state
+        const { $from, empty } = selection
+
         if (!empty) return false
 
         const indent = $from.parent.attrs.indent || 0
+
         if ($from.parent.content.size === 0) {
-          return this.editor.commands.setNode("paragraph", { indent })
+          return editor.commands.setNode("paragraph", { indent })
         }
 
-        return this.editor.chain().splitBlock().setNode(this.name, { indent }).run()
+        const tr = state.tr
+        tr.deleteSelection()
+        splitBlockKeepType(tr, tr.selection.from)
+        view.dispatch(tr)
+        return true
       },
-      Backspace: () => {
-        if (!this.editor.isActive(this.name)) return false
-        const { state } = this.editor
+      Backspace: ({ editor }) => {
+        if (!editor.isActive(this.name)) return false
+
+        const { state } = editor
         const { $from, empty } = state.selection
+
         if (!empty || $from.parentOffset !== 0) return false
+
         const indent = $from.parent.attrs.indent || 0
-        return this.editor.commands.setNode("paragraph", { indent })
+        return editor.commands.setNode("paragraph", { indent })
       }
     }
   },

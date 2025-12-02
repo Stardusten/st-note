@@ -73,7 +73,7 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
       },
       editorProps: {
         attributes: {
-          class: "prose prose-sm max-w-none focus:outline-none min-h-[400px]"
+          class: "prose prose-sm max-w-none focus:outline-none"
         }
       }
     })

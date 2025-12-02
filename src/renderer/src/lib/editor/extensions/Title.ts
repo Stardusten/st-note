@@ -13,7 +13,7 @@ export const Title = Heading.extend({
         ...HTMLAttributes,
         class: "editor-title",
         style:
-          "font-size: 29px; font-weight: 400; border-bottom: 1px solid rgb(27, 27, 29); box-shadow: rgba(72, 73, 75, 0.84) 0px 1px 0px; margin-bottom: 18px; padding-bottom: 8px;"
+          "font-size: 29px; font-weight: 300; border-bottom: 1px solid rgb(27, 27, 29); box-shadow: rgba(72, 73, 75, 0.84) 0px 1px 0px; margin-bottom: 18px; padding-bottom: 8px;"
       },
       0
     ]

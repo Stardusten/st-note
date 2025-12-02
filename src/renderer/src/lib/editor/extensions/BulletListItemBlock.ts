@@ -1,9 +1,9 @@
 import { Node, mergeAttributes } from "@tiptap/core"
 import { InputRule } from "@tiptap/core"
+import { Transaction } from "@tiptap/pm/state"
 
 export type BulletListItemBlockOptions = {
   maxIndent: number
-  indentSize: number
 }
 
 declare module "@tiptap/core" {
@@ -15,30 +15,31 @@ declare module "@tiptap/core" {
   }
 }
 
+const splitBlockKeepType = (tr: Transaction, pos: number): boolean => {
+  const $pos = tr.doc.resolve(pos)
+  const parent = $pos.parent
+  const type = parent.type
+  const attrs = { ...parent.attrs }
+
+  tr.split(pos, 1, [{ type, attrs }])
+  return true
+}
+
 export const BulletListItemBlock = Node.create<BulletListItemBlockOptions>({
   name: "bulletListItem",
   group: "block",
   content: "inline*",
 
   addOptions() {
-    return {
-      maxIndent: 10,
-      indentSize: 24
-    }
+    return { maxIndent: 10 }
   },
 
   addAttributes() {
     return {
       indent: {
         default: 0,
-        parseHTML: (element) => {
-          const indent = element.getAttribute("data-indent")
-          return indent ? parseInt(indent, 10) : 0
-        },
-        renderHTML: (attributes) => {
-          if (!attributes.indent) return { "data-indent": 0 }
-          return { "data-indent": attributes.indent }
-        }
+        parseHTML: (el) => parseInt(el.getAttribute("data-indent") || "0", 10),
+        renderHTML: (attrs) => ({ "data-indent": attrs.indent || 0 })
       }
     }
   },
@@ -82,10 +83,7 @@ export const BulletListItemBlock = Node.create<BulletListItemBlockOptions>({
         find: /^[-*+]\s$/,
         handler: ({ state, range, chain }) => {
           const indent = state.doc.resolve(range.from).parent.attrs.indent || 0
-          chain()
-            .deleteRange(range)
-            .setNode(this.name, { indent })
-            .run()
+          chain().deleteRange(range).setNode(this.name, { indent }).run()
         }
       })
     ]
@@ -94,26 +92,37 @@ export const BulletListItemBlock = Node.create<BulletListItemBlockOptions>({
   addKeyboardShortcuts() {
     return {
       "Mod-Shift-8": () => this.editor.commands.toggleBulletListItem(),
-      Enter: () => {
-        if (!this.editor.isActive(this.name)) return false
-        const { state } = this.editor
-        const { $from, empty } = state.selection
+      Enter: ({ editor }) => {
+        if (!editor.isActive(this.name)) return false
+
+        const { state, view } = editor
+        const { selection } = state
+        const { $from, empty } = selection
+
         if (!empty) return false
 
         const indent = $from.parent.attrs.indent || 0
+
         if ($from.parent.content.size === 0) {
-          return this.editor.commands.setNode("paragraph", { indent })
+          return editor.commands.setNode("paragraph", { indent })
         }
 
-        return this.editor.chain().splitBlock().setNode(this.name, { indent }).run()
+        const tr = state.tr
+        tr.deleteSelection()
+        splitBlockKeepType(tr, tr.selection.from)
+        view.dispatch(tr)
+        return true
       },
-      Backspace: () => {
-        if (!this.editor.isActive(this.name)) return false
-        const { state } = this.editor
+      Backspace: ({ editor }) => {
+        if (!editor.isActive(this.name)) return false
+
+        const { state } = editor
         const { $from, empty } = state.selection
+
         if (!empty || $from.parentOffset !== 0) return false
+
         const indent = $from.parent.attrs.indent || 0
-        return this.editor.commands.setNode("paragraph", { indent })
+        return editor.commands.setNode("paragraph", { indent })
       }
     }
   }
