@@ -1,6 +1,6 @@
-import { StObjectId } from "src/preload"
+import { type StObjectId } from "src/preload"
 
-export { StObjectId }
+export type { StObjectId }
 
 export type StObject = {
   id: StObjectId

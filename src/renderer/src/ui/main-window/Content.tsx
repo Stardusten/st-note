@@ -1,4 +1,4 @@
-import { type Component } from "solid-js"
+import { type Component, createSignal, Show, onMount, onCleanup } from "solid-js"
 import LeftSidebar from "./LeftSidebar"
 import CardMainEditor from "./CardEditor"
 import { ChevronDown, Link } from "lucide-solid"
@@ -7,6 +7,30 @@ import CardBacklinkEditor from "./CardBacklinkEditor"
 import SearchPanel from "./SearchPanel"
 
 const Content: Component = () => {
+  const [showSearch, setShowSearch] = createSignal(false)
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Cmd+K or Ctrl+K to open search
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault()
+      setShowSearch(true)
+    }
+    // Escape to close search
+    if (e.key === 'Escape' && showSearch()) {
+      e.preventDefault()
+      setShowSearch(false)
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('keydown', handleKeyDown)
+  })
+
+  onCleanup(() => {
+    window.removeEventListener('keydown', handleKeyDown)
+  })
+
   return (
     <div
       class="flex-1 w-full flex flex-row overflow-hidden"
@@ -55,7 +79,9 @@ const Content: Component = () => {
         </div>
       </div>
 
-      <SearchPanel />
+      <Show when={showSearch()}>
+        <SearchPanel onClose={() => setShowSearch(false)} />
+      </Show>
     </div>
   )
 }

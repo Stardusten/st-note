@@ -63,7 +63,7 @@ export function updateObject(path: string, params: UpdateParamsRaw) {
   const db = getDb(path)
   const current = fetchObject(path, params.id)
   if (!current) throw new Error(`Object with id ${params.id} not found`)
-  if (current.deleted_at != null)
+  if (current.deleted_at !== 0)
     throw new Error(`Object with id ${params.id} is deleted, update a deleted object is not allowed`)
 
   const now = Date.now()

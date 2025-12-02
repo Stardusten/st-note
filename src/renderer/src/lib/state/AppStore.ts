@@ -3,7 +3,7 @@ import { ObjCache } from "../objcache/objcache"
 import { SQLiteStorage } from "../storage/sqlite"
 import type { Card } from "../common/types/card"
 import type { StObjectId } from "../common/types"
-import { prepareFuzzySearch, type SearchResult } from "../common/utils/fuzzySearch"
+import { prepareFuzzySearch } from "../common/utils/fuzzySearch"
 
 class AppStore {
   private objCache: ObjCache
@@ -21,6 +21,9 @@ class AppStore {
 
   private searchResults: Accessor<Array<Card & { searchScore?: number }>>
   private setSearchResults: Setter<Array<Card & { searchScore?: number }>>
+
+  private recentCardIds: Accessor<string[]>
+  private setRecentCardIds: Setter<string[]>
 
   constructor() {
     // Initialize signals
@@ -40,19 +43,23 @@ class AppStore {
     this.searchResults = searchResults
     this.setSearchResults = setSearchResults
 
+    const [recentCardIds, setRecentCardIds] = createSignal<string[]>([])
+    this.recentCardIds = recentCardIds
+    this.setRecentCardIds = setRecentCardIds
+
     // Initialize storage and cache
     this.storage = new SQLiteStorage()
-    this.objCache = new ObjCache(this.storage)
+    this.objCache = new ObjCache()
   }
 
   async init(dbPath: string = "notes.db") {
     await this.storage.init(dbPath)
-    await this.objCache.init()
+    await this.objCache.init(this.storage)
     await this.loadCards()
   }
 
   private async loadCards() {
-    const objects = await this.storage.query({ type: 'card' })
+    const objects = await this.storage.query({ type: 'card', includeDeleted: false })
     this.setCards(objects as Card[])
   }
 
@@ -66,33 +73,49 @@ class AppStore {
   getCards = () => this.cards()
   getSearchQuery = () => this.searchQuery()
   getSearchResults = () => this.searchResults()
+  getRecentCards = (): Card[] => {
+    const recentIds = this.recentCardIds()
+    const allCards = this.cards()
+    return recentIds
+      .map(id => allCards.find(c => c.id === id))
+      .filter((c): c is Card => c !== undefined)
+  }
 
   // Card operations
-  async createCard(): Promise<Card> {
-    const newCard = await this.objCache.withTx(tx => {
-      const card = {
-        type: 'card' as const,
-        data: {
-          content: {
-            type: "doc",
-            content: [
-              {
-                type: "paragraph",
-                content: []
-              }
-            ]
-          }
-        },
-        text: '',
-        tags: []
-      }
+  async createCard(initialText?: string): Promise<Card> {
+    const newId = crypto.randomUUID()
+    const card = {
+      id: newId,
+      type: 'card' as const,
+      data: {
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "title",
+              attrs: { level: 1 },
+              content: initialText ? [{ type: "text", text: initialText }] : []
+            },
+            { type: "paragraph" }
+          ]
+        }
+      },
+      text: initialText || '',
+      tags: []
+    }
+
+    await this.objCache.withTx(tx => {
       tx.create(card)
-      return card
     })
 
     await this.loadCards()
-    this.setCurrentCardId(newCard.id)
-    return newCard as Card
+    this.setCurrentCardId(newId)
+
+    const createdCard = this.cards().find(c => c.id === newId)
+    if (createdCard) {
+      return createdCard
+    }
+    throw new Error("Failed to create card")
   }
 
   async updateCard(id: StObjectId, content: any, text: string) {
@@ -101,6 +124,7 @@ class AppStore {
       if (!card) return
 
       tx.update(id, {
+        id,
         type: 'card',
         data: {
           ...card.data,
@@ -129,6 +153,14 @@ class AppStore {
   // Navigation
   selectCard(id: StObjectId | null) {
     this.setCurrentCardId(id)
+
+    if (id) {
+      // Track recent cards
+      const recent = this.recentCardIds()
+      const filtered = recent.filter(cid => cid !== id)
+      const updated = [id, ...filtered].slice(0, 10) // Keep last 10
+      this.setRecentCardIds(updated)
+    }
   }
 
   // Search

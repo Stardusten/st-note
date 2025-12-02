@@ -13,3 +13,130 @@
   background: linear-gradient(133.42deg, rgb(255, 255, 255) -8.59%, rgba(255, 255, 255, 0) 128.85%);
   filter: drop-shadow(rgba(255, 255, 255, 0.8) 0px -2px 4px);
 }
+
+/* TipTap Editor Styles */
+.card-editor .ProseMirror {
+  outline: none;
+}
+
+.card-editor .ProseMirror p {
+  margin: 0.5em 0;
+}
+
+.card-editor .ProseMirror h1.editor-title {
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.card-editor .ProseMirror h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+.card-editor .ProseMirror h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+/* Block list item styles */
+.card-editor .ProseMirror .bn-bullet-list-item,
+.card-editor .ProseMirror .bn-numbered-list-item {
+  position: relative;
+  margin: 0.25em 0;
+  padding-left: 1.5em;
+}
+
+/* Indent levels */
+.card-editor .ProseMirror [data-indent="1"] { margin-left: 24px; }
+.card-editor .ProseMirror [data-indent="2"] { margin-left: 48px; }
+.card-editor .ProseMirror [data-indent="3"] { margin-left: 72px; }
+.card-editor .ProseMirror [data-indent="4"] { margin-left: 96px; }
+.card-editor .ProseMirror [data-indent="5"] { margin-left: 120px; }
+.card-editor .ProseMirror [data-indent="6"] { margin-left: 144px; }
+.card-editor .ProseMirror [data-indent="7"] { margin-left: 168px; }
+.card-editor .ProseMirror [data-indent="8"] { margin-left: 192px; }
+.card-editor .ProseMirror [data-indent="9"] { margin-left: 216px; }
+.card-editor .ProseMirror [data-indent="10"] { margin-left: 240px; }
+
+/* Bullet list markers */
+.card-editor .ProseMirror .bn-bullet-list-item::before {
+  content: "•";
+  position: absolute;
+  left: 0.5em;
+  color: currentColor;
+}
+
+.card-editor .ProseMirror .bn-bullet-list-item[data-indent="1"]::before,
+.card-editor .ProseMirror .bn-bullet-list-item[data-indent="4"]::before,
+.card-editor .ProseMirror .bn-bullet-list-item[data-indent="7"]::before,
+.card-editor .ProseMirror .bn-bullet-list-item[data-indent="10"]::before {
+  content: "◦";
+}
+
+.card-editor .ProseMirror .bn-bullet-list-item[data-indent="2"]::before,
+.card-editor .ProseMirror .bn-bullet-list-item[data-indent="5"]::before,
+.card-editor .ProseMirror .bn-bullet-list-item[data-indent="8"]::before {
+  content: "▪";
+}
+
+/* Numbered list index widget */
+.card-editor .ProseMirror .bn-list-index {
+  position: absolute;
+  left: 0;
+  color: currentColor;
+  min-width: 1.2em;
+  text-align: right;
+  user-select: none;
+}
+
+/* Placeholder styles */
+.card-editor .ProseMirror p.is-editor-empty:first-child::before,
+.card-editor .ProseMirror .is-empty::before {
+  color: rgb(100, 100, 100);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Global drag handle styles */
+.drag-handle {
+  position: fixed;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  width: 20px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.drag-handle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.drag-handle::before {
+  content: "⋮⋮";
+  font-size: 12px;
+  color: rgb(120, 120, 120);
+  letter-spacing: -2px;
+}
+
+.drag-handle.show {
+  opacity: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Dropcursor style */
+.ProseMirror-dropcursor {
+  border-left: 2px solid #6366f1;
+}
