@@ -1,4 +1,12 @@
-import { app, shell, BrowserWindow, ipcMain, IpcMainInvokeEvent } from "electron"
+import {
+  app,
+  shell,
+  screen,
+  BrowserWindow,
+  ipcMain,
+  IpcMainInvokeEvent,
+  globalShortcut
+} from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
@@ -12,9 +20,12 @@ import {
   queryObjects
 } from "./storage"
 
+let mainWindow: BrowserWindow | null = null
+let quickWindow: BrowserWindow | null = null
+
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -31,7 +42,7 @@ function createWindow(): void {
   })
 
   mainWindow.on("ready-to-show", () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -45,6 +56,58 @@ function createWindow(): void {
     mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"])
   } else {
     mainWindow.loadFile(join(__dirname, "../renderer/index.html"))
+  }
+
+  mainWindow.on("closed", () => {
+    mainWindow = null
+  })
+}
+
+function createQuickWindow(): void {
+  quickWindow = new BrowserWindow({
+    width: 600,
+    height: 300,
+    show: false, // initially hidden
+    frame: false, // frameless window
+    // transparent: true, // transparent window
+    resizable: false,
+    alwaysOnTop: true, // always on top
+    skipTaskbar: true, // do not show in taskbar
+    fullscreenable: false,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false
+    }
+  })
+
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    quickWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/quick.html`)
+  } else {
+    quickWindow.loadFile(join(__dirname, "../renderer/quick.html"))
+  }
+
+  // quickWindow.on("blur", () => {
+  //   quickWindow?.hide()
+  // })
+}
+
+function toggleQuickWindow() {
+  if (!quickWindow || quickWindow.isDestroyed()) {
+    createQuickWindow()
+    return
+  }
+
+  if (quickWindow.isVisible()) {
+    quickWindow.hide()
+  } else {
+    const point = screen.getCursorScreenPoint()
+    const display = screen.getDisplayNearestPoint(point)
+    const x = display.bounds.x + (display.bounds.width - 800) / 2
+    const y = display.bounds.y + (display.bounds.height - 600) / 2 // 稍微偏上
+
+    quickWindow.setPosition(Math.round(x), Math.round(y))
+    quickWindow.show()
+    quickWindow.focus()
   }
 }
 
@@ -77,8 +140,12 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:update", restFunc(updateObject))
   ipcMain.handle("storage:delete", restFunc(deleteObject))
   ipcMain.handle("storage:query", restFunc(queryObjects))
+  ipcMain.handle("quick:hide", () => quickWindow?.hide())
 
   createWindow()
+  createQuickWindow()
+
+  globalShortcut.register("CommandOrControl+Shift+K", toggleQuickWindow)
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
@@ -96,5 +163,6 @@ app.on("window-all-closed", () => {
   }
 })
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll()
+})

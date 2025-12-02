@@ -1,7 +1,7 @@
-import './assets/main.css'
-import './assets/solid-ui.css'
+import "./assets/main.css"
+import "./assets/solid-ui.css"
 
-import { render } from 'solid-js/web'
-import App from './App'
+import { render } from "solid-js/web"
+import MainWindow from "./ui/main-window/MainWindow"
 
-render(() => <App />, document.getElementById('root') as HTMLElement)
+render(() => <MainWindow />, document.getElementById("root") as HTMLElement)

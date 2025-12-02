@@ -1,0 +1,50 @@
+.cbutton {
+  display: inline-flex;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  background-color: transparent;
+  outline: 0px;
+  margin: 0px;
+  cursor: pointer;
+  user-select: none;
+  vertical-align: middle;
+  appearance: none;
+  text-decoration: none;
+  font-family: Inter;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.5rem;
+  font-style: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  font-feature-settings: "tnum", "lnum";
+  min-width: 64px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  color: inherit;
+  transition:
+    background-color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,
+    box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,
+    border-color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+  position: relative;
+  overflow: visible;
+  width: 81px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(138.16deg, rgb(49, 49, 53) -14.83%, rgb(31, 32, 36) 92.59%) padding-box
+      padding-box,
+    linear-gradient(rgb(184, 184, 184) -76.62%, rgba(184, 184, 184, 0) 131.05%) border-box
+      border-box;
+}
+
+.cbutton:hover {
+  background:
+    linear-gradient(rgb(78, 79, 82), rgb(78, 79, 82)) padding-box padding-box,
+    linear-gradient(rgb(184, 184, 184) -76.62%, rgba(184, 184, 184, 0) 131.05%) border-box
+      border-box;
+  text-decoration: none;
+}

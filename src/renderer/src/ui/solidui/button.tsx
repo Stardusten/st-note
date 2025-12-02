@@ -1,4 +1,4 @@
-import type { ComponentProps, JSX, ValidComponent } from "solid-js"
+import type { JSX, ValidComponent } from "solid-js"
 import { splitProps } from "solid-js"
 
 import * as ButtonPrimitive from "@kobalte/core/button"
@@ -20,14 +20,14 @@ const buttonVariants = cva(
           "border border-destructive/50 text-destructive shadow-xs hover:bg-destructive/10",
         destructiveGhost: "text-destructive hover:bg-destructive/10",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "rounded border border-transparent [background:linear-gradient(138.16deg,rgb(49,49,53)_-14.83%,rgb(31,32,36)_92.59%)_padding-box,linear-gradient(rgb(184,184,184)_-76.62%,rgba(184,184,184,0)_131.05%)_border-box] hover:[background:linear-gradient(rgb(78,79,82),rgb(78,79,82))_padding-box,linear-gradient(rgb(184,184,184)_-76.62%,rgba(184,184,184,0)_131.05%)_border-box]",
         secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost:
           "text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline"
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        default: "h-8 px-4 text-[13px] py-2 has-[>svg]:px-3",
         sm: "rounded-sm gap-1.5 px-1 py-1 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
