@@ -4,6 +4,8 @@ import { Command, Inbox, Link, Pin, Plus, SquareArrowRight, WandSparkles } from 
 import { Button } from "../solidui/button"
 import { appStore } from "@renderer/lib/state/AppStore"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
+import { getCardTitle } from "@renderer/lib/common/types/card"
+import type { CardSuggestionItem } from "@renderer/lib/editor/extensions/CardRefSuggestion"
 
 const CardMainEditor: Component = () => {
   let saveTimeout: NodeJS.Timeout
@@ -20,6 +22,28 @@ const CardMainEditor: Component = () => {
 
   const handleCreateCard = async () => {
     await appStore.createCard()
+  }
+
+  const searchCards = (query: string): CardSuggestionItem[] => {
+    const currentCardId = appStore.getCurrentCardId()
+    const cards = appStore.getCards()
+
+    if (!query.trim()) {
+      return cards
+        .filter((c) => c.id !== currentCardId)
+        .slice(0, 10)
+        .map((c) => ({ id: c.id, title: getCardTitle(c) }))
+    }
+
+    const lowerQuery = query.toLowerCase()
+    return cards
+      .filter((c) => c.id !== currentCardId && getCardTitle(c).toLowerCase().includes(lowerQuery))
+      .slice(0, 10)
+      .map((c) => ({ id: c.id, title: getCardTitle(c) }))
+  }
+
+  const handleCardClick = (cardId: string) => {
+    appStore.selectCard(cardId)
   }
 
   const currentCard = () => appStore.getCurrentCard()
@@ -76,6 +100,8 @@ const CardMainEditor: Component = () => {
             titlePlaceholder="Untitled"
             placeholder="Start writing..."
             showTitleToolbar={true}
+            searchCards={searchCards}
+            onCardClick={handleCardClick}
           />
         </div>
       </Show>

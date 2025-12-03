@@ -2,6 +2,7 @@ import { Component, Show } from "solid-js"
 import { Image, Smile } from "lucide-solid"
 import { Button } from "@renderer/ui/solidui/button"
 import TiptapEditor from "./TiptapEditor"
+import type { CardSuggestionItem } from "./extensions/CardRefSuggestion"
 import "./note-editor.css"
 
 type NoteEditorProps = {
@@ -11,6 +12,8 @@ type NoteEditorProps = {
   titlePlaceholder?: string
   showTitleToolbar?: boolean
   class?: string
+  searchCards?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
+  onCardClick?: (cardId: string) => void
 }
 
 const NoteEditor: Component<NoteEditorProps> = (props) => {
@@ -36,6 +39,8 @@ const NoteEditor: Component<NoteEditorProps> = (props) => {
           onUpdate={props.onUpdate}
           titlePlaceholder={props.titlePlaceholder}
           placeholder={props.placeholder}
+          searchCards={props.searchCards}
+          onCardClick={props.onCardClick}
           class="text-foreground"
         />
       </div>

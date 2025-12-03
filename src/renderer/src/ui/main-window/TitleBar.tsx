@@ -1,9 +1,15 @@
-import { type Component } from "solid-js"
+import { type Component, Show } from "solid-js"
 import { Button } from "../solidui/button"
-import { ArrowLeft, ArrowRight, Database, Inbox, PanelRight } from "lucide-solid"
-import SearchInput from "./SearchInput"
+import { ArrowLeft, ArrowRight, Database, PanelRight, Search, StickyNoteIcon } from "lucide-solid"
+import { appStore } from "@renderer/lib/state/AppStore"
+import { getCardTitle } from "@renderer/lib/common/types/card"
 
 const TitleBar: Component = () => {
+  const currentCardTitle = () => {
+    const card = appStore.getCurrentCard()
+    return card ? getCardTitle(card) : null
+  }
+
   return (
     <div class="relative flex items-center justify-center shrink-0 z-1000 h-[42px]">
       <div
@@ -16,26 +22,36 @@ const TitleBar: Component = () => {
       />
       <div
         class="w-full ml-[70px] px-[10px] z-999 flex flex-row items-center justify-between"
-        style={{
-          "-webkit-app-region": "no-drag",
-          "user-select": "none"
-        }}>
-        <div class="flex flex-row items-center gap-2">
-          <Button variant="ghost" size="xs-icon" class="!text-foreground">
+        style={{ "user-select": "none" }}>
+        <div class="flex flex-row items-center gap-2" style={{ "-webkit-app-region": "no-drag" }}>
+          <Button
+            variant="ghost"
+            size="xs-icon"
+            class="!text-foreground"
+            disabled={!appStore.canGoBack()}
+            onClick={() => appStore.goBack()}>
             <ArrowLeft class="size-4 stroke-[1.5]" />
           </Button>
-          <Button variant="ghost" size="xs-icon">
+          <Button
+            variant="ghost"
+            size="xs-icon"
+            disabled={!appStore.canGoForward()}
+            onClick={() => appStore.goForward()}>
             <ArrowRight class="size-4 stroke-[1.5]" />
           </Button>
-          {/* breadcrumb */}
-          <span class="border-r w-[1px] h-[16px] mr-2"></span>
-          <div class="flex flex-row gap-2 items-center text-foreground text-sm">
-            <Inbox class="size-4 stroke-[1.5]" />
-            <span>Notes</span>
-          </div>
+          <Show when={currentCardTitle()}>
+            <span class="border-r w-[1px] h-[16px] mr-2"></span>
+            <StickyNoteIcon class="size-4 stroke-[1.5px" />
+            <span class="text-foreground text-sm max-w-[200px] truncate">{currentCardTitle()}</span>
+          </Show>
         </div>
-        <div class="flex flex-row items-center gap-2">
-          <SearchInput />
+        <div class="flex flex-row items-center gap-2" style={{ "-webkit-app-region": "no-drag" }}>
+          <button
+            class="h-[28px] w-[200px] rounded-full bg-none cursor-pointer border border-border flex items-center px-3 gap-2 text-muted-foreground/50 text-sm hover:bg-input/70 transition-colors"
+            onClick={() => appStore.openSearchPanel()}>
+            <Search class="size-4 stroke-[1.5]bg-none" />
+            <span>Find, create or ask AI</span>
+          </button>
           <Button variant="ghost" size="xs-icon">
             <Database class="size-4 stroke-[1.5]" />
           </Button>

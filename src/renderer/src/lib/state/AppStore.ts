@@ -4,10 +4,13 @@ import { SQLiteStorage } from "../storage/sqlite"
 import type { Card } from "../common/types/card"
 import type { StObjectId } from "../common/types"
 import { prepareFuzzySearch } from "../common/utils/fuzzySearch"
+import { BacklinkIndex } from "../backlink/BacklinkIndex"
+import { getCardTitle } from "../common/types/card"
 
 class AppStore {
   private objCache: ObjCache
   private storage: SQLiteStorage
+  private backlinkIndex: BacklinkIndex
 
   // Signals for reactive state
   private currentCardId: Accessor<StObjectId | null>
@@ -24,6 +27,17 @@ class AppStore {
 
   private recentCardIds: Accessor<string[]>
   private setRecentCardIds: Setter<string[]>
+
+  // Navigation history
+  private navHistory: Accessor<(StObjectId | null)[]>
+  private setNavHistory: Setter<(StObjectId | null)[]>
+  private navIndex: Accessor<number>
+  private setNavIndex: Setter<number>
+  private isNavigating: boolean = false
+
+  // UI state
+  private searchPanelOpen: Accessor<boolean>
+  private setSearchPanelOpen: Setter<boolean>
 
   constructor() {
     // Initialize signals
@@ -47,14 +61,30 @@ class AppStore {
     this.recentCardIds = recentCardIds
     this.setRecentCardIds = setRecentCardIds
 
+    // Initialize navigation history
+    const [navHistory, setNavHistory] = createSignal<(StObjectId | null)[]>([null])
+    this.navHistory = navHistory
+    this.setNavHistory = setNavHistory
+
+    const [navIndex, setNavIndex] = createSignal(0)
+    this.navIndex = navIndex
+    this.setNavIndex = setNavIndex
+
+    // Initialize UI state
+    const [searchPanelOpen, setSearchPanelOpen] = createSignal(false)
+    this.searchPanelOpen = searchPanelOpen
+    this.setSearchPanelOpen = setSearchPanelOpen
+
     // Initialize storage and cache
     this.storage = new SQLiteStorage()
     this.objCache = new ObjCache()
+    this.backlinkIndex = new BacklinkIndex()
   }
 
   async init(dbPath: string = "notes.db") {
     await this.storage.init(dbPath)
     await this.objCache.init(this.storage)
+    await this.backlinkIndex.init(this.objCache)
     await this.loadCards()
   }
 
@@ -152,15 +182,46 @@ class AppStore {
 
   // Navigation
   selectCard(id: StObjectId | null) {
+    const currentId = this.currentCardId()
+    if (id === currentId) return
+
     this.setCurrentCardId(id)
 
+    if (!this.isNavigating) {
+      const history = this.navHistory()
+      const index = this.navIndex()
+      const newHistory = [...history.slice(0, index + 1), id]
+      this.setNavHistory(newHistory)
+      this.setNavIndex(newHistory.length - 1)
+    }
+
     if (id) {
-      // Track recent cards
       const recent = this.recentCardIds()
       const filtered = recent.filter(cid => cid !== id)
-      const updated = [id, ...filtered].slice(0, 10) // Keep last 10
+      const updated = [id, ...filtered].slice(0, 10)
       this.setRecentCardIds(updated)
     }
+  }
+
+  canGoBack = () => this.navIndex() > 0
+  canGoForward = () => this.navIndex() < this.navHistory().length - 1
+
+  goBack() {
+    if (!this.canGoBack()) return
+    this.isNavigating = true
+    const newIndex = this.navIndex() - 1
+    this.setNavIndex(newIndex)
+    this.setCurrentCardId(this.navHistory()[newIndex])
+    this.isNavigating = false
+  }
+
+  goForward() {
+    if (!this.canGoForward()) return
+    this.isNavigating = true
+    const newIndex = this.navIndex() + 1
+    this.setNavIndex(newIndex)
+    this.setCurrentCardId(this.navHistory()[newIndex])
+    this.isNavigating = false
   }
 
   // Search
@@ -190,6 +251,22 @@ class AppStore {
   clearSearch() {
     this.setSearchQuery("")
     this.setSearchResults([])
+  }
+
+  // Search panel UI
+  isSearchPanelOpen = () => this.searchPanelOpen()
+  openSearchPanel = () => this.setSearchPanelOpen(true)
+  closeSearchPanel = () => this.setSearchPanelOpen(false)
+
+  // Backlinks
+  getBacklinks(cardId: StObjectId) {
+    return this.backlinkIndex.getBacklinks(cardId)
+  }
+
+  getPotentialLinks(cardId: StObjectId) {
+    const card = this.cards().find(c => c.id === cardId)
+    const title = card ? getCardTitle(card) : ''
+    return this.backlinkIndex.getPotentialLinks(cardId, title)
   }
 }
 

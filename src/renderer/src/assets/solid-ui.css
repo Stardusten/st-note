@@ -164,7 +164,6 @@ html[data-kb-theme="dark"] {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  /* --primary: oklch(0.546 0.245 262.881); */
   --primary: oklch(0.7153 0.1518 253.31);
   --primary-foreground: oklch(0.379 0.146 265.522);
   --secondary: oklch(0.274 0.006 286.033);
@@ -212,33 +211,6 @@ html[data-kb-theme="dark"] {
   --color-syntax-tag: #ff7b72;
   --color-syntax-attr: #d2a8ff;
   --color-syntax-meta: #ffa657;
-
-  /* 标签颜色 */
-  --tag-bg1: var(--color-fuchsia-600);
-  --tag-bg2: var(--color-orange-600);
-  --tag-bg3: var(--color-amber-600);
-  --tag-bg4: var(--color-yellow-600);
-  --tag-bg5: var(--color-lime-600);
-  --tag-bg6: var(--color-green-600);
-  --tag-bg7: var(--color-teal-600);
-  --tag-bg8: var(--color-blue-600);
-  --tag-bg9: var(--color-indigo-600);
-  --tag-bg10: var(--color-violet-600);
-  --tag-bg11: var(--color-pink-600);
-  --tag-bg12: var(--color-gray-600);
-
-  --tag-foreground1: var(--color-fuchsia-300);
-  --tag-foreground2: var(--color-orange-300);
-  --tag-foreground3: var(--color-amber-300);
-  --tag-foreground4: var(--color-yellow-300);
-  --tag-foreground5: var(--color-lime-300);
-  --tag-foreground6: var(--color-green-300);
-  --tag-foreground7: var(--color-teal-300);
-  --tag-foreground8: var(--color-blue-300);
-  --tag-foreground9: var(--color-indigo-300);
-  --tag-foreground10: var(--color-violet-300);
-  --tag-foreground11: var(--color-pink-300);
-  --tag-foreground12: var(--color-gray-300);
 }
 
 @layer base {

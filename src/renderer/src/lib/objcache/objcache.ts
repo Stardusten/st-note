@@ -4,6 +4,20 @@ import { CreateParams, StObject, UpdateParams } from "../common/types"
 import { StObjectId } from "src/preload"
 import type { Storage } from "../storage/storage"
 
+export type ObjCacheEventOp = {
+  op: 'create' | 'update' | 'delete'
+  id: StObjectId
+  object?: StObject
+  oldObject?: StObject
+}
+
+export type ObjCacheEvent = {
+  type: 'committed'
+  ops: ObjCacheEventOp[]
+}
+
+export type ObjCacheListener = (event: ObjCacheEvent) => void
+
 export type TxOpParams =
   | { type: "create"; newObject: CreateParams }
   | { type: "update"; id: StObjectId; patch: UpdateParams }
@@ -28,6 +42,16 @@ export class ObjCache {
   cache: Map<StObjectId, Signal<StObject | null>> = new Map()
   txQueue: AsyncTaskQueue = new AsyncTaskQueue()
   storage: Storage | null = null
+  private listeners: Set<ObjCacheListener> = new Set()
+
+  subscribe(listener: ObjCacheListener): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  private emit(event: ObjCacheEvent) {
+    this.listeners.forEach(l => l(event))
+  }
 
   async init(storage: Storage) {
     this.storage = storage
@@ -171,6 +195,18 @@ export class ObjCache {
       }
     }
     tx.status = "committed"
+
+    const eventOps: ObjCacheEventOp[] = tx.executedOps.map(op => {
+      switch (op.type) {
+        case "create":
+          return { op: 'create' as const, id: op.object.id, object: op.object }
+        case "update":
+          return { op: 'update' as const, id: op.newObject.id, object: op.newObject, oldObject: op.oldObject }
+        case "delete":
+          return { op: 'delete' as const, id: op.deletedObject.id, oldObject: op.deletedObject }
+      }
+    })
+    this.emit({ type: 'committed', ops: eventOps })
   }
 }
 

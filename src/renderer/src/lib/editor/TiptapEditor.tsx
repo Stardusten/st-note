@@ -9,6 +9,9 @@ import { Title } from "./extensions/Title"
 import { BetterIndent } from "./extensions/BetterIndent"
 import { BulletListItemBlock } from "./extensions/BulletListItemBlock"
 import { NumberedListItemBlock } from "./extensions/NumberedListItemBlock"
+import { CardRef } from "./extensions/CardRef"
+import { CardRefSuggestion, type CardSuggestionItem } from "./extensions/CardRefSuggestion"
+import { createCardRefPopupRenderer } from "./extensions/CardRefPopup"
 
 type TiptapEditorProps = {
   content?: any
@@ -16,14 +19,21 @@ type TiptapEditorProps = {
   placeholder?: string
   titlePlaceholder?: string
   class?: string
+  searchCards?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
+  onCardClick?: (cardId: string) => void
 }
 
 const TiptapEditor: Component<TiptapEditorProps> = (props) => {
   let editorElement: HTMLDivElement | undefined
   let editor: Editor | null = null
 
+  const defaultSearchCards = () => [] as CardSuggestionItem[]
+  const getSearchCards = () => props.searchCards || defaultSearchCards
+
   onMount(() => {
     if (!editorElement) return
+
+    const popupRenderer = createCardRefPopupRenderer((query) => getSearchCards()(query))
 
     editor = new Editor({
       element: editorElement,
@@ -49,6 +59,15 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
           scrollTreshold: 100
         }),
         BetterIndent,
+        CardRef.configure({
+          onCardClick: props.onCardClick
+        }),
+        CardRefSuggestion.configure({
+          suggestion: {
+            items: (query) => getSearchCards()(query),
+            render: () => popupRenderer
+          }
+        }),
         Placeholder.configure({
           placeholder: ({ node }) => {
             if (node.type.name === "title") {
