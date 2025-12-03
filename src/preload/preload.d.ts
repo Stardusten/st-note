@@ -1,12 +1,14 @@
 import { ElectronAPI } from "@electron-toolkit/preload"
-import type { StorageAPI } from "./index"
+import type { StorageAPI, SearchAPI } from "./index"
 
 declare global {
   interface Window {
     electron: ElectronAPI
     api: {
       storage: StorageAPI
+      search: SearchAPI
       hideQuickWindow: () => void
+      hideSearchWindow: () => void
     }
   }
 }

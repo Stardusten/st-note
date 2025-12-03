@@ -11,8 +11,8 @@ const Content: Component = () => {
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: KeyboardEvent) => {
-    // Cmd+K or Ctrl+K to open search
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    // Cmd+P or Ctrl+P to open search
+    if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
       e.preventDefault()
       setShowSearch(true)
     }

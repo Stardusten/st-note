@@ -34,6 +34,25 @@ export type StorageAPI = {
   query: (path: string, options?: QueryOptionsRaw) => Promise<StObjectRaw[]>
 }
 
+export type SearchResultItem = {
+  id: string
+  title: string
+  text: string
+}
+
+export type SearchAPI = {
+  query: (query: string) => Promise<SearchResultItem[]>
+  getRecent: () => Promise<SearchResultItem[]>
+  selectCard: (cardId: string) => Promise<void>
+  createCard: (title: string) => Promise<string | null>
+  onQuery: (callback: (data: { query: string; responseChannel: string }) => void) => void
+  onGetRecent: (callback: (data: { responseChannel: string }) => void) => void
+  onSelectCard: (callback: (cardId: string) => void) => void
+  onCreateCard: (callback: (data: { title: string; responseChannel: string }) => void) => void
+  sendResult: (channel: string, results: SearchResultItem[]) => void
+  sendCardCreated: (channel: string, cardId: string | null) => void
+}
+
 const api = {
   storage: {
     init: (path) => ipcRenderer.invoke("storage:init", path),
@@ -44,7 +63,20 @@ const api = {
     delete: (path, id) => ipcRenderer.invoke("storage:delete", path, id),
     query: (path, options) => ipcRenderer.invoke("storage:query", path, options)
   } satisfies StorageAPI,
-  hideQuickWindow: () => ipcRenderer.invoke("quick:hide")
+  hideQuickWindow: () => ipcRenderer.invoke("quick:hide"),
+  hideSearchWindow: () => ipcRenderer.invoke("search:hide"),
+  search: {
+    query: (query) => ipcRenderer.invoke("search:query", query),
+    getRecent: () => ipcRenderer.invoke("search:getRecent"),
+    selectCard: (cardId) => ipcRenderer.invoke("search:selectCard", cardId),
+    createCard: (title) => ipcRenderer.invoke("search:createCard", title),
+    onQuery: (callback) => ipcRenderer.on("search:query", (_e, data) => callback(data)),
+    onGetRecent: (callback) => ipcRenderer.on("search:getRecent", (_e, data) => callback(data)),
+    onSelectCard: (callback) => ipcRenderer.on("search:selectCard", (_e, cardId) => callback(cardId)),
+    onCreateCard: (callback) => ipcRenderer.on("search:createCard", (_e, data) => callback(data)),
+    sendResult: (channel, results) => ipcRenderer.send(channel, results),
+    sendCardCreated: (channel, cardId) => ipcRenderer.send(channel, cardId)
+  } satisfies SearchAPI
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

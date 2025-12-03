@@ -22,6 +22,7 @@ import {
 
 let mainWindow: BrowserWindow | null = null
 let quickWindow: BrowserWindow | null = null
+let searchWindow: BrowserWindow | null = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -111,6 +112,53 @@ function toggleQuickWindow() {
   }
 }
 
+function createSearchWindow(): void {
+  searchWindow = new BrowserWindow({
+    width: 650,
+    height: 500,
+    show: false,
+    frame: false,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false
+    }
+  })
+
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    searchWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/search.html`)
+  } else {
+    searchWindow.loadFile(join(__dirname, "../renderer/search.html"))
+  }
+
+  searchWindow.on("blur", () => {
+    searchWindow?.hide()
+  })
+}
+
+function toggleSearchWindow() {
+  if (!searchWindow || searchWindow.isDestroyed()) {
+    createSearchWindow()
+    return
+  }
+
+  if (searchWindow.isVisible()) {
+    searchWindow.hide()
+  } else {
+    const point = screen.getCursorScreenPoint()
+    const display = screen.getDisplayNearestPoint(point)
+    const x = display.bounds.x + (display.bounds.width - 650) / 2
+    const y = display.bounds.y + 150
+
+    searchWindow.setPosition(Math.round(x), Math.round(y))
+    searchWindow.show()
+    searchWindow.focus()
+  }
+}
+
 function restFunc<T extends any[], R>(f: (...args: T) => R) {
   return function (_e: IpcMainInvokeEvent, ...rest: T) {
     return f(...rest)
@@ -141,11 +189,55 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:delete", restFunc(deleteObject))
   ipcMain.handle("storage:query", restFunc(queryObjects))
   ipcMain.handle("quick:hide", () => quickWindow?.hide())
+  ipcMain.handle("search:hide", () => searchWindow?.hide())
+
+  // Search IPC: forward search requests to main window
+  ipcMain.handle("search:query", async (_e, query: string) => {
+    if (!mainWindow) return []
+    const win = mainWindow
+    return new Promise((resolve) => {
+      const channel = `search:result:${Date.now()}`
+      ipcMain.once(channel, (_e, results) => resolve(results))
+      win.webContents.send("search:query", { query, responseChannel: channel })
+      setTimeout(() => resolve([]), 5000) // timeout
+    })
+  })
+
+  ipcMain.handle("search:getRecent", async () => {
+    if (!mainWindow) return []
+    const win = mainWindow
+    return new Promise((resolve) => {
+      const channel = `search:recent:${Date.now()}`
+      ipcMain.once(channel, (_e, results) => resolve(results))
+      win.webContents.send("search:getRecent", { responseChannel: channel })
+      setTimeout(() => resolve([]), 5000)
+    })
+  })
+
+  ipcMain.handle("search:selectCard", async (_e, cardId: string) => {
+    if (!mainWindow) return
+    mainWindow.webContents.send("search:selectCard", cardId)
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
+  ipcMain.handle("search:createCard", async (_e, title: string) => {
+    if (!mainWindow) return
+    const win = mainWindow
+    return new Promise((resolve) => {
+      const channel = `search:cardCreated:${Date.now()}`
+      ipcMain.once(channel, (_e, cardId) => resolve(cardId))
+      win.webContents.send("search:createCard", { title, responseChannel: channel })
+      setTimeout(() => resolve(null), 5000)
+    })
+  })
 
   createWindow()
   createQuickWindow()
+  createSearchWindow()
 
   globalShortcut.register("CommandOrControl+Shift+C", toggleQuickWindow)
+  globalShortcut.register("CommandOrControl+Shift+P", toggleSearchWindow)
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the

@@ -91,6 +91,7 @@
 /* Placeholder styles */
 .note-editor .ProseMirror p.is-editor-empty:first-child::before,
 .note-editor .ProseMirror p.is-empty::before,
+.note-editor .ProseMirror h1.editor-title.is-empty::before,
 .note-editor .ProseMirror h2.is-empty::before,
 .note-editor .ProseMirror h3.is-empty::before {
   color: rgb(100, 100, 100);
