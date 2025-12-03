@@ -6,6 +6,7 @@ declare global {
     electron: ElectronAPI
     api: {
       storage: StorageAPI
+      hideQuickWindow: () => void
     }
   }
 }

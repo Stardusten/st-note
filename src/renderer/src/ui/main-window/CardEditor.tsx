@@ -1,19 +1,9 @@
 import { Component, Show } from "solid-js"
 import "./card-editor.css"
-import {
-  Command,
-  Image,
-  Inbox,
-  Link,
-  Pin,
-  Plus,
-  Smile,
-  SquareArrowRight,
-  WandSparkles
-} from "lucide-solid"
+import { Command, Inbox, Link, Pin, Plus, SquareArrowRight, WandSparkles } from "lucide-solid"
 import { Button } from "../solidui/button"
 import { appStore } from "@renderer/lib/state/AppStore"
-import TiptapEditor from "@renderer/lib/editor/TiptapEditor"
+import NoteEditor from "@renderer/lib/editor/NoteEditor"
 
 const CardMainEditor: Component = () => {
   let saveTimeout: NodeJS.Timeout
@@ -52,9 +42,9 @@ const CardMainEditor: Component = () => {
         when={currentCard()}
         fallback={
           <div class="flex flex-col items-center justify-center h-[300px]">
-            <p class="text-muted-foreground mb-4">No card selected</p>
-            <Button onClick={handleCreateCard}>
-              <Plus class="size-4 mr-2" />
+            <p class="text-muted-foreground mb-4">Oops, No card selected</p>
+            <Button variant="outline" onClick={handleCreateCard}>
+              <Plus class="size-4 stroke-[1.5px]" />
               Create New Card
             </Button>
           </div>
@@ -79,29 +69,14 @@ const CardMainEditor: Component = () => {
             <Command class="size-4 stroke-[1.5]" />
           </Button>
         </div>
-        <div class="pt-[68px]">
-          <div class="ml-[52px] h-[28px] left-[52px] w-full opacity-0 hover:opacity-100">
-            <Button variant="ghost" size="sm">
-              <Smile class="size-4" />
-              <span>Add emoji</span>
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Image class="size-4" />
-              <span>Add cover</span>
-            </Button>
-          </div>
-        </div>
-
-        <div class="px-[64px] pb-[68px]">
-          <Show when={currentCard()}>
-            <TiptapEditor
-              content={currentCard()?.data.content}
-              onUpdate={handleContentChange}
-              titlePlaceholder="Untitled"
-              placeholder="Start writing..."
-              class="text-foreground"
-            />
-          </Show>
+        <div class="py-[68px] px-[64px]">
+          <NoteEditor
+            content={currentCard()?.data.content}
+            onUpdate={handleContentChange}
+            titlePlaceholder="Untitled"
+            placeholder="Start writing..."
+            showTitleToolbar={true}
+          />
         </div>
       </Show>
     </div>

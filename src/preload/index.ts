@@ -43,7 +43,8 @@ const api = {
     update: (path, params) => ipcRenderer.invoke("storage:update", path, params),
     delete: (path, id) => ipcRenderer.invoke("storage:delete", path, id),
     query: (path, options) => ipcRenderer.invoke("storage:query", path, options)
-  } satisfies StorageAPI
+  } satisfies StorageAPI,
+  hideQuickWindow: () => ipcRenderer.invoke("quick:hide")
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
