@@ -2,6 +2,9 @@ import { Component, createSignal } from "solid-js"
 import { Button } from "../solidui/button"
 import { Inbox } from "lucide-solid"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
+import { appStore } from "@renderer/lib/state/AppStore"
+import { getCardTitle } from "@renderer/lib/common/types/card"
+import type { CardSuggestionItem } from "@renderer/lib/editor/extensions/CardRefSuggestion"
 import "./quick-window.css"
 
 const QuickWindow: Component = () => {
@@ -29,6 +32,28 @@ const QuickWindow: Component = () => {
         if (discard) window.api.hideQuickWindow()
       }
     }
+  }
+
+  const searchCards = (query: string): CardSuggestionItem[] => {
+    const cards = appStore.getCards()
+
+    if (!query.trim()) {
+      return cards
+        .slice(0, 10)
+        .map((c) => ({ id: c.id, title: getCardTitle(c) }))
+    }
+
+    const lowerQuery = query.toLowerCase()
+    return cards
+      .filter((c) => getCardTitle(c).toLowerCase().includes(lowerQuery))
+      .slice(0, 10)
+      .map((c) => ({ id: c.id, title: getCardTitle(c) }))
+  }
+
+  const handleCardClick = (cardId: string) => {
+    appStore.selectCard(cardId)
+    window.api.hideQuickWindow()
+    window.api.showMainWindow?.()
   }
 
   return (
@@ -69,6 +94,8 @@ const QuickWindow: Component = () => {
             titlePlaceholder="Untitled"
             placeholder="Start writing..."
             showTitleToolbar={false}
+            searchCards={searchCards}
+            onCardClick={handleCardClick}
           />
         </div>
         <div class="py-3 flex flex-row justify-between items-center ">

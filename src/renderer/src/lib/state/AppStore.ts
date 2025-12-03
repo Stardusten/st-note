@@ -1,5 +1,5 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
-import { ObjCache } from "../objcache/objcache"
+import { ObjCache, type ObjCacheEvent } from "../objcache/objcache"
 import { SQLiteStorage } from "../storage/sqlite"
 import type { Card } from "../common/types/card"
 import type { StObjectId } from "../common/types"
@@ -148,8 +148,9 @@ class AppStore {
     throw new Error("Failed to create card")
   }
 
-  async updateCard(id: StObjectId, content: any, text: string) {
+  async updateCard(id: StObjectId, content: any, text: string, source?: string) {
     await this.objCache.withTx(tx => {
+      if (source) tx.setSource(source)
       const card = this.cards().find(c => c.id === id)
       if (!card) return
 
@@ -267,6 +268,10 @@ class AppStore {
     const card = this.cards().find(c => c.id === cardId)
     const title = card ? getCardTitle(card) : ''
     return this.backlinkIndex.getPotentialLinks(cardId, title)
+  }
+
+  subscribeToUpdates(listener: (event: ObjCacheEvent) => void): () => void {
+    return this.objCache.subscribe(listener)
   }
 }
 

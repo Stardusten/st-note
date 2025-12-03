@@ -1,15 +1,20 @@
-import { type Component, Show, For, onMount, onCleanup, createSignal } from "solid-js"
+import { type Component, Show, onMount, onCleanup, createSignal, createMemo } from "solid-js"
+import { Key } from "@solid-primitives/keyed"
 import LeftSidebar from "./LeftSidebar"
 import CardMainEditor from "./CardEditor"
-import { ChevronDown, ChevronRight, Link } from "lucide-solid"
+import { ChevronDown, ChevronLeft, ChevronRight, Link } from "lucide-solid"
 import { Button } from "../solidui/button"
 import CardBacklinkEditor from "./CardBacklinkEditor"
 import SearchPanel from "./SearchPanel"
 import { appStore } from "@renderer/lib/state/AppStore"
 
+const PAGE_SIZE = 10
+
 const Content: Component = () => {
   const [backlinksExpanded, setBacklinksExpanded] = createSignal(true)
   const [potentialLinksExpanded, setPotentialLinksExpanded] = createSignal(true)
+  const [backlinksPage, setBacklinksPage] = createSignal(0)
+  const [potentialLinksPage, setPotentialLinksPage] = createSignal(0)
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
@@ -41,6 +46,21 @@ const Content: Component = () => {
     const id = currentCardId()
     return id ? appStore.getPotentialLinks(id)() : []
   }
+
+  const pagedBacklinks = createMemo(() => {
+    const all = backlinks()
+    const start = backlinksPage() * PAGE_SIZE
+    return all.slice(start, start + PAGE_SIZE)
+  })
+
+  const pagedPotentialLinks = createMemo(() => {
+    const all = potentialLinks()
+    const start = potentialLinksPage() * PAGE_SIZE
+    return all.slice(start, start + PAGE_SIZE)
+  })
+
+  const backlinksPageCount = () => Math.ceil(backlinks().length / PAGE_SIZE)
+  const potentialLinksPageCount = () => Math.ceil(potentialLinks().length / PAGE_SIZE)
 
   const handleBacklinkClick = (cardId: string) => {
     appStore.selectCard(cardId)
@@ -80,15 +100,37 @@ const Content: Component = () => {
                 <Show when={backlinks().length === 0}>
                   <div class="text-muted-foreground text-sm py-4 text-center">No backlinks yet</div>
                 </Show>
-                <For each={backlinks()}>
+                <Key each={pagedBacklinks()} by={backlink => backlink.sourceCardId}>
                   {(backlink) => (
                     <CardBacklinkEditor
-                      cardId={backlink.sourceCardId}
-                      blocks={backlink.blocks}
-                      onClick={() => handleBacklinkClick(backlink.sourceCardId)}
+                      cardId={backlink().sourceCardId}
+                      blocks={backlink().blocks}
+                      targetCardId={currentCardId()!}
+                      onNavigate={() => handleBacklinkClick(backlink().sourceCardId)}
                     />
                   )}
-                </For>
+                </Key>
+                <Show when={backlinksPageCount() > 1}>
+                  <div class="flex items-center justify-center gap-2 py-2">
+                    <Button
+                      variant="ghost"
+                      size="xs-icon"
+                      disabled={backlinksPage() === 0}
+                      onClick={() => setBacklinksPage(p => p - 1)}>
+                      <ChevronLeft class="size-4" />
+                    </Button>
+                    <span class="text-xs text-muted-foreground">
+                      {backlinksPage() + 1} / {backlinksPageCount()}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="xs-icon"
+                      disabled={backlinksPage() >= backlinksPageCount() - 1}
+                      onClick={() => setBacklinksPage(p => p + 1)}>
+                      <ChevronRight class="size-4" />
+                    </Button>
+                  </div>
+                </Show>
               </div>
             </Show>
 
@@ -114,15 +156,37 @@ const Content: Component = () => {
                 <Show when={potentialLinks().length === 0}>
                   <div class="text-muted-foreground text-sm py-4 text-center">No potential links found</div>
                 </Show>
-                <For each={potentialLinks()}>
+                <Key each={pagedPotentialLinks()} by={link => link.sourceCardId}>
                   {(link) => (
                     <CardBacklinkEditor
-                      cardId={link.sourceCardId}
-                      blocks={link.blocks}
-                      onClick={() => handleBacklinkClick(link.sourceCardId)}
+                      cardId={link().sourceCardId}
+                      blocks={link().blocks}
+                      targetCardId={currentCardId()!}
+                      onNavigate={() => handleBacklinkClick(link().sourceCardId)}
                     />
                   )}
-                </For>
+                </Key>
+                <Show when={potentialLinksPageCount() > 1}>
+                  <div class="flex items-center justify-center gap-2 py-2">
+                    <Button
+                      variant="ghost"
+                      size="xs-icon"
+                      disabled={potentialLinksPage() === 0}
+                      onClick={() => setPotentialLinksPage(p => p - 1)}>
+                      <ChevronLeft class="size-4" />
+                    </Button>
+                    <span class="text-xs text-muted-foreground">
+                      {potentialLinksPage() + 1} / {potentialLinksPageCount()}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="xs-icon"
+                      disabled={potentialLinksPage() >= potentialLinksPageCount() - 1}
+                      onClick={() => setPotentialLinksPage(p => p + 1)}>
+                      <ChevronRight class="size-4" />
+                    </Button>
+                  </div>
+                </Show>
               </div>
             </Show>
           </div>

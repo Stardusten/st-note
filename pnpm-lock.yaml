@@ -20,6 +20,9 @@ importers:
       '@solid-primitives/i18n':
         specifier: ^2.2.1
         version: 2.2.1(solid-js@1.9.10)
+      '@solid-primitives/keyed':
+        specifier: ^1.5.2
+        version: 1.5.2(solid-js@1.9.10)
       '@solid-primitives/map':
         specifier: ^0.7.2
         version: 0.7.2(solid-js@1.9.10)

@@ -13,6 +13,7 @@ export type ObjCacheEventOp = {
 
 export type ObjCacheEvent = {
   type: 'committed'
+  source?: string
   ops: ObjCacheEventOp[]
 }
 
@@ -32,6 +33,7 @@ export type TxStatus = "notCommit" | "pending" | "committed" | "rollbacked" | "a
 
 export type TxObj = {
   getStatus: () => TxStatus
+  setSource: (source: string) => void
   create: (item: CreateParams) => void
   update: (id: StObjectId, patch: UpdateParams) => void
   delete: (id: StObjectId) => void
@@ -206,17 +208,22 @@ export class ObjCache {
           return { op: 'delete' as const, id: op.deletedObject.id, oldObject: op.deletedObject }
       }
     })
-    this.emit({ type: 'committed', ops: eventOps })
+    this.emit({ type: 'committed', source: tx.source, ops: eventOps })
   }
 }
 
 class TxObjImpl implements TxObj {
   status: TxStatus = "notCommit"
+  source?: string
   ops: TxOpParams[] = []
   executedOps: ExecutedTxOp[] | null = null
 
   getStatus(): TxStatus {
     return this.status
+  }
+
+  setSource(source: string) {
+    this.source = source
   }
 
   create(item: CreateParams) {

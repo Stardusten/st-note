@@ -10,6 +10,8 @@ export class BacklinkIndex {
   private unsubscribe: (() => void) | null = null
 
   private forwardIndex: Map<StObjectId, Set<StObjectId>> = new Map()
+  private backlinkCache: Map<StObjectId, BacklinkContext[]> = new Map()
+  private potentialLinkCache: Map<string, BacklinkContext[]> = new Map()
 
   private indexVersion: Accessor<number>
   private setIndexVersion: Setter<number>
@@ -34,6 +36,8 @@ export class BacklinkIndex {
     if (!this.objCache) return
 
     this.forwardIndex.clear()
+    this.backlinkCache.clear()
+    this.potentialLinkCache.clear()
 
     for (const [id, signal] of this.objCache.cache) {
       const obj = signal[0]()
@@ -89,32 +93,68 @@ export class BacklinkIndex {
     }
 
     this.pendingUpdates.clear()
+    this.backlinkCache.clear()
+    this.potentialLinkCache.clear()
     this.setIndexVersion(v => v + 1)
+  }
+
+  private computeBacklinks(cardId: StObjectId): BacklinkContext[] {
+    if (!this.objCache) return []
+
+    const sourceCardIds = this.forwardIndex.get(cardId)
+    if (!sourceCardIds) return []
+
+    const results: BacklinkContext[] = []
+
+    for (const sourceId of sourceCardIds) {
+      const obj = this.objCache.get(sourceId)()
+      if (!obj || obj.type !== 'card') continue
+
+      const card = obj as Card
+      const blocks = extractBlocksWithCardRef(card.data?.content, cardId)
+      if (blocks.length > 0) {
+        results.push({ sourceCardId: sourceId, blocks })
+      }
+    }
+
+    results.sort((a, b) => a.sourceCardId.localeCompare(b.sourceCardId))
+    return results
+  }
+
+  private computePotentialLinks(cardId: StObjectId, title: string): BacklinkContext[] {
+    if (!this.objCache || !title.trim()) return []
+
+    const existingBacklinks = this.forwardIndex.get(cardId) || new Set()
+    const results: BacklinkContext[] = []
+
+    for (const [id, signal] of this.objCache.cache) {
+      if (id === cardId) continue
+      if (existingBacklinks.has(id)) continue
+
+      const obj = signal[0]()
+      if (!obj || obj.type !== 'card') continue
+
+      const card = obj as Card
+      const blocks = extractBlocksWithText(card.data?.content, title)
+      if (blocks.length > 0) {
+        results.push({ sourceCardId: id, blocks })
+      }
+    }
+
+    results.sort((a, b) => a.sourceCardId.localeCompare(b.sourceCardId))
+    return results
   }
 
   getBacklinks(cardId: StObjectId): Accessor<BacklinkContext[]> {
     return () => {
       this.indexVersion()
 
-      if (!this.objCache) return []
-
-      const sourceCardIds = this.forwardIndex.get(cardId)
-      if (!sourceCardIds) return []
-
-      const results: BacklinkContext[] = []
-
-      for (const sourceId of sourceCardIds) {
-        const obj = this.objCache.get(sourceId)()
-        if (!obj || obj.type !== 'card') continue
-
-        const card = obj as Card
-        const blocks = extractBlocksWithCardRef(card.data?.content, cardId)
-        if (blocks.length > 0) {
-          results.push({ sourceCardId: sourceId, blocks })
-        }
+      let cached = this.backlinkCache.get(cardId)
+      if (!cached) {
+        cached = this.computeBacklinks(cardId)
+        this.backlinkCache.set(cardId, cached)
       }
-
-      return results
+      return cached
     }
   }
 
@@ -122,26 +162,13 @@ export class BacklinkIndex {
     return () => {
       this.indexVersion()
 
-      if (!this.objCache || !title.trim()) return []
-
-      const existingBacklinks = this.forwardIndex.get(cardId) || new Set()
-      const results: BacklinkContext[] = []
-
-      for (const [id, signal] of this.objCache.cache) {
-        if (id === cardId) continue
-        if (existingBacklinks.has(id)) continue
-
-        const obj = signal[0]()
-        if (!obj || obj.type !== 'card') continue
-
-        const card = obj as Card
-        const blocks = extractBlocksWithText(card.data?.content, title)
-        if (blocks.length > 0) {
-          results.push({ sourceCardId: id, blocks })
-        }
+      const cacheKey = `${cardId}:${title}`
+      let cached = this.potentialLinkCache.get(cacheKey)
+      if (!cached) {
+        cached = this.computePotentialLinks(cardId, title)
+        this.potentialLinkCache.set(cacheKey, cached)
       }
-
-      return results
+      return cached
     }
   }
 
@@ -155,6 +182,8 @@ export class BacklinkIndex {
       this.debounceTimer = null
     }
     this.forwardIndex.clear()
+    this.backlinkCache.clear()
+    this.potentialLinkCache.clear()
     this.pendingUpdates.clear()
   }
 }
