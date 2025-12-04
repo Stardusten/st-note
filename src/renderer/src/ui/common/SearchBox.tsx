@@ -1,6 +1,6 @@
 import { FileIcon } from "lucide-solid"
 import { TextField, TextFieldInput } from "../solidui/text-field"
-import { Component, createSignal, For, Show, onMount, onCleanup, createEffect } from "solid-js"
+import { Component, createSignal, For, Show, onMount, onCleanup, createEffect, on } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { getCardTitle } from "@renderer/lib/common/types/card"
 
@@ -14,7 +14,24 @@ type SearchBoxProps = {
 const SearchBox: Component<SearchBoxProps> = (props) => {
   const [query, setQuery] = createSignal("")
   const [focusedIndex, setFocusedIndex] = createSignal(0)
+  const [itemRefs, setItemRefs] = createSignal<Record<number, HTMLElement>>({})
   let inputRef: HTMLInputElement | undefined
+
+  const setItemRef = (el: HTMLElement | undefined, index: number) => {
+    setItemRefs((prev) => {
+      const next = { ...prev }
+      if (el) next[index] = el
+      else delete next[index]
+      return next
+    })
+  }
+
+  const scrollToFocusedItem = () => {
+    const el = itemRefs()[focusedIndex()]
+    if (el) el.scrollIntoView({ block: "nearest" })
+  }
+
+  createEffect(on(focusedIndex, scrollToFocusedItem))
 
   createEffect(() => {
     if (props.resetTrigger !== undefined) {
@@ -29,6 +46,15 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
     setQuery(value)
     appStore.performSearch(value)
     setFocusedIndex(0)
+  }
+
+  const handleInput = (e: InputEvent) => {
+    if (e.isComposing) return
+    handleSearch((e.target as HTMLInputElement).value)
+  }
+
+  const handleCompositionEnd = (e: CompositionEvent) => {
+    handleSearch((e.target as HTMLInputElement).value)
   }
 
   const selectCard = (cardId: string) => {
@@ -47,9 +73,11 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
   const searchResults = () => {
     const q = query().trim()
     if (!q) {
-      const recent = appStore.getRecentCards()
-      if (recent.length > 0) return recent
-      return appStore.getCards().slice(0, 10)
+      const allCards = appStore.getCards()
+      const recentIds = new Set(appStore.getRecentCards().map((c) => c.id))
+      const recentCards = appStore.getRecentCards()
+      const otherCards = allCards.filter((c) => !recentIds.has(c.id))
+      return [...recentCards, ...otherCards]
     }
     return appStore.getSearchResults()
   }
@@ -60,6 +88,7 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.isComposing || e.keyCode === 229) return
     if (e.key === "Escape") {
       e.preventDefault()
       props.onClose?.()
@@ -110,7 +139,8 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
             }}
             placeholder="Find, create or ask AI"
             value={query()}
-            onInput={(e) => handleSearch(e.currentTarget.value)}
+            onInput={handleInput}
+            onCompositionEnd={handleCompositionEnd}
             autofocus
           />
         </TextField>
@@ -118,62 +148,67 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
 
       <div class="flex-1 flex flex-col overflow-hidden">
         <div class="px-5 py-[13px] text-muted-foreground/60 font-medium text-[0.625rem] tracking-[0.8px]">
-          <Show when={query().trim()} fallback="RECENT NOTES">
+          <Show when={query().trim()} fallback="ALL NOTES">
             RESULTS ({searchResults().length})
           </Show>
         </div>
         <div class="flex-1 overflow-y-auto">
-          <div class="h-[2px]"></div>
           <For each={searchResults()}>
             {(card, index) => (
-              <div
-                class="relative flex items-center p-[8px] mx-5 mb-[4px] text-foreground text-sm rounded-md cursor-pointer"
-                classList={{ "bg-[#25262a]": focusedIndex() === index() }}
-                style={{
-                  "border-color": "transparent",
-                  "box-shadow":
-                    focusedIndex() === index()
-                      ? "rgba(78, 79, 82, 0.9) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.12) 0px 1px 10px, rgba(0, 0, 0, 0.14) 0px 4px 5px, rgba(0, 0, 0, 0.2) 0px 2px 4px -1px"
-                      : undefined
-                }}
-                onMouseEnter={() => setFocusedIndex(index())}
-                onClick={() => selectCard(card.id)}>
-                <FileIcon class="size-4 stroke-[1.5px] mr-2" />
-                <span>{getCardTitle(card)}</span>
-                <Show when={focusedIndex() === index()}>
-                  <div class="absolute bg-[#b8b8b8] w-[3px] h-[24px] rounded-r-[2px] -left-[20px]"></div>
-                </Show>
+              <div ref={(el) => setItemRef(el, index())} class="px-5 py-1 first:pt-1">
+                <div
+                  class="relative flex items-center p-[8px] text-foreground text-sm rounded-md cursor-pointer"
+                  classList={{ "bg-[#25262a]": focusedIndex() === index() }}
+                  style={{
+                    "border-color": "transparent",
+                    "box-shadow":
+                      focusedIndex() === index()
+                        ? "rgba(78, 79, 82, 0.9) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.12) 0px 1px 10px, rgba(0, 0, 0, 0.14) 0px 4px 5px, rgba(0, 0, 0, 0.2) 0px 2px 4px -1px"
+                        : undefined
+                  }}
+                  onMouseEnter={() => setFocusedIndex(index())}
+                  onClick={() => selectCard(card.id)}>
+                  <FileIcon class="size-4 stroke-[1.5px] mr-2" />
+                  <span>{getCardTitle(card)}</span>
+                  <Show when={focusedIndex() === index()}>
+                    <div class="absolute bg-[#b8b8b8] w-[3px] h-[24px] rounded-r-[2px] -left-[20px]"></div>
+                  </Show>
+                </div>
               </div>
             )}
           </For>
 
           <Show when={query().trim()}>
             <div
-              class="relative flex items-center p-[8px] mx-5 mb-[4px] text-foreground text-sm rounded-md cursor-pointer"
-              classList={{ "bg-[#25262a]": focusedIndex() === searchResults().length }}
-              style={{
-                "border-color": "transparent",
-                "box-shadow":
-                  focusedIndex() === searchResults().length
-                    ? "rgba(78, 79, 82, 0.9) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.12) 0px 1px 10px, rgba(0, 0, 0, 0.14) 0px 4px 5px, rgba(0, 0, 0, 0.2) 0px 2px 4px -1px"
-                    : undefined
-              }}
-              onMouseEnter={() => setFocusedIndex(searchResults().length)}
-              onClick={createNewNote}>
-              <span class="text-muted-foreground">
-                + New note:{" "}
-                <span class="text-foreground">
-                  "<span class="underline">{query()}</span>"
+              ref={(el) => setItemRef(el, searchResults().length)}
+              class="px-5 pt-1 pb-2"
+              classList={{ "first:pt-2": searchResults().length === 0 }}>
+              <div
+                class="relative flex items-center p-[8px] text-foreground text-sm rounded-md cursor-pointer"
+                classList={{ "bg-[#25262a]": focusedIndex() === searchResults().length }}
+                style={{
+                  "border-color": "transparent",
+                  "box-shadow":
+                    focusedIndex() === searchResults().length
+                      ? "rgba(78, 79, 82, 0.9) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.12) 0px 1px 10px, rgba(0, 0, 0, 0.14) 0px 4px 5px, rgba(0, 0, 0, 0.2) 0px 2px 4px -1px"
+                      : undefined
+                }}
+                onMouseEnter={() => setFocusedIndex(searchResults().length)}
+                onClick={createNewNote}>
+                <span class="text-muted-foreground">
+                  + New note:{" "}
+                  <span class="text-foreground">
+                    "<span class="underline">{query()}</span>"
+                  </span>
                 </span>
-              </span>
-              <Show when={focusedIndex() === searchResults().length}>
-                <div class="absolute bg-[#b8b8b8] w-[3px] h-[24px] rounded-r-[2px] -left-[20px]"></div>
-              </Show>
+                <Show when={focusedIndex() === searchResults().length}>
+                  <div class="absolute bg-[#b8b8b8] w-[3px] h-[24px] rounded-r-[2px] -left-[20px]"></div>
+                </Show>
+              </div>
             </div>
           </Show>
-
-          <div class="h-[8px]"></div>
         </div>
+        {/* <div class="h-[16px]"></div> */}
       </div>
     </>
   )

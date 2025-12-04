@@ -14,6 +14,7 @@ type NoteEditorProps = {
   class?: string
   searchCards?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
   onCardClick?: (cardId: string) => void
+  onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
 }
 
 const NoteEditor: Component<NoteEditorProps> = (props) => {
@@ -41,6 +42,7 @@ const NoteEditor: Component<NoteEditorProps> = (props) => {
           placeholder={props.placeholder}
           searchCards={props.searchCards}
           onCardClick={props.onCardClick}
+          onCreateCard={props.onCreateCard}
           class="text-foreground"
         />
       </div>

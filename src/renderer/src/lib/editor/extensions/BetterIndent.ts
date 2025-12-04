@@ -31,7 +31,7 @@ export const BetterIndent = Extension.create<IndentOptions>({
   addGlobalAttributes() {
     return [
       {
-        types: ["paragraph", "heading"],
+        types: ["paragraph", "heading", "codeBlock"],
         attributes: {
           indent: {
             default: 0,
@@ -103,7 +103,23 @@ export const BetterIndent = Extension.create<IndentOptions>({
   addKeyboardShortcuts() {
     return {
       Tab: () => this.editor.commands.indent(),
-      "Shift-Tab": () => this.editor.commands.outdent()
+      "Shift-Tab": () => this.editor.commands.outdent(),
+      Enter: ({ editor }) => {
+        const { state } = editor
+        const { selection } = state
+        const { $from, empty } = selection
+
+        if (!empty) return false
+
+        const node = $from.parent
+        if (node.type.name !== "paragraph") return false
+        if (node.textContent.length > 0) return false
+
+        const currentIndent = node.attrs.indent || 0
+        if (currentIndent <= 0) return false
+
+        return editor.commands.outdent()
+      }
     }
   }
 })

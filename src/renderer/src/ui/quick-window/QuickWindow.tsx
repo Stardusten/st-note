@@ -1,4 +1,4 @@
-import { Component, createSignal } from "solid-js"
+import { Component, createSignal, Show } from "solid-js"
 import { Button } from "../solidui/button"
 import { Inbox } from "lucide-solid"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
@@ -7,18 +7,34 @@ import { getCardTitle } from "@renderer/lib/common/types/card"
 import type { CardSuggestionItem } from "@renderer/lib/editor/extensions/CardRefSuggestion"
 import "./quick-window.css"
 
+const emptyContent = {
+  type: "doc",
+  content: [{ type: "title", attrs: { level: 1 }, content: [] }, { type: "paragraph" }]
+}
+
 const QuickWindow: Component = () => {
-  const [content, setContent] = createSignal<any>(null)
+  const [content, setContent] = createSignal<any>(emptyContent)
   const [isEmpty, setIsEmpty] = createSignal(true)
+  const [resetKey, setResetKey] = createSignal(1)
 
   const handleUpdate = (newContent: any, text: string) => {
     setContent(newContent)
     setIsEmpty(text.trim().length === 0)
   }
 
-  const handleCapture = () => {
-    // TODO: Save the note
-    console.log("Capturing note:", content())
+  const resetEditor = () => {
+    setContent(emptyContent)
+    setIsEmpty(true)
+    setResetKey((k) => k + 1)
+  }
+
+  const handleCapture = async () => {
+    if (isEmpty()) {
+      window.api.hideQuickWindow()
+      return
+    }
+    await appStore.createCardWithoutSelect(undefined, content())
+    resetEditor()
     window.api.hideQuickWindow()
   }
 
@@ -27,9 +43,11 @@ const QuickWindow: Component = () => {
       if (isEmpty()) {
         window.api.hideQuickWindow()
       } else {
-        // TODO: Show confirmation dialog
         const discard = window.confirm("Discard this note?")
-        if (discard) window.api.hideQuickWindow()
+        if (discard) {
+          resetEditor()
+          window.api.hideQuickWindow()
+        }
       }
     }
   }
@@ -53,7 +71,12 @@ const QuickWindow: Component = () => {
   const handleCardClick = (cardId: string) => {
     appStore.selectCard(cardId)
     window.api.hideQuickWindow()
-    window.api.showMainWindow?.()
+  }
+
+  const handleCreateCard = async (title: string) => {
+    const newCard = await appStore.createCardWithoutSelect(title)
+    if (newCard) return { id: newCard.id, title: getCardTitle(newCard) }
+    return null
   }
 
   return (
@@ -89,14 +112,20 @@ const QuickWindow: Component = () => {
             "box-shadow": "rgba(4, 4, 7, 0.25) 0px 2px 2px, rgba(4, 4, 7, 0.4) 0px 8px 24px",
             transition: "all 300ms ease 0s"
           }}>
-          <NoteEditor
-            onUpdate={handleUpdate}
-            titlePlaceholder="Untitled"
-            placeholder="Start writing..."
-            showTitleToolbar={false}
-            searchCards={searchCards}
-            onCardClick={handleCardClick}
-          />
+          <Show when={resetKey()} keyed>
+            {(_key) => (
+              <NoteEditor
+                content={content()}
+                onUpdate={handleUpdate}
+                titlePlaceholder="Untitled"
+                placeholder="Start writing..."
+                showTitleToolbar={false}
+                searchCards={searchCards}
+                onCardClick={handleCardClick}
+                onCreateCard={handleCreateCard}
+              />
+            )}
+          </Show>
         </div>
         <div class="py-3 flex flex-row justify-between items-center ">
           <div class="text-sm text-foreground flex flex-row items-center gap-2 pl-2">

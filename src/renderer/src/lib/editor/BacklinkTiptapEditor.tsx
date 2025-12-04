@@ -9,6 +9,7 @@ import { BulletListItemBlock } from "./extensions/BulletListItemBlock"
 import { NumberedListItemBlock } from "./extensions/NumberedListItemBlock"
 import { CardRef } from "./extensions/CardRef"
 import { BacklinkViewExtension, backlinkViewPluginKey } from "./extensions/BacklinkViewExtension"
+import { CodeBlock } from "./extensions/CodeBlockLowlight"
 import type { BlockContext } from "../backlink/types"
 import { appStore } from "../state/AppStore"
 
@@ -55,8 +56,10 @@ const BacklinkTiptapEditor: Component<BacklinkTiptapEditorProps> = (props) => {
           dropcursor: false,
           bulletList: false,
           orderedList: false,
-          listItem: false
+          listItem: false,
+          codeBlock: false
         }),
+        CodeBlock,
         BulletListItemBlock,
         NumberedListItemBlock,
         BetterIndent,

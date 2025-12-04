@@ -65,6 +65,7 @@ const api = {
   } satisfies StorageAPI,
   hideQuickWindow: () => ipcRenderer.invoke("quick:hide"),
   hideSearchWindow: () => ipcRenderer.invoke("search:hide"),
+  fetchPageTitle: (url: string) => ipcRenderer.invoke("fetchPageTitle", url) as Promise<string | null>,
   search: {
     query: (query) => ipcRenderer.invoke("search:query", query),
     getRecent: () => ipcRenderer.invoke("search:getRecent"),

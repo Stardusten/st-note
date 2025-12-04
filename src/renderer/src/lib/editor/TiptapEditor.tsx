@@ -3,6 +3,7 @@ import { Editor } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import Dropcursor from "@tiptap/extension-dropcursor"
+import Link from "@tiptap/extension-link"
 import GlobalDragHandle from "tiptap-extension-global-drag-handle"
 import { CustomDocument } from "./extensions/CustomDocument"
 import { Title } from "./extensions/Title"
@@ -12,6 +13,8 @@ import { NumberedListItemBlock } from "./extensions/NumberedListItemBlock"
 import { CardRef } from "./extensions/CardRef"
 import { CardRefSuggestion, type CardSuggestionItem } from "./extensions/CardRefSuggestion"
 import { createCardRefPopupRenderer } from "./extensions/CardRefPopup"
+import { CodeBlock } from "./extensions/CodeBlockLowlight"
+import { AutoLink } from "./extensions/AutoLink"
 
 type TiptapEditorProps = {
   content?: any
@@ -21,6 +24,7 @@ type TiptapEditorProps = {
   class?: string
   searchCards?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
   onCardClick?: (cardId: string) => void
+  onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
 }
 
 const TiptapEditor: Component<TiptapEditorProps> = (props) => {
@@ -29,11 +33,15 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
 
   const defaultSearchCards = () => [] as CardSuggestionItem[]
   const getSearchCards = () => props.searchCards || defaultSearchCards
+  const getCreateCard = () => props.onCreateCard
 
   onMount(() => {
     if (!editorElement) return
 
-    const popupRenderer = createCardRefPopupRenderer((query) => getSearchCards()(query))
+    const popupRenderer = createCardRefPopupRenderer(
+      (query) => getSearchCards()(query),
+      (title) => getCreateCard()?.(title) ?? Promise.resolve(null)
+    )
 
     editor = new Editor({
       element: editorElement,
@@ -46,10 +54,17 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
           dropcursor: false,
           bulletList: false,
           orderedList: false,
-          listItem: false
+          listItem: false,
+          codeBlock: false
         }),
+        CodeBlock,
         BulletListItemBlock,
         NumberedListItemBlock,
+        Link.configure({
+          openOnClick: true,
+          HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" }
+        }),
+        AutoLink,
         Dropcursor.configure({
           color: "#6366f1",
           width: 2
@@ -79,14 +94,11 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
       ],
       content: props.content || {
         type: "doc",
-        content: [
-          { type: "title", attrs: { level: 1 }, content: [] },
-          { type: "paragraph" }
-        ]
+        content: [{ type: "title", attrs: { level: 1 }, content: [] }, { type: "paragraph" }]
       },
       onUpdate: ({ editor }) => {
         const json = editor.getJSON()
-        console.log("Editor Content:", JSON.stringify(json, null, 2))
+        // console.log("Editor Content:", JSON.stringify(json, null, 2))
         const text = editor.getText()
         props.onUpdate?.(json, text)
       },

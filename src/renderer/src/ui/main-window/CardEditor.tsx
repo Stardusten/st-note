@@ -20,7 +20,7 @@ const CardMainEditor: Component = () => {
     }, 500)
   }
 
-  const handleCreateCard = async () => {
+  const handleCreateNewCard = async () => {
     await appStore.createCard()
   }
 
@@ -46,6 +46,12 @@ const CardMainEditor: Component = () => {
     appStore.selectCard(cardId)
   }
 
+  const handleCreateCard = async (title: string) => {
+    const newCard = await appStore.createCardWithoutSelect(title)
+    if (newCard) return { id: newCard.id, title: getCardTitle(newCard) }
+    return null
+  }
+
   const currentCard = () => appStore.getCurrentCard()
 
   return (
@@ -67,7 +73,7 @@ const CardMainEditor: Component = () => {
         fallback={
           <div class="flex flex-col items-center justify-center h-[300px]">
             <p class="text-muted-foreground mb-4">Oops, No card selected</p>
-            <Button variant="outline" onClick={handleCreateCard}>
+            <Button variant="outline" onClick={handleCreateNewCard}>
               <Plus class="size-4 stroke-[1.5px]" />
               Create New Card
             </Button>
@@ -102,6 +108,7 @@ const CardMainEditor: Component = () => {
             showTitleToolbar={true}
             searchCards={searchCards}
             onCardClick={handleCardClick}
+            onCreateCard={handleCreateCard}
           />
         </div>
       </Show>

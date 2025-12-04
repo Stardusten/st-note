@@ -92,15 +92,15 @@ export const CardRefSuggestion = Extension.create<CardRefSuggestionOptions>({
                 $from.parentOffset
               )
 
-              console.log("[CardRefSuggestion] textBefore:", JSON.stringify(textBefore))
+              // console.log("[CardRefSuggestion] textBefore:", JSON.stringify(textBefore))
 
               let triggerMatch: { pattern: string; index: number } | null = null
               for (const pattern of TRIGGER_PATTERNS) {
                 const idx = textBefore.lastIndexOf(pattern)
-                console.log("[CardRefSuggestion] checking pattern:", pattern, "idx:", idx)
+                // console.log("[CardRefSuggestion] checking pattern:", pattern, "idx:", idx)
                 if (idx !== -1) {
                   const afterTrigger = textBefore.slice(idx + pattern.length)
-                  console.log("[CardRefSuggestion] afterTrigger:", JSON.stringify(afterTrigger))
+                  // console.log("[CardRefSuggestion] afterTrigger:", JSON.stringify(afterTrigger))
                   if (!afterTrigger.includes("]") && !afterTrigger.includes("】")) {
                     if (!triggerMatch || idx > triggerMatch.index) {
                       triggerMatch = { pattern, index: idx }
@@ -109,7 +109,7 @@ export const CardRefSuggestion = Extension.create<CardRefSuggestionOptions>({
                 }
               }
 
-              console.log("[CardRefSuggestion] triggerMatch:", triggerMatch)
+              // console.log("[CardRefSuggestion] triggerMatch:", triggerMatch)
 
               if (!triggerMatch) {
                 renderer.onExit()
@@ -119,9 +119,13 @@ export const CardRefSuggestion = Extension.create<CardRefSuggestionOptions>({
               const query = textBefore.slice(triggerMatch.index + triggerMatch.pattern.length)
               const items = await suggestion.items(query)
 
-              console.log("[CardRefSuggestion] query:", JSON.stringify(query), "items:", items.length)
+              // console.log("[CardRefSuggestion] query:", JSON.stringify(query), "items:", items.length)
 
-              const triggerStart = $from.pos - $from.parentOffset + Math.max(0, $from.parentOffset - 50) + triggerMatch.index
+              const triggerStart =
+                $from.pos -
+                $from.parentOffset +
+                Math.max(0, $from.parentOffset - 50) +
+                triggerMatch.index
 
               const props: SuggestionProps = {
                 query,
@@ -158,10 +162,10 @@ export const CardRefSuggestion = Extension.create<CardRefSuggestionOptions>({
               }
 
               if (items.length > 0 || query.length > 0) {
-                console.log("[CardRefSuggestion] showing popup")
+                // console.log("[CardRefSuggestion] showing popup")
                 renderer.onUpdate(props)
               } else {
-                console.log("[CardRefSuggestion] hiding popup - no items and empty query")
+                // console.log("[CardRefSuggestion] hiding popup - no items and empty query")
                 renderer.onExit()
               }
             },

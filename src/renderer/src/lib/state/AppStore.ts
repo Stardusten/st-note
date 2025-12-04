@@ -113,24 +113,32 @@ class AppStore {
 
   // Card operations
   async createCard(initialText?: string): Promise<Card> {
+    return this.createCardInternal(initialText, undefined, true)
+  }
+
+  async createCardWithoutSelect(initialText?: string, initialContent?: any): Promise<Card> {
+    return this.createCardInternal(initialText, initialContent, false)
+  }
+
+  private async createCardInternal(initialText?: string, initialContent?: any, selectAfterCreate = true): Promise<Card> {
     const newId = crypto.randomUUID()
+    const content = initialContent || {
+      type: "doc",
+      content: [
+        {
+          type: "title",
+          attrs: { level: 1 },
+          content: initialText ? [{ type: "text", text: initialText }] : []
+        },
+        { type: "paragraph" }
+      ]
+    }
+    const text = initialContent ? this.extractTextFromContent(initialContent) : (initialText || '')
     const card = {
       id: newId,
       type: 'card' as const,
-      data: {
-        content: {
-          type: "doc",
-          content: [
-            {
-              type: "title",
-              attrs: { level: 1 },
-              content: initialText ? [{ type: "text", text: initialText }] : []
-            },
-            { type: "paragraph" }
-          ]
-        }
-      },
-      text: initialText || '',
+      data: { content },
+      text,
       tags: []
     }
 
@@ -139,13 +147,26 @@ class AppStore {
     })
 
     await this.loadCards()
-    this.setCurrentCardId(newId)
+    if (selectAfterCreate) {
+      this.setCurrentCardId(newId)
+    }
 
     const createdCard = this.cards().find(c => c.id === newId)
     if (createdCard) {
       return createdCard
     }
     throw new Error("Failed to create card")
+  }
+
+  private extractTextFromContent(content: any): string {
+    if (!content) return ''
+    const texts: string[] = []
+    const extract = (node: any) => {
+      if (node.text) texts.push(node.text)
+      if (node.content) node.content.forEach(extract)
+    }
+    extract(content)
+    return texts.join(' ')
   }
 
   async updateCard(id: StObjectId, content: any, text: string, source?: string) {

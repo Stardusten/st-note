@@ -9,6 +9,7 @@ declare global {
       search: SearchAPI
       hideQuickWindow: () => void
       hideSearchWindow: () => void
+      fetchPageTitle: (url: string) => Promise<string | null>
     }
   }
 }

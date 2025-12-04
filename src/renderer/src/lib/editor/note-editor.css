@@ -2,15 +2,15 @@
 .note-editor .ProseMirror {
   outline: none;
   font-family: "Inter", sans-serif;
+  line-height: 1.5sm;
 }
 
 .note-editor .ProseMirror p {
-  margin: 0.5em 0;
+  margin: 10px 0;
 }
 
 .note-editor .ProseMirror h1.editor-title {
   font-weight: 600;
-  line-height: 1.2;
   margin: 0;
 }
 
@@ -35,6 +35,8 @@
 .note-editor .ProseMirror blockquote {
   position: relative;
   padding-left: 1em;
+  margin-top: 10px;
+  margin-bottom: 5px;
 }
 
 .note-editor .ProseMirror blockquote::before {
@@ -52,11 +54,23 @@
   background-color: var(--color-accent);
 }
 
+/* Link styles */
+.note-editor .ProseMirror a {
+  color: #79c0ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.note-editor .ProseMirror a:hover {
+  color: #a5d6ff;
+}
+
 /* Block list item styles */
 .note-editor .ProseMirror .bn-bullet-list-item,
 .note-editor .ProseMirror .bn-numbered-list-item {
   position: relative;
-  margin: 0.25em 0;
+  margin: 10px 0;
   padding-left: 1.5em;
 }
 
@@ -141,31 +155,34 @@
 /* Global drag handle styles */
 .drag-handle {
   position: fixed;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.2s ease;
-  width: 20px;
-  height: 24px;
+  width: 16px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  border-radius: 4px;
+  border-radius: 2px;
   background: transparent;
 }
 
 .drag-handle:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-accent);
 }
 
 .drag-handle::before {
   content: "⋮⋮";
-  font-size: 12px;
+  font-size: 16px;
   color: rgb(120, 120, 120);
   letter-spacing: -2px;
+  margin-left: -2px;
+  margin-top: -1px;
 }
 
-.drag-handle.show {
-  opacity: 1;
+.drag-handle.hide {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .drag-handle:active {
@@ -219,6 +236,17 @@
   background-color: var(--color-accent);
 }
 
+.backlink-tiptap-wrapper .ProseMirror a {
+  color: #79c0ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.backlink-tiptap-wrapper .ProseMirror a:hover {
+  color: #a5d6ff;
+}
+
 .backlink-tiptap-wrapper .ProseMirror [data-indent="1"] {
   margin-left: 24px;
 }
@@ -260,4 +288,178 @@
   color: currentColor;
   min-width: 1.2em;
   text-align: right;
+}
+
+/* Code block styles */
+.note-editor .ProseMirror pre,
+.backlink-tiptap-wrapper .ProseMirror pre {
+  background: rgb(26, 27, 31);
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin: 0.75em 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+/* Code block indent levels */
+.note-editor .ProseMirror pre[data-indent="1"],
+.backlink-tiptap-wrapper .ProseMirror pre[data-indent="1"] {
+  margin-left: 24px;
+}
+.note-editor .ProseMirror pre[data-indent="2"],
+.backlink-tiptap-wrapper .ProseMirror pre[data-indent="2"] {
+  margin-left: 48px;
+}
+.note-editor .ProseMirror pre[data-indent="3"],
+.backlink-tiptap-wrapper .ProseMirror pre[data-indent="3"] {
+  margin-left: 72px;
+}
+.note-editor .ProseMirror pre[data-indent="4"],
+.backlink-tiptap-wrapper .ProseMirror pre[data-indent="4"] {
+  margin-left: 96px;
+}
+.note-editor .ProseMirror pre[data-indent="5"],
+.backlink-tiptap-wrapper .ProseMirror pre[data-indent="5"] {
+  margin-left: 120px;
+}
+
+.note-editor .ProseMirror pre code,
+.backlink-tiptap-wrapper .ProseMirror pre code {
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: none;
+  padding: 0;
+}
+
+/* Language selector */
+.code-block-language-select {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: rgb(120, 120, 120);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.code-block-language-select:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgb(180, 180, 180);
+}
+
+.code-block-language-select:focus {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgb(180, 180, 180);
+}
+
+/* Syntax highlighting - GitHub Dark theme inspired */
+.note-editor .ProseMirror pre .hljs-comment,
+.note-editor .ProseMirror pre .hljs-quote,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-comment,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.note-editor .ProseMirror pre .hljs-keyword,
+.note-editor .ProseMirror pre .hljs-selector-tag,
+.note-editor .ProseMirror pre .hljs-addition,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-keyword,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-tag,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-addition {
+  color: #ff7b72;
+}
+
+.note-editor .ProseMirror pre .hljs-number,
+.note-editor .ProseMirror pre .hljs-string,
+.note-editor .ProseMirror pre .hljs-meta .hljs-meta-string,
+.note-editor .ProseMirror pre .hljs-literal,
+.note-editor .ProseMirror pre .hljs-doctag,
+.note-editor .ProseMirror pre .hljs-regexp,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-number,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-string,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-meta .hljs-meta-string,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-literal,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-doctag,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-regexp {
+  color: #a5d6ff;
+}
+
+.note-editor .ProseMirror pre .hljs-title,
+.note-editor .ProseMirror pre .hljs-section,
+.note-editor .ProseMirror pre .hljs-name,
+.note-editor .ProseMirror pre .hljs-selector-id,
+.note-editor .ProseMirror pre .hljs-selector-class,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-title,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-section,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-name,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-id,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-class {
+  color: #d2a8ff;
+}
+
+.note-editor .ProseMirror pre .hljs-attribute,
+.note-editor .ProseMirror pre .hljs-attr,
+.note-editor .ProseMirror pre .hljs-variable,
+.note-editor .ProseMirror pre .hljs-template-variable,
+.note-editor .ProseMirror pre .hljs-class .hljs-title,
+.note-editor .ProseMirror pre .hljs-type,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-attribute,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-attr,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-variable,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-template-variable,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-class .hljs-title,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-type {
+  color: #ffa657;
+}
+
+.note-editor .ProseMirror pre .hljs-symbol,
+.note-editor .ProseMirror pre .hljs-bullet,
+.note-editor .ProseMirror pre .hljs-subst,
+.note-editor .ProseMirror pre .hljs-meta,
+.note-editor .ProseMirror pre .hljs-meta .hljs-keyword,
+.note-editor .ProseMirror pre .hljs-selector-attr,
+.note-editor .ProseMirror pre .hljs-selector-pseudo,
+.note-editor .ProseMirror pre .hljs-link,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-symbol,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-bullet,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-subst,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-meta,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-meta .hljs-keyword,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-attr,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-pseudo,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-link {
+  color: #79c0ff;
+}
+
+.note-editor .ProseMirror pre .hljs-built_in,
+.note-editor .ProseMirror pre .hljs-deletion,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-built_in,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-deletion {
+  color: #ffa198;
+}
+
+.note-editor .ProseMirror pre .hljs-function,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-function {
+  color: #d2a8ff;
+}
+
+.note-editor .ProseMirror pre .hljs-params,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-params {
+  color: #c9d1d9;
+}
+
+.note-editor .ProseMirror pre .hljs-property,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-property {
+  color: #79c0ff;
+}
+
+.note-editor .ProseMirror pre .hljs-punctuation,
+.backlink-tiptap-wrapper .ProseMirror pre .hljs-punctuation {
+  color: #c9d1d9;
 }

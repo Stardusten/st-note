@@ -5,7 +5,8 @@ import {
   BrowserWindow,
   ipcMain,
   IpcMainInvokeEvent,
-  globalShortcut
+  globalShortcut,
+  net
 } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
@@ -165,6 +166,20 @@ function restFunc<T extends any[], R>(f: (...args: T) => R) {
   }
 }
 
+async function fetchPageTitle(url: string): Promise<string | null> {
+  try {
+    const response = await net.fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; STNote/1.0)" }
+    })
+    if (!response.ok) return null
+    const html = await response.text()
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+    return titleMatch ? titleMatch[1].trim() : null
+  } catch {
+    return null
+  }
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -190,6 +205,7 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:query", restFunc(queryObjects))
   ipcMain.handle("quick:hide", () => quickWindow?.hide())
   ipcMain.handle("search:hide", () => searchWindow?.hide())
+  ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
   // Search IPC: forward search requests to main window
   ipcMain.handle("search:query", async (_e, query: string) => {
