@@ -1,4 +1,5 @@
-import { Component, onMount, onCleanup, createEffect } from "solid-js"
+import { Component, onMount, onCleanup, createEffect, createSignal } from "solid-js"
+import type { Accessor } from "solid-js"
 import { Editor } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
@@ -25,6 +26,11 @@ type TiptapEditorProps = {
   searchCards?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
   onCardClick?: (cardId: string) => void
   onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
+  getCardTitle?: (cardId: string) => Accessor<string>
+  isTask?: boolean
+  checked?: boolean
+  onCheckedChange?: (checked: boolean) => void
+  onToggleTask?: () => void
 }
 
 const TiptapEditor: Component<TiptapEditorProps> = (props) => {
@@ -35,6 +41,12 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
   const getSearchCards = () => props.searchCards || defaultSearchCards
   const getCreateCard = () => props.onCreateCard
 
+  const [isTask, setIsTask] = createSignal(props.isTask ?? false)
+  const [checked, setChecked] = createSignal(props.checked ?? false)
+
+  createEffect(() => setIsTask(props.isTask ?? false))
+  createEffect(() => setChecked(props.checked ?? false))
+
   onMount(() => {
     if (!editorElement) return
 
@@ -43,11 +55,26 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
       (title) => getCreateCard()?.(title) ?? Promise.resolve(null)
     )
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.metaKey && e.key === 't') {
+        e.preventDefault()
+        e.stopPropagation()
+        props.onToggleTask?.()
+      }
+    }
+
+    editorElement.addEventListener('keydown', handleKeyDown)
+    onCleanup(() => editorElement?.removeEventListener('keydown', handleKeyDown))
+
     editor = new Editor({
       element: editorElement,
       extensions: [
         CustomDocument,
-        Title,
+        Title.configure({
+          getIsTask: isTask,
+          getChecked: checked,
+          onCheckedChange: (c: boolean) => props.onCheckedChange?.(c)
+        }),
         StarterKit.configure({
           document: false,
           heading: { levels: [2, 3] },
@@ -55,7 +82,8 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
           bulletList: false,
           orderedList: false,
           listItem: false,
-          codeBlock: false
+          codeBlock: false,
+          link: false
         }),
         CodeBlock,
         BulletListItemBlock,
@@ -75,7 +103,8 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
         }),
         BetterIndent,
         CardRef.configure({
-          onCardClick: props.onCardClick
+          onCardClick: props.onCardClick,
+          getTitle: props.getCardTitle
         }),
         CardRefSuggestion.configure({
           suggestion: {
@@ -94,17 +123,16 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
       ],
       content: props.content || {
         type: "doc",
-        content: [{ type: "title", attrs: { level: 1 }, content: [] }, { type: "paragraph" }]
+        content: [{ type: "title", attrs: { level: 1 }, content: [] }]
       },
       onUpdate: ({ editor }) => {
         const json = editor.getJSON()
-        // console.log("Editor Content:", JSON.stringify(json, null, 2))
         const text = editor.getText()
         props.onUpdate?.(json, text)
       },
       editorProps: {
         attributes: {
-          class: "prose prose-sm max-w-none focus:outline-none"
+          class: "tiptap prose prose-sm max-w-none focus:outline-none"
         }
       }
     })

@@ -1,113 +1,96 @@
-/* TipTap Editor Styles */
-.note-editor .ProseMirror {
+/* ================================
+   Base ProseMirror Editor Styles
+   ================================ */
+
+.ProseMirror {
   outline: none;
   font-family: "Inter", sans-serif;
-  line-height: 1.5sm;
 }
 
-.note-editor .ProseMirror p {
-  margin: 10px 0;
+.ProseMirror p {
+  margin: 0.5em 0;
 }
 
-.note-editor .ProseMirror h1.editor-title {
+.ProseMirror h1.editor-title {
   font-weight: 600;
   margin: 0;
 }
 
-.note-editor .ProseMirror h2 {
+.ProseMirror h2 {
   font-size: 1.5em;
   font-weight: 600;
   margin: 1em 0 0.5em;
 }
 
-.note-editor .ProseMirror h3 {
+.ProseMirror h3 {
   font-size: 1.25em;
   font-weight: 600;
   margin: 1em 0 0.5em;
 }
 
-.note-editor .ProseMirror .card-ref {
+/* ================================
+   Card Ref Styles
+   ================================ */
+
+.ProseMirror .card-ref {
   border-bottom: 1px solid var(--color-border);
   color: var(--accent-foreground);
   cursor: pointer;
 }
 
-.note-editor .ProseMirror blockquote {
+.ProseMirror .card-ref.ProseMirror-selectednode,
+.ProseMirror .card-ref:hover {
+  background-color: var(--color-accent);
+}
+
+/* ================================
+   Blockquote Styles
+   ================================ */
+
+.ProseMirror blockquote {
   position: relative;
   padding-left: 1em;
   margin-top: 10px;
   margin-bottom: 5px;
 }
 
-.note-editor .ProseMirror blockquote::before {
+.ProseMirror blockquote::before {
   content: "";
   position: absolute;
-  left: 0px;
+  left: 0;
   width: 3px;
   height: 100%;
-  background: linear-gradient(179.99deg, rgb(196, 196, 196) 0%, rgba(196, 196, 196, 0) 115.46%);
+  background: linear-gradient(180deg, rgb(196, 196, 196) 0%, rgba(196, 196, 196, 0) 100%);
   border-radius: 5rem;
 }
 
-.note-editor .ProseMirror .card-ref.ProseMirror-selectednode,
-.note-editor .ProseMirror .card-ref:hover {
-  background-color: var(--color-accent);
-}
+/* ================================
+   Link Styles
+   ================================ */
 
-/* Link styles */
-.note-editor .ProseMirror a {
+.ProseMirror a {
   color: #79c0ff;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
 }
 
-.note-editor .ProseMirror a:hover {
+.ProseMirror a:hover {
   color: #a5d6ff;
 }
 
-/* Block list item styles */
-.note-editor .ProseMirror .bn-bullet-list-item,
-.note-editor .ProseMirror .bn-numbered-list-item {
+/* ================================
+   List Item Styles
+   ================================ */
+
+.ProseMirror .bn-bullet-list-item,
+.ProseMirror .bn-numbered-list-item {
   position: relative;
-  margin: 10px 0;
+  margin: 0.5em 0;
   padding-left: 1.5em;
 }
 
-/* Indent levels */
-.note-editor .ProseMirror [data-indent="1"] {
-  margin-left: 24px;
-}
-.note-editor .ProseMirror [data-indent="2"] {
-  margin-left: 48px;
-}
-.note-editor .ProseMirror [data-indent="3"] {
-  margin-left: 72px;
-}
-.note-editor .ProseMirror [data-indent="4"] {
-  margin-left: 96px;
-}
-.note-editor .ProseMirror [data-indent="5"] {
-  margin-left: 120px;
-}
-.note-editor .ProseMirror [data-indent="6"] {
-  margin-left: 144px;
-}
-.note-editor .ProseMirror [data-indent="7"] {
-  margin-left: 168px;
-}
-.note-editor .ProseMirror [data-indent="8"] {
-  margin-left: 192px;
-}
-.note-editor .ProseMirror [data-indent="9"] {
-  margin-left: 216px;
-}
-.note-editor .ProseMirror [data-indent="10"] {
-  margin-left: 240px;
-}
-
-/* Bullet list markers */
-.note-editor .ProseMirror .bn-bullet-list-item::before {
+.ProseMirror .bn-bullet-list-item::before {
   content: "";
   position: absolute;
   left: 0.5em;
@@ -118,8 +101,7 @@
   border-radius: 50%;
 }
 
-/* Numbered list markers - using data-index from decoration */
-.note-editor .ProseMirror .bn-numbered-list-item::before {
+.ProseMirror .bn-numbered-list-item::before {
   content: attr(data-index) ".";
   position: absolute;
   left: 0;
@@ -128,12 +110,49 @@
   text-align: right;
 }
 
-/* Placeholder styles */
-.note-editor .ProseMirror p.is-editor-empty:first-child::before,
-.note-editor .ProseMirror p.is-empty::before,
-.note-editor .ProseMirror h1.editor-title.is-empty::before,
-.note-editor .ProseMirror h2.is-empty::before,
-.note-editor .ProseMirror h3.is-empty::before {
+/* ================================
+   Indent Levels
+   ================================ */
+
+.ProseMirror [data-indent="1"] {
+  margin-left: 24px;
+}
+.ProseMirror [data-indent="2"] {
+  margin-left: 48px;
+}
+.ProseMirror [data-indent="3"] {
+  margin-left: 72px;
+}
+.ProseMirror [data-indent="4"] {
+  margin-left: 96px;
+}
+.ProseMirror [data-indent="5"] {
+  margin-left: 120px;
+}
+.ProseMirror [data-indent="6"] {
+  margin-left: 144px;
+}
+.ProseMirror [data-indent="7"] {
+  margin-left: 168px;
+}
+.ProseMirror [data-indent="8"] {
+  margin-left: 192px;
+}
+.ProseMirror [data-indent="9"] {
+  margin-left: 216px;
+}
+.ProseMirror [data-indent="10"] {
+  margin-left: 240px;
+}
+
+/* ================================
+   Placeholder Styles
+   ================================ */
+
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror p.is-empty::before,
+.ProseMirror h2.is-empty::before,
+.ProseMirror h3.is-empty::before {
   color: rgb(100, 100, 100);
   content: attr(data-placeholder);
   float: left;
@@ -141,9 +160,23 @@
   pointer-events: none;
 }
 
+/* Title placeholder - on .title-content to avoid checkbox conflict */
+.ProseMirror h1.editor-title .title-content {
+  position: relative;
+}
+
+.ProseMirror h1.editor-title.is-empty .title-content::before {
+  color: rgb(100, 100, 100);
+  content: "Untitled";
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
 /* List item placeholder - use ::after to avoid conflict with marker */
-.note-editor .ProseMirror .bn-bullet-list-item.is-empty::after,
-.note-editor .ProseMirror .bn-numbered-list-item.is-empty::after {
+.ProseMirror .bn-bullet-list-item.is-empty::after,
+.ProseMirror .bn-numbered-list-item.is-empty::after {
   color: rgb(100, 100, 100);
   content: attr(data-placeholder);
   position: absolute;
@@ -152,11 +185,13 @@
   pointer-events: none;
 }
 
-/* Global drag handle styles */
+/* ================================
+   Drag Handle Styles
+   ================================ */
+
 .drag-handle {
   position: fixed;
   opacity: 1;
-  transition: opacity 0.2s ease;
   width: 16px;
   height: 22px;
   display: flex;
@@ -169,6 +204,7 @@
 
 .drag-handle:hover {
   background: var(--color-accent);
+  opacity: 1 !important;
 }
 
 .drag-handle::before {
@@ -189,12 +225,38 @@
   cursor: grabbing;
 }
 
-/* Dropcursor style */
+/* 为 checkbox 原点增加一些阴影效果 */
+.ProseMirror .title-checkbox::before {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  content: " ";
+  background:
+    radial-gradient(
+      39.58% 39.58% at 76.79% 24.58%,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    conic-gradient(rgba(37, 38, 42, 0.9) 100%, transparent 0%);
+  border-radius: 50px;
+  transform: scaleX(-1);
+  transition: background 0.3s ease 0s;
+}
+
+/* ================================
+   Dropcursor
+   ================================ */
+
 .ProseMirror-dropcursor {
   border-left: 2px solid #6366f1;
 }
 
-/* Backlink editor styles */
+/* ================================
+   Backlink Editor Overrides
+   ================================ */
+
 .backlink-editor .backlink-hidden {
   display: none;
 }
@@ -210,11 +272,6 @@
   cursor: default;
 }
 
-.backlink-tiptap-wrapper .ProseMirror {
-  outline: none;
-  font-family: "Inter", sans-serif;
-}
-
 .backlink-tiptap-wrapper .ProseMirror p {
   margin: 0.25em 0;
 }
@@ -226,73 +283,16 @@
   margin: 0.25em 0;
 }
 
-.backlink-tiptap-wrapper .ProseMirror .card-ref {
-  border-bottom: 1px solid var(--color-border);
-  color: var(--accent-foreground);
-  cursor: pointer;
-}
-
-.backlink-tiptap-wrapper .ProseMirror .card-ref:hover {
-  background-color: var(--color-accent);
-}
-
-.backlink-tiptap-wrapper .ProseMirror a {
-  color: #79c0ff;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-
-.backlink-tiptap-wrapper .ProseMirror a:hover {
-  color: #a5d6ff;
-}
-
-.backlink-tiptap-wrapper .ProseMirror [data-indent="1"] {
-  margin-left: 24px;
-}
-.backlink-tiptap-wrapper .ProseMirror [data-indent="2"] {
-  margin-left: 48px;
-}
-.backlink-tiptap-wrapper .ProseMirror [data-indent="3"] {
-  margin-left: 72px;
-}
-.backlink-tiptap-wrapper .ProseMirror [data-indent="4"] {
-  margin-left: 96px;
-}
-.backlink-tiptap-wrapper .ProseMirror [data-indent="5"] {
-  margin-left: 120px;
-}
-
 .backlink-tiptap-wrapper .ProseMirror .bn-bullet-list-item,
 .backlink-tiptap-wrapper .ProseMirror .bn-numbered-list-item {
-  position: relative;
   margin: 0.25em 0;
-  padding-left: 1.5em;
 }
 
-.backlink-tiptap-wrapper .ProseMirror .bn-bullet-list-item::before {
-  content: "";
-  position: absolute;
-  left: 0.5em;
-  top: 0.6em;
-  width: 4px;
-  height: 4px;
-  background: currentColor;
-  border-radius: 50%;
-}
+/* ================================
+   Code Block Styles
+   ================================ */
 
-.backlink-tiptap-wrapper .ProseMirror .bn-numbered-list-item::before {
-  content: attr(data-index) ".";
-  position: absolute;
-  left: 0;
-  color: currentColor;
-  min-width: 1.2em;
-  text-align: right;
-}
-
-/* Code block styles */
-.note-editor .ProseMirror pre,
-.backlink-tiptap-wrapper .ProseMirror pre {
+.ProseMirror pre {
   background: rgb(26, 27, 31);
   border-radius: 4px;
   padding: 12px 16px;
@@ -301,30 +301,7 @@
   position: relative;
 }
 
-/* Code block indent levels */
-.note-editor .ProseMirror pre[data-indent="1"],
-.backlink-tiptap-wrapper .ProseMirror pre[data-indent="1"] {
-  margin-left: 24px;
-}
-.note-editor .ProseMirror pre[data-indent="2"],
-.backlink-tiptap-wrapper .ProseMirror pre[data-indent="2"] {
-  margin-left: 48px;
-}
-.note-editor .ProseMirror pre[data-indent="3"],
-.backlink-tiptap-wrapper .ProseMirror pre[data-indent="3"] {
-  margin-left: 72px;
-}
-.note-editor .ProseMirror pre[data-indent="4"],
-.backlink-tiptap-wrapper .ProseMirror pre[data-indent="4"] {
-  margin-left: 96px;
-}
-.note-editor .ProseMirror pre[data-indent="5"],
-.backlink-tiptap-wrapper .ProseMirror pre[data-indent="5"] {
-  margin-left: 120px;
-}
-
-.note-editor .ProseMirror pre code,
-.backlink-tiptap-wrapper .ProseMirror pre code {
+.ProseMirror pre code {
   font-family: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
   font-size: 13px;
   line-height: 1.5;
@@ -347,119 +324,82 @@
   outline: none;
 }
 
-.code-block-language-select:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgb(180, 180, 180);
-}
-
+.code-block-language-select:hover,
 .code-block-language-select:focus {
   background: rgba(255, 255, 255, 0.1);
   color: rgb(180, 180, 180);
 }
 
-/* Syntax highlighting - GitHub Dark theme inspired */
-.note-editor .ProseMirror pre .hljs-comment,
-.note-editor .ProseMirror pre .hljs-quote,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-comment,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-quote {
+/* ================================
+   Syntax Highlighting (GitHub Dark)
+   ================================ */
+
+.ProseMirror pre .hljs-comment,
+.ProseMirror pre .hljs-quote {
   color: #8b949e;
   font-style: italic;
 }
 
-.note-editor .ProseMirror pre .hljs-keyword,
-.note-editor .ProseMirror pre .hljs-selector-tag,
-.note-editor .ProseMirror pre .hljs-addition,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-keyword,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-tag,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-addition {
+.ProseMirror pre .hljs-keyword,
+.ProseMirror pre .hljs-selector-tag,
+.ProseMirror pre .hljs-addition {
   color: #ff7b72;
 }
 
-.note-editor .ProseMirror pre .hljs-number,
-.note-editor .ProseMirror pre .hljs-string,
-.note-editor .ProseMirror pre .hljs-meta .hljs-meta-string,
-.note-editor .ProseMirror pre .hljs-literal,
-.note-editor .ProseMirror pre .hljs-doctag,
-.note-editor .ProseMirror pre .hljs-regexp,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-number,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-string,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-meta .hljs-meta-string,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-literal,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-doctag,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-regexp {
+.ProseMirror pre .hljs-number,
+.ProseMirror pre .hljs-string,
+.ProseMirror pre .hljs-meta .hljs-meta-string,
+.ProseMirror pre .hljs-literal,
+.ProseMirror pre .hljs-doctag,
+.ProseMirror pre .hljs-regexp {
   color: #a5d6ff;
 }
 
-.note-editor .ProseMirror pre .hljs-title,
-.note-editor .ProseMirror pre .hljs-section,
-.note-editor .ProseMirror pre .hljs-name,
-.note-editor .ProseMirror pre .hljs-selector-id,
-.note-editor .ProseMirror pre .hljs-selector-class,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-title,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-section,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-name,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-id,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-class {
+.ProseMirror pre .hljs-title,
+.ProseMirror pre .hljs-section,
+.ProseMirror pre .hljs-name,
+.ProseMirror pre .hljs-selector-id,
+.ProseMirror pre .hljs-selector-class {
   color: #d2a8ff;
 }
 
-.note-editor .ProseMirror pre .hljs-attribute,
-.note-editor .ProseMirror pre .hljs-attr,
-.note-editor .ProseMirror pre .hljs-variable,
-.note-editor .ProseMirror pre .hljs-template-variable,
-.note-editor .ProseMirror pre .hljs-class .hljs-title,
-.note-editor .ProseMirror pre .hljs-type,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-attribute,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-attr,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-variable,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-template-variable,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-class .hljs-title,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-type {
+.ProseMirror pre .hljs-attribute,
+.ProseMirror pre .hljs-attr,
+.ProseMirror pre .hljs-variable,
+.ProseMirror pre .hljs-template-variable,
+.ProseMirror pre .hljs-class .hljs-title,
+.ProseMirror pre .hljs-type {
   color: #ffa657;
 }
 
-.note-editor .ProseMirror pre .hljs-symbol,
-.note-editor .ProseMirror pre .hljs-bullet,
-.note-editor .ProseMirror pre .hljs-subst,
-.note-editor .ProseMirror pre .hljs-meta,
-.note-editor .ProseMirror pre .hljs-meta .hljs-keyword,
-.note-editor .ProseMirror pre .hljs-selector-attr,
-.note-editor .ProseMirror pre .hljs-selector-pseudo,
-.note-editor .ProseMirror pre .hljs-link,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-symbol,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-bullet,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-subst,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-meta,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-meta .hljs-keyword,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-attr,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-selector-pseudo,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-link {
+.ProseMirror pre .hljs-symbol,
+.ProseMirror pre .hljs-bullet,
+.ProseMirror pre .hljs-subst,
+.ProseMirror pre .hljs-meta,
+.ProseMirror pre .hljs-meta .hljs-keyword,
+.ProseMirror pre .hljs-selector-attr,
+.ProseMirror pre .hljs-selector-pseudo,
+.ProseMirror pre .hljs-link {
   color: #79c0ff;
 }
 
-.note-editor .ProseMirror pre .hljs-built_in,
-.note-editor .ProseMirror pre .hljs-deletion,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-built_in,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-deletion {
+.ProseMirror pre .hljs-built_in,
+.ProseMirror pre .hljs-deletion {
   color: #ffa198;
 }
 
-.note-editor .ProseMirror pre .hljs-function,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-function {
+.ProseMirror pre .hljs-function {
   color: #d2a8ff;
 }
 
-.note-editor .ProseMirror pre .hljs-params,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-params {
+.ProseMirror pre .hljs-params {
   color: #c9d1d9;
 }
 
-.note-editor .ProseMirror pre .hljs-property,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-property {
+.ProseMirror pre .hljs-property {
   color: #79c0ff;
 }
 
-.note-editor .ProseMirror pre .hljs-punctuation,
-.backlink-tiptap-wrapper .ProseMirror pre .hljs-punctuation {
+.ProseMirror pre .hljs-punctuation {
   color: #c9d1d9;
 }

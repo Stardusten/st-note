@@ -6,6 +6,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Link } from "lucide-solid"
 import { Button } from "../solidui/button"
 import CardBacklinkEditor from "./CardBacklinkEditor"
 import SearchPanel from "./SearchPanel"
+import SettingsPanel from "./SettingsPanel"
 import { appStore } from "@renderer/lib/state/AppStore"
 
 const PAGE_SIZE = 10
@@ -15,11 +16,16 @@ const Content: Component = () => {
   const [potentialLinksExpanded, setPotentialLinksExpanded] = createSignal(true)
   const [backlinksPage, setBacklinksPage] = createSignal(0)
   const [potentialLinksPage, setPotentialLinksPage] = createSignal(0)
+  const [settingsOpen, setSettingsOpen] = createSignal(false)
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
       e.preventDefault()
       appStore.openSearchPanel()
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+      e.preventDefault()
+      setSettingsOpen(true)
     }
     if (e.key === 'Escape' && appStore.isSearchPanelOpen()) {
       e.preventDefault()
@@ -47,14 +53,36 @@ const Content: Component = () => {
     return id ? appStore.getPotentialLinks(id)() : []
   }
 
-  const pagedBacklinks = createMemo(() => {
+  const sortedBacklinks = createMemo(() => {
     const all = backlinks()
+    return [...all].sort((a, b) => {
+      const cardA = appStore.getCards().find(c => c.id === a.sourceCardId)
+      const cardB = appStore.getCards().find(c => c.id === b.sourceCardId)
+      const timeA = cardA?.createdAt ? new Date(cardA.createdAt).getTime() : 0
+      const timeB = cardB?.createdAt ? new Date(cardB.createdAt).getTime() : 0
+      return timeB - timeA
+    })
+  })
+
+  const sortedPotentialLinks = createMemo(() => {
+    const all = potentialLinks()
+    return [...all].sort((a, b) => {
+      const cardA = appStore.getCards().find(c => c.id === a.sourceCardId)
+      const cardB = appStore.getCards().find(c => c.id === b.sourceCardId)
+      const timeA = cardA?.createdAt ? new Date(cardA.createdAt).getTime() : 0
+      const timeB = cardB?.createdAt ? new Date(cardB.createdAt).getTime() : 0
+      return timeB - timeA
+    })
+  })
+
+  const pagedBacklinks = createMemo(() => {
+    const all = sortedBacklinks()
     const start = backlinksPage() * PAGE_SIZE
     return all.slice(start, start + PAGE_SIZE)
   })
 
   const pagedPotentialLinks = createMemo(() => {
-    const all = potentialLinks()
+    const all = sortedPotentialLinks()
     const start = potentialLinksPage() * PAGE_SIZE
     return all.slice(start, start + PAGE_SIZE)
   })
@@ -196,6 +224,8 @@ const Content: Component = () => {
       <Show when={appStore.isSearchPanelOpen()}>
         <SearchPanel onClose={() => appStore.closeSearchPanel()} />
       </Show>
+
+      <SettingsPanel open={settingsOpen()} onOpenChange={setSettingsOpen} />
     </div>
   )
 }

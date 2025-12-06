@@ -20,6 +20,13 @@ import {
   deleteObject,
   queryObjects
 } from "./storage"
+import {
+  loadSettings,
+  updateSettings,
+  exportSettings,
+  importSettings,
+  type Settings
+} from "./settings"
 
 let mainWindow: BrowserWindow | null = null
 let quickWindow: BrowserWindow | null = null
@@ -206,6 +213,37 @@ app.whenReady().then(() => {
   ipcMain.handle("quick:hide", () => quickWindow?.hide())
   ipcMain.handle("search:hide", () => searchWindow?.hide())
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
+
+  // Settings IPC
+  ipcMain.handle("settings:get", () => loadSettings())
+  ipcMain.handle("settings:set", (_e, partial: Partial<Settings>) => {
+    const updated = updateSettings(partial)
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send("settings:changed", updated)
+    })
+    return updated
+  })
+  ipcMain.handle("settings:export", () => exportSettings())
+  ipcMain.handle("settings:import", (_e, json: string) => {
+    const updated = importSettings(json)
+    BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send("settings:changed", updated)
+    })
+    return updated
+  })
+
+  // Quick capture IPC: forward to main window
+  ipcMain.handle("quick:capture", async (_e, options: { content: any; checked?: boolean }) => {
+    if (!mainWindow) return
+    const win = mainWindow
+    return new Promise<void>((resolve) => {
+      const channel = `quick:captured:${Date.now()}`
+      ipcMain.once(channel, () => resolve())
+      win.webContents.send("quick:capture", { ...options, responseChannel: channel })
+      setTimeout(() => resolve(), 5000)
+    })
+  })
 
   // Search IPC: forward search requests to main window
   ipcMain.handle("search:query", async (_e, query: string) => {

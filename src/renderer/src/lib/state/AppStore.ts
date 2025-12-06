@@ -5,12 +5,13 @@ import type { Card } from "../common/types/card"
 import type { StObjectId } from "../common/types"
 import { prepareFuzzySearch } from "../common/utils/fuzzySearch"
 import { BacklinkIndex } from "../backlink/BacklinkIndex"
-import { getCardTitle } from "../common/types/card"
+import { TextContentCache } from "../textcontent/TextContentCache"
 
 class AppStore {
   private objCache: ObjCache
   private storage: SQLiteStorage
   private backlinkIndex: BacklinkIndex
+  private textContentCache: TextContentCache
 
   // Signals for reactive state
   private currentCardId: Accessor<StObjectId | null>
@@ -79,12 +80,14 @@ class AppStore {
     this.storage = new SQLiteStorage()
     this.objCache = new ObjCache()
     this.backlinkIndex = new BacklinkIndex()
+    this.textContentCache = new TextContentCache()
   }
 
   async init(dbPath: string = "notes.db") {
     await this.storage.init(dbPath)
     await this.objCache.init(this.storage)
     await this.backlinkIndex.init(this.objCache)
+    await this.textContentCache.init(this.objCache)
     await this.loadCards()
   }
 
@@ -116,11 +119,11 @@ class AppStore {
     return this.createCardInternal(initialText, undefined, true)
   }
 
-  async createCardWithoutSelect(initialText?: string, initialContent?: any): Promise<Card> {
-    return this.createCardInternal(initialText, initialContent, false)
+  async createCardWithoutSelect(initialText?: string, initialContent?: any, checked?: boolean): Promise<Card> {
+    return this.createCardInternal(initialText, initialContent, false, checked)
   }
 
-  private async createCardInternal(initialText?: string, initialContent?: any, selectAfterCreate = true): Promise<Card> {
+  private async createCardInternal(initialText?: string, initialContent?: any, selectAfterCreate = true, checked?: boolean): Promise<Card> {
     const newId = crypto.randomUUID()
     const content = initialContent || {
       type: "doc",
@@ -137,7 +140,10 @@ class AppStore {
     const card = {
       id: newId,
       type: 'card' as const,
-      data: { content },
+      data: {
+        content,
+        checked
+      },
       text,
       tags: []
     }
@@ -188,6 +194,58 @@ class AppStore {
     })
 
     await this.loadCards()
+  }
+
+  async updateCardChecked(id: StObjectId, checked: boolean) {
+    await this.objCache.withTx(tx => {
+      const card = this.cards().find(c => c.id === id)
+      if (!card) return
+
+      tx.update(id, {
+        id,
+        type: 'card',
+        data: {
+          ...card.data,
+          checked
+        },
+        text: card.text,
+        tags: card.tags
+      })
+    })
+
+    await this.loadCards()
+  }
+
+  async toggleCardTask(cardId: StObjectId) {
+    const card = this.cards().find(c => c.id === cardId)
+    if (!card) {
+      console.log('[toggleCardTask] Card not found:', cardId)
+      return
+    }
+
+    // 循环: undefined (不是任务) -> false (未完成) -> true (已完成) -> undefined
+    let newChecked: boolean | undefined
+    if (card.data.checked === undefined) newChecked = false
+    else if (card.data.checked === false) newChecked = true
+    else newChecked = undefined
+
+    console.log('[toggleCardTask] checked:', card.data.checked, '->', newChecked)
+
+    await this.objCache.withTx(tx => {
+      tx.update(card.id, {
+        id: card.id,
+        type: 'card',
+        data: {
+          ...card.data,
+          checked: newChecked
+        },
+        text: card.text,
+        tags: card.tags
+      })
+    })
+
+    await this.loadCards()
+    console.log('[toggleCardTask] Done')
   }
 
   async deleteCard(id: StObjectId) {
@@ -280,14 +338,17 @@ class AppStore {
   openSearchPanel = () => this.setSearchPanelOpen(true)
   closeSearchPanel = () => this.setSearchPanelOpen(false)
 
+  // Text content
+  getCardTitle = (cardId: StObjectId) => this.textContentCache.getTitle(cardId)
+  getCardText = (cardId: StObjectId) => this.textContentCache.getText(cardId)
+
   // Backlinks
   getBacklinks(cardId: StObjectId) {
     return this.backlinkIndex.getBacklinks(cardId)
   }
 
   getPotentialLinks(cardId: StObjectId) {
-    const card = this.cards().find(c => c.id === cardId)
-    const title = card ? getCardTitle(card) : ''
+    const title = this.textContentCache.getTitle(cardId)()
     return this.backlinkIndex.getPotentialLinks(cardId, title)
   }
 

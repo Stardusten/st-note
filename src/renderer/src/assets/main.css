@@ -12,4 +12,5 @@ html,
 #root,
 body {
   overflow: hidden;
+  font-family: "Inter", sans-serif !important;
 }

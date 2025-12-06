@@ -53,6 +53,25 @@ export type SearchAPI = {
   sendCardCreated: (channel: string, cardId: string | null) => void
 }
 
+export type Settings = {
+  theme: "light" | "dark" | "system"
+  fontSize: "small" | "medium" | "large"
+  showLineNumbers: boolean
+  spellCheck: boolean
+  quickCaptureShortcut: string
+  searchShortcut: string
+  language: "zh-CN" | "en-US"
+  autoSave: boolean
+}
+
+export type SettingsAPI = {
+  get: () => Promise<Settings>
+  set: (partial: Partial<Settings>) => Promise<Settings>
+  export: () => Promise<string>
+  import: (json: string) => Promise<Settings>
+  onChange: (callback: (settings: Settings) => void) => void
+}
+
 const api = {
   storage: {
     init: (path) => ipcRenderer.invoke("storage:init", path),
@@ -66,6 +85,12 @@ const api = {
   hideQuickWindow: () => ipcRenderer.invoke("quick:hide"),
   hideSearchWindow: () => ipcRenderer.invoke("search:hide"),
   fetchPageTitle: (url: string) => ipcRenderer.invoke("fetchPageTitle", url) as Promise<string | null>,
+  quick: {
+    capture: (options: { content: any; checked?: boolean }) => ipcRenderer.invoke("quick:capture", options) as Promise<void>,
+    onCapture: (callback: (data: { content: any; checked?: boolean; responseChannel: string }) => void) =>
+      ipcRenderer.on("quick:capture", (_e, data) => callback(data)),
+    sendCaptured: (channel: string) => ipcRenderer.send(channel, null)
+  },
   search: {
     query: (query) => ipcRenderer.invoke("search:query", query),
     getRecent: () => ipcRenderer.invoke("search:getRecent"),
@@ -77,7 +102,14 @@ const api = {
     onCreateCard: (callback) => ipcRenderer.on("search:createCard", (_e, data) => callback(data)),
     sendResult: (channel, results) => ipcRenderer.send(channel, results),
     sendCardCreated: (channel, cardId) => ipcRenderer.send(channel, cardId)
-  } satisfies SearchAPI
+  } satisfies SearchAPI,
+  settings: {
+    get: () => ipcRenderer.invoke("settings:get"),
+    set: (partial) => ipcRenderer.invoke("settings:set", partial),
+    export: () => ipcRenderer.invoke("settings:export"),
+    import: (json) => ipcRenderer.invoke("settings:import", json),
+    onChange: (callback) => ipcRenderer.on("settings:changed", (_e, settings) => callback(settings))
+  } satisfies SettingsAPI
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

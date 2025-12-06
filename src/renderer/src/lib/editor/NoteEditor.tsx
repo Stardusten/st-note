@@ -1,4 +1,5 @@
 import { Component, Show } from "solid-js"
+import type { Accessor } from "solid-js"
 import { Image, Smile } from "lucide-solid"
 import { Button } from "@renderer/ui/solidui/button"
 import TiptapEditor from "./TiptapEditor"
@@ -15,6 +16,11 @@ type NoteEditorProps = {
   searchCards?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
   onCardClick?: (cardId: string) => void
   onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
+  getCardTitle?: (cardId: string) => Accessor<string>
+  isTask?: boolean
+  checked?: boolean
+  onCheckedChange?: (checked: boolean) => void
+  onToggleTask?: () => void
 }
 
 const NoteEditor: Component<NoteEditorProps> = (props) => {
@@ -43,6 +49,11 @@ const NoteEditor: Component<NoteEditorProps> = (props) => {
           searchCards={props.searchCards}
           onCardClick={props.onCardClick}
           onCreateCard={props.onCreateCard}
+          getCardTitle={props.getCardTitle}
+          isTask={props.isTask}
+          checked={props.checked}
+          onCheckedChange={props.onCheckedChange}
+          onToggleTask={props.onToggleTask}
           class="text-foreground"
         />
       </div>

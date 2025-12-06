@@ -1,23 +1,19 @@
 import { Component, createSignal } from "solid-js"
-import { ArrowUpRightIcon, ChevronDown } from "lucide-solid"
+import { ArrowUpRightIcon } from "lucide-solid"
 import type { StObjectId } from "@renderer/lib/common/types"
 import type { BlockContext } from "@renderer/lib/backlink/types"
 import { appStore } from "@renderer/lib/state/AppStore"
 import BacklinkTiptapEditor from "@renderer/lib/editor/BacklinkTiptapEditor"
 import "@renderer/lib/editor/note-editor.css"
 import { Button } from "../solidui/button"
+import { formatRelativeTime } from "@renderer/lib/common/utils/relative-time"
+import { isTask } from "@renderer/lib/common/types/card"
 
 type CardBacklinkEditorProps = {
   cardId: StObjectId
   blocks: BlockContext[]
   targetCardId: string
   onNavigate?: () => void
-}
-
-const formatDate = (date: Date | undefined) => {
-  if (!date) return ""
-  const d = new Date(date)
-  return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" })
 }
 
 const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
@@ -31,6 +27,14 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
 
   const handleCardClick = (cardId: string) => {
     appStore.selectCard(cardId)
+  }
+
+  const handleCheckedChange = (checked: boolean) => {
+    appStore.updateCardChecked(props.cardId, checked)
+  }
+
+  const handleToggleTask = () => {
+    appStore.toggleCardTask(props.cardId)
   }
 
   return (
@@ -52,6 +56,11 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
           expanded={expanded()}
           onUpdate={handleUpdate}
           onCardClick={handleCardClick}
+          getCardTitle={appStore.getCardTitle}
+          isTask={card() ? isTask(card()!) : false}
+          checked={card()?.data.checked ?? false}
+          onCheckedChange={handleCheckedChange}
+          onToggleTask={handleToggleTask}
         />
       </div>
       <div class="flex items-center justify-between mt-2">
@@ -62,7 +71,7 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
           {expanded() ? "Collapse all" : "Expand all"}
         </Button>
         <div class="flex items-center gap-2">
-          <span class="text-xs text-muted-foreground">{formatDate(card()?.createdAt)}</span>
+          <span class="text-xs text-muted-foreground">{formatRelativeTime(card()?.createdAt)}</span>
           <Button
             class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={props.onNavigate}

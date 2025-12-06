@@ -1,4 +1,5 @@
-import { Component, onMount, onCleanup, createEffect } from "solid-js"
+import { Component, onMount, onCleanup, createEffect, createSignal } from "solid-js"
+import type { Accessor } from "solid-js"
 import { Editor } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
@@ -21,12 +22,23 @@ type BacklinkTiptapEditorProps = {
   expanded: boolean
   onUpdate?: (content: any, text: string) => void
   onCardClick?: (cardId: string) => void
+  getCardTitle?: (cardId: string) => Accessor<string>
+  isTask?: boolean
+  checked?: boolean
+  onCheckedChange?: (checked: boolean) => void
+  onToggleTask?: () => void
 }
 
 const BacklinkTiptapEditor: Component<BacklinkTiptapEditorProps> = (props) => {
   let editorElement: HTMLDivElement | undefined
   let editor: Editor | null = null
   let initialContent: any = null
+
+  const [isTask, setIsTask] = createSignal(props.isTask ?? false)
+  const [checked, setChecked] = createSignal(props.checked ?? false)
+
+  createEffect(() => setIsTask(props.isTask ?? false))
+  createEffect(() => setChecked(props.checked ?? false))
 
   const visibleNodeIndices = () => {
     if (props.expanded) {
@@ -35,21 +47,37 @@ const BacklinkTiptapEditor: Component<BacklinkTiptapEditorProps> = (props) => {
       for (let i = 0; i < content.length; i++) indices.add(i)
       return indices
     }
-    return new Set(props.blocks.map(b => b.nodeIndex))
+    return new Set(props.blocks.map((b) => b.nodeIndex))
   }
 
-  const matchNodeIndices = () => new Set(props.blocks.filter(b => b.isMatch).map(b => b.nodeIndex))
+  const matchNodeIndices = () =>
+    new Set(props.blocks.filter((b) => b.isMatch).map((b) => b.nodeIndex))
 
   onMount(() => {
     if (!editorElement) return
 
     initialContent = props.content
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.metaKey && e.key === "t") {
+        e.preventDefault()
+        e.stopPropagation()
+        props.onToggleTask?.()
+      }
+    }
+
+    editorElement.addEventListener("keydown", handleKeyDown)
+    onCleanup(() => editorElement?.removeEventListener("keydown", handleKeyDown))
+
     editor = new Editor({
       element: editorElement,
       extensions: [
         CustomDocument,
-        Title,
+        Title.configure({
+          getIsTask: isTask,
+          getChecked: checked,
+          onCheckedChange: (c: boolean) => props.onCheckedChange?.(c)
+        }),
         StarterKit.configure({
           document: false,
           heading: { levels: [2, 3] },
@@ -64,7 +92,8 @@ const BacklinkTiptapEditor: Component<BacklinkTiptapEditorProps> = (props) => {
         NumberedListItemBlock,
         BetterIndent,
         CardRef.configure({
-          onCardClick: props.onCardClick
+          onCardClick: props.onCardClick,
+          getTitle: props.getCardTitle
         }),
         BacklinkViewExtension.configure({
           targetCardId: props.targetCardId,
@@ -94,8 +123,8 @@ const BacklinkTiptapEditor: Component<BacklinkTiptapEditorProps> = (props) => {
       if (event.source === props.editorId) return
 
       for (const op of event.ops) {
-        if (op.op === 'update' && op.id === props.editorId.replace('backlink-editor:', '')) {
-          if (op.object && 'data' in op.object) {
+        if (op.op === "update" && op.id === props.editorId.replace("backlink-editor:", "")) {
+          if (op.object && "data" in op.object) {
             const newContent = (op.object as any).data?.content
             if (newContent) {
               editor.commands.setContent(newContent)

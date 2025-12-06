@@ -1,3 +1,4 @@
+/* Decorative left bar */
 .card-editor::after {
   content: "";
   visibility: visible;
@@ -14,17 +15,8 @@
   filter: drop-shadow(rgba(255, 255, 255, 0.8) 0px -2px 4px);
 }
 
-/* TipTap Editor Styles */
-.card-editor .ProseMirror {
-  outline: none;
-  font-family: "Inter", sans-serif;
-}
-
-.card-editor .ProseMirror p {
-  margin: 0.5em 0;
-}
-
-.card-editor .ProseMirror .editor-title {
+/* Card editor title overrides */
+.card-editor .ProseMirror h1.editor-title {
   font-size: 24px;
   font-weight: 300 !important;
   border-bottom: 1px solid rgb(27, 27, 29);
@@ -32,111 +24,4 @@
   margin-bottom: 18px !important;
   padding-bottom: 8px;
   line-height: 1.2;
-  margin: 0;
-}
-
-.card-editor .ProseMirror h2 {
-  font-size: 1.5em;
-  font-weight: 600;
-  margin: 1em 0 0.5em;
-}
-
-.card-editor .ProseMirror h3 {
-  font-size: 1.25em;
-  font-weight: 600;
-  margin: 1em 0 0.5em;
-}
-
-/* Block list item styles */
-.card-editor .ProseMirror .bn-bullet-list-item,
-.card-editor .ProseMirror .bn-numbered-list-item {
-  position: relative;
-  margin: 0.25em 0;
-  padding-left: 1.5em;
-}
-
-/* Indent levels */
-.card-editor .ProseMirror [data-indent="1"] {
-  margin-left: 24px;
-}
-
-.card-editor .ProseMirror [data-indent="2"] {
-  margin-left: 48px;
-}
-
-.card-editor .ProseMirror [data-indent="3"] {
-  margin-left: 72px;
-}
-
-.card-editor .ProseMirror [data-indent="4"] {
-  margin-left: 96px;
-}
-
-.card-editor .ProseMirror [data-indent="5"] {
-  margin-left: 120px;
-}
-
-.card-editor .ProseMirror [data-indent="6"] {
-  margin-left: 144px;
-}
-
-.card-editor .ProseMirror [data-indent="7"] {
-  margin-left: 168px;
-}
-
-.card-editor .ProseMirror [data-indent="8"] {
-  margin-left: 192px;
-}
-
-.card-editor .ProseMirror [data-indent="9"] {
-  margin-left: 216px;
-}
-
-.card-editor .ProseMirror [data-indent="10"] {
-  margin-left: 240px;
-}
-
-/* Bullet list markers */
-.card-editor .ProseMirror .bn-bullet-list-item::before {
-  content: "";
-  position: absolute;
-  left: 0.5em;
-  top: 0.6em;
-  width: 4px;
-  height: 4px;
-  background: currentColor;
-  border-radius: 50%;
-}
-
-/* Numbered list markers - using data-index from decoration */
-.card-editor .ProseMirror .bn-numbered-list-item::before {
-  content: attr(data-index) ".";
-  position: absolute;
-  left: 0;
-  color: currentColor;
-  min-width: 1.2em;
-  text-align: right;
-}
-
-/* Placeholder styles */
-.card-editor .ProseMirror p.is-editor-empty:first-child::before,
-.card-editor .ProseMirror p.is-empty::before,
-.card-editor .ProseMirror h2.is-empty::before,
-.card-editor .ProseMirror h3.is-empty::before {
-  color: rgb(100, 100, 100);
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-
-/* List item placeholder - use ::after to avoid conflict with marker */
-.card-editor .ProseMirror .bn-bullet-list-item.is-empty::after,
-.card-editor .ProseMirror .bn-numbered-list-item.is-empty::after {
-  color: rgb(100, 100, 100);
-  content: attr(data-placeholder);
-  position: absolute;
-  left: 1.5em;
-  top: 0;
-  pointer-events: none;
 }

@@ -1,21 +1,23 @@
 import { Component, createSignal, Show } from "solid-js"
+import type { Accessor } from "solid-js"
 import { Button } from "../solidui/button"
 import { Inbox } from "lucide-solid"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
-import { appStore } from "@renderer/lib/state/AppStore"
-import { getCardTitle } from "@renderer/lib/common/types/card"
+import { appStoreIpc } from "@renderer/lib/state/AppStoreIpc"
 import type { CardSuggestionItem } from "@renderer/lib/editor/extensions/CardRefSuggestion"
 import "./quick-window.css"
 
 const emptyContent = {
   type: "doc",
-  content: [{ type: "title", attrs: { level: 1 }, content: [] }, { type: "paragraph" }]
+  content: [{ type: "title", attrs: { level: 1 }, content: [] }]
 }
 
 const QuickWindow: Component = () => {
   const [content, setContent] = createSignal<any>(emptyContent)
   const [isEmpty, setIsEmpty] = createSignal(true)
   const [resetKey, setResetKey] = createSignal(1)
+  const [titleCache, setTitleCache] = createSignal<Map<string, string>>(new Map())
+  const [checked, setChecked] = createSignal<boolean | undefined>(undefined)
 
   const handleUpdate = (newContent: any, text: string) => {
     setContent(newContent)
@@ -26,6 +28,7 @@ const QuickWindow: Component = () => {
     setContent(emptyContent)
     setIsEmpty(true)
     setResetKey((k) => k + 1)
+    setChecked(undefined)
   }
 
   const handleCapture = async () => {
@@ -33,9 +36,21 @@ const QuickWindow: Component = () => {
       window.api.hideQuickWindow()
       return
     }
-    await appStore.createCardWithoutSelect(undefined, content())
+    await appStoreIpc.captureNote({ content: content(), checked: checked() })
     resetEditor()
     window.api.hideQuickWindow()
+  }
+
+  const handleToggleTask = () => {
+    // 循环: undefined (不是任务) -> false (未完成) -> true (已完成) -> undefined
+    const current = checked()
+    if (current === undefined) setChecked(false)
+    else if (current === false) setChecked(true)
+    else setChecked(undefined)
+  }
+
+  const handleCheckedChange = (newChecked: boolean) => {
+    setChecked(newChecked)
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,31 +67,27 @@ const QuickWindow: Component = () => {
     }
   }
 
-  const searchCards = (query: string): CardSuggestionItem[] => {
-    const cards = appStore.getCards()
-
-    if (!query.trim()) {
-      return cards
-        .slice(0, 10)
-        .map((c) => ({ id: c.id, title: getCardTitle(c) }))
+  const searchCards = async (query: string): Promise<CardSuggestionItem[]> => {
+    const results = await appStoreIpc.searchCards(query)
+    const newCache = new Map(titleCache())
+    for (const r of results) {
+      newCache.set(r.id, r.title)
     }
+    setTitleCache(newCache)
+    return results.map((r) => ({ id: r.id, title: r.title }))
+  }
 
-    const lowerQuery = query.toLowerCase()
-    return cards
-      .filter((c) => getCardTitle(c).toLowerCase().includes(lowerQuery))
-      .slice(0, 10)
-      .map((c) => ({ id: c.id, title: getCardTitle(c) }))
+  const getCardTitle = (cardId: string): Accessor<string> => {
+    return () => titleCache().get(cardId) || "Untitled"
   }
 
   const handleCardClick = (cardId: string) => {
-    appStore.selectCard(cardId)
+    window.api.search.selectCard(cardId)
     window.api.hideQuickWindow()
   }
 
-  const handleCreateCard = async (title: string) => {
-    const newCard = await appStore.createCardWithoutSelect(title)
-    if (newCard) return { id: newCard.id, title: getCardTitle(newCard) }
-    return null
+  const handleCreateCard = async (title: string): Promise<CardSuggestionItem | null> => {
+    return appStoreIpc.createCard(title)
   }
 
   return (
@@ -123,6 +134,11 @@ const QuickWindow: Component = () => {
                 searchCards={searchCards}
                 onCardClick={handleCardClick}
                 onCreateCard={handleCreateCard}
+                getCardTitle={getCardTitle}
+                isTask={checked() !== undefined}
+                checked={checked() ?? false}
+                onCheckedChange={handleCheckedChange}
+                onToggleTask={handleToggleTask}
               />
             )}
           </Show>

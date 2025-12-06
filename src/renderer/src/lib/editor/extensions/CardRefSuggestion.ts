@@ -148,8 +148,7 @@ export const CardRefSuggestion = Extension.create<CardRefSuggestionOptions>({
                   tr.insert(
                     triggerStart,
                     state.schema.nodes.cardRef.create({
-                      cardId: item.id,
-                      title: item.title
+                      cardId: item.id
                     })
                   )
                   dispatch(tr)
@@ -161,7 +160,7 @@ export const CardRefSuggestion = Extension.create<CardRefSuggestionOptions>({
                 }
               }
 
-              if (items.length > 0 || query.length > 0) {
+              if (items.length > 0 || query.length > 0 || triggerMatch) {
                 // console.log("[CardRefSuggestion] showing popup")
                 renderer.onUpdate(props)
               } else {

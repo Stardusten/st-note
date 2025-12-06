@@ -2,12 +2,11 @@ import { type Component, Show } from "solid-js"
 import { Button } from "../solidui/button"
 import { ArrowLeft, ArrowRight, Database, PanelRight, Search, StickyNoteIcon } from "lucide-solid"
 import { appStore } from "@renderer/lib/state/AppStore"
-import { getCardTitle } from "@renderer/lib/common/types/card"
 
 const TitleBar: Component = () => {
   const currentCardTitle = () => {
     const card = appStore.getCurrentCard()
-    return card ? getCardTitle(card) : null
+    return card ? appStore.getCardTitle(card.id)() : null
   }
 
   return (

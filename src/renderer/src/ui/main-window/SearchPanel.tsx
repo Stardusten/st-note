@@ -25,7 +25,7 @@ const SearchPanel: Component<SearchPanelProps> = (props) => {
   }
 
   return (
-    <div class="fixed top-0 left-0 h-screen w-screen flex items-start justify-center pt-[80px] bg-[#000]/40">
+    <div class="fixed z-50 top-0 left-0 h-screen w-screen flex items-start justify-center pt-[80px] bg-[#000]/40">
       <div class="absolute inset-0" onClick={handleClose} />
       <div
         class="relative w-[650px] max-h-[80vh] flex flex-col border rounded-md bg-[#181a1c] z-10"

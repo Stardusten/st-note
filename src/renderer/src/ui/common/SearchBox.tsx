@@ -2,7 +2,6 @@ import { FileIcon } from "lucide-solid"
 import { TextField, TextFieldInput } from "../solidui/text-field"
 import { Component, createSignal, For, Show, onMount, onCleanup, createEffect, on } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
-import { getCardTitle } from "@renderer/lib/common/types/card"
 
 type SearchBoxProps = {
   onSelectCard: (cardId: string) => void
@@ -169,7 +168,7 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
                   onMouseEnter={() => setFocusedIndex(index())}
                   onClick={() => selectCard(card.id)}>
                   <FileIcon class="size-4 stroke-[1.5px] mr-2" />
-                  <span>{getCardTitle(card)}</span>
+                  <span>{appStore.getCardTitle(card.id)()}</span>
                   <Show when={focusedIndex() === index()}>
                     <div class="absolute bg-[#b8b8b8] w-[3px] h-[24px] rounded-r-[2px] -left-[20px]"></div>
                   </Show>
