@@ -6,9 +6,11 @@ import {
   ipcMain,
   IpcMainInvokeEvent,
   globalShortcut,
-  net
+  net,
+  dialog
 } from "electron"
 import { join } from "path"
+import { copyFileSync, existsSync } from "fs"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
 import {
@@ -18,14 +20,24 @@ import {
   fetchObject,
   updateObject,
   deleteObject,
-  queryObjects
+  queryObjects,
+  getSetting,
+  setSetting,
+  getAllSettings,
+  deleteSetting
 } from "./storage"
 import {
   loadSettings,
   updateSettings,
   exportSettings,
   importSettings,
-  type Settings
+  setCurrentDatabase,
+  migrateOldSettingsToVault,
+  loadGlobalSettings,
+  updateGlobalSettings,
+  addRecentDatabase,
+  type Settings,
+  type GlobalSettings
 } from "./settings"
 
 let mainWindow: BrowserWindow | null = null
@@ -203,18 +215,67 @@ app.whenReady().then(() => {
 
   // IPC methods
   ipcMain.on("ping", () => console.log("pong"))
-  ipcMain.handle("storage:init", restFunc(initStorage))
-  ipcMain.handle("storage:close", restFunc(closeStorage))
+  ipcMain.handle("storage:init", (_e, path: string) => {
+    initStorage(path)
+    migrateOldSettingsToVault(path)
+    setCurrentDatabase(path)
+    addRecentDatabase(path)
+  })
+  ipcMain.handle("storage:close", (_e, path: string) => {
+    closeStorage(path)
+    setCurrentDatabase(null)
+  })
   ipcMain.handle("storage:insert", restFunc(insertObject))
   ipcMain.handle("storage:fetch", restFunc(fetchObject))
   ipcMain.handle("storage:update", restFunc(updateObject))
   ipcMain.handle("storage:delete", restFunc(deleteObject))
   ipcMain.handle("storage:query", restFunc(queryObjects))
+  ipcMain.handle("storage:getSetting", restFunc(getSetting))
+  ipcMain.handle("storage:setSetting", restFunc(setSetting))
+  ipcMain.handle("storage:getAllSettings", restFunc(getAllSettings))
+  ipcMain.handle("storage:deleteSetting", restFunc(deleteSetting))
   ipcMain.handle("quick:hide", () => quickWindow?.hide())
   ipcMain.handle("search:hide", () => searchWindow?.hide())
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
-  // Settings IPC
+  // Database export/import
+  ipcMain.handle("database:export", async (_e, currentDbPath: string) => {
+    const result = await dialog.showSaveDialog({
+      title: "Export Base",
+      defaultPath: `st-note-backup-${new Date().toISOString().slice(0, 10)}.db`,
+      filters: [{ name: "SQLite Database", extensions: ["db"] }]
+    })
+    if (result.canceled || !result.filePath) return { success: false, canceled: true }
+    try {
+      copyFileSync(currentDbPath, result.filePath)
+      return { success: true, canceled: false, path: result.filePath }
+    } catch (e) {
+      return { success: false, canceled: false, error: String(e) }
+    }
+  })
+
+  ipcMain.handle("database:import", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "Import Base",
+      filters: [{ name: "SQLite Database", extensions: ["db"] }],
+      properties: ["openFile"]
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    const sourcePath = result.filePaths[0]
+    if (!existsSync(sourcePath)) return null
+    return sourcePath
+  })
+
+  ipcMain.handle("database:getPath", () => {
+    const global = loadGlobalSettings()
+    return global.lastDatabase
+  })
+
+  // Global settings IPC
+  ipcMain.handle("globalSettings:get", () => loadGlobalSettings())
+  ipcMain.handle("globalSettings:update", (_e, partial: Partial<GlobalSettings>) => updateGlobalSettings(partial))
+
+  // Vault settings IPC (兼容旧 API)
   ipcMain.handle("settings:get", () => loadSettings())
   ipcMain.handle("settings:set", (_e, partial: Partial<Settings>) => {
     const updated = updateSettings(partial)

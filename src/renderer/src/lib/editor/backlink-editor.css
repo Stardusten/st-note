@@ -1,0 +1,30 @@
+.backlink-editor .backlink-hidden {
+  display: none;
+}
+
+.backlink-editor .backlink-highlight {
+  background-color: rgba(234, 179, 8, 0.2);
+}
+
+.backlink-editor .backlink-collapsed-indicator {
+  color: rgb(100, 100, 100);
+  font-size: 12px;
+  padding: 4px 0;
+  cursor: default;
+}
+
+.backlink-tiptap-wrapper .ProseMirror p {
+  margin: 0.25em 0;
+}
+
+.backlink-tiptap-wrapper .ProseMirror h1.editor-title {
+  font-size: inherit;
+  font-weight: 300;
+  line-height: inherit;
+  margin: 0.25em 0;
+}
+
+.backlink-tiptap-wrapper .ProseMirror .bn-bullet-list-item,
+.backlink-tiptap-wrapper .ProseMirror .bn-numbered-list-item {
+  margin: 0.25em 0;
+}

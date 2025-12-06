@@ -21,6 +21,7 @@ type NoteEditorProps = {
   checked?: boolean
   onCheckedChange?: (checked: boolean) => void
   onToggleTask?: () => void
+  autoFocus?: boolean
 }
 
 const NoteEditor: Component<NoteEditorProps> = (props) => {
@@ -54,6 +55,7 @@ const NoteEditor: Component<NoteEditorProps> = (props) => {
           checked={props.checked}
           onCheckedChange={props.onCheckedChange}
           onToggleTask={props.onToggleTask}
+          autoFocus={props.autoFocus}
           class="text-foreground"
         />
       </div>

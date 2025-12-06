@@ -1,11 +1,14 @@
-import { Component, createSignal, Show } from "solid-js"
+import { Component, createSignal, Show, onMount, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import { Button } from "../solidui/button"
+import Kbd from "../solidui/kbd"
 import { Inbox } from "lucide-solid"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
 import { appStoreIpc } from "@renderer/lib/state/AppStoreIpc"
 import type { CardSuggestionItem } from "@renderer/lib/editor/extensions/CardRefSuggestion"
 import "./quick-window.css"
+
+const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
 const emptyContent = {
   type: "doc",
@@ -19,16 +22,22 @@ const QuickWindow: Component = () => {
   const [titleCache, setTitleCache] = createSignal<Map<string, string>>(new Map())
   const [checked, setChecked] = createSignal<boolean | undefined>(undefined)
 
-  const handleUpdate = (newContent: any, text: string) => {
-    setContent(newContent)
-    setIsEmpty(text.trim().length === 0)
-  }
-
   const resetEditor = () => {
     setContent(emptyContent)
     setIsEmpty(true)
     setResetKey((k) => k + 1)
     setChecked(undefined)
+  }
+
+  onMount(() => {
+    const handleFocus = () => resetEditor()
+    window.addEventListener("focus", handleFocus)
+    onCleanup(() => window.removeEventListener("focus", handleFocus))
+  })
+
+  const handleUpdate = (newContent: any, text: string) => {
+    setContent(newContent)
+    setIsEmpty(text.trim().length === 0)
   }
 
   const handleCapture = async () => {
@@ -54,6 +63,11 @@ const QuickWindow: Component = () => {
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault()
+      handleCapture()
+      return
+    }
     if (e.key === "Escape") {
       if (isEmpty()) {
         window.api.hideQuickWindow()
@@ -139,6 +153,7 @@ const QuickWindow: Component = () => {
                 checked={checked() ?? false}
                 onCheckedChange={handleCheckedChange}
                 onToggleTask={handleToggleTask}
+                autoFocus
               />
             )}
           </Show>
@@ -148,9 +163,15 @@ const QuickWindow: Component = () => {
             <Inbox class="size-4 stroke-[1.5px]" />
             Notes Inbox
           </div>
-          <Button variant="outline" onClick={handleCapture}>
-            Capture
-          </Button>
+          <div class="flex flex-row items-center gap-2">
+            <Button variant="outline" onClick={handleCapture}>
+              Capture
+              <div class="flex flex-row gap-1">
+                <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
+                <Kbd>↵</Kbd>
+              </div>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

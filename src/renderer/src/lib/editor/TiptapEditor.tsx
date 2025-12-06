@@ -31,6 +31,7 @@ type TiptapEditorProps = {
   checked?: boolean
   onCheckedChange?: (checked: boolean) => void
   onToggleTask?: () => void
+  autoFocus?: boolean
 }
 
 const TiptapEditor: Component<TiptapEditorProps> = (props) => {
@@ -136,6 +137,12 @@ const TiptapEditor: Component<TiptapEditorProps> = (props) => {
         }
       }
     })
+
+    if (props.autoFocus) {
+      setTimeout(() => {
+        editor?.commands.focus("start")
+      }, 50)
+    }
   })
 
   createEffect(() => {

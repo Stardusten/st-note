@@ -13,6 +13,7 @@ import { BacklinkViewExtension, backlinkViewPluginKey } from "./extensions/Backl
 import { CodeBlock } from "./extensions/CodeBlockLowlight"
 import type { BlockContext } from "../backlink/types"
 import { appStore } from "../state/AppStore"
+import "./backlink-editor.css"
 
 type BacklinkTiptapEditorProps = {
   content: any

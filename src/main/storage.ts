@@ -31,6 +31,12 @@ export function initStorage(path: string): void {
       deleted_at INTEGER NOT NULL
     )
   `)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `)
   databases.set(path, db)
 }
 
@@ -114,4 +120,30 @@ export function queryObjects(path: string, options?: QueryOptionsRaw): StObjectR
   }
 
   return db.prepare(query).all(...params) as StObjectRaw[]
+}
+
+// ============ Settings ============
+
+export function getSetting(path: string, key: string): string | null {
+  const db = getDb(path)
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined
+  return row?.value ?? null
+}
+
+export function setSetting(path: string, key: string, value: string): void {
+  const db = getDb(path)
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value)
+}
+
+export function getAllSettings(path: string): Record<string, string> {
+  const db = getDb(path)
+  const rows = db.prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[]
+  const result: Record<string, string> = {}
+  for (const row of rows) result[row.key] = row.value
+  return result
+}
+
+export function deleteSetting(path: string, key: string): void {
+  const db = getDb(path)
+  db.prepare("DELETE FROM settings WHERE key = ?").run(key)
 }

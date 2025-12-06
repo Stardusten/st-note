@@ -30,35 +30,28 @@ type SettingsPanelProps = {
 }
 
 const SettingsPanel: Component<SettingsPanelProps> = (props) => {
+  const [exportError, setExportError] = createSignal<string | null>(null)
   const [importError, setImportError] = createSignal<string | null>(null)
 
   const handleExport = async () => {
-    const json = await settingsStore.exportSettings()
-    const blob = new Blob([json], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "st-note-settings.json"
-    a.click()
-    URL.revokeObjectURL(url)
+    setExportError(null)
+    const dbPath = await window.api.database.getPath()
+    if (!dbPath) {
+      setExportError("No database opened")
+      return
+    }
+    const result = await window.api.database.export(dbPath)
+    if (result.canceled) return
+    if (!result.success) {
+      setExportError(result.error || "Export failed")
+    }
   }
 
   const handleImport = async () => {
-    const input = document.createElement("input")
-    input.type = "file"
-    input.accept = ".json"
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
-      try {
-        const text = await file.text()
-        await settingsStore.importSettings(text)
-        setImportError(null)
-      } catch (e) {
-        setImportError("Invalid settings file")
-      }
-    }
-    input.click()
+    setImportError(null)
+    const dbPath = await window.api.database.import()
+    if (!dbPath) return
+    window.location.reload()
   }
 
   return (
@@ -191,13 +184,14 @@ const SettingsPanel: Component<SettingsPanelProps> = (props) => {
             <div class="flex flex-row gap-2">
               <Button variant="outline" onClick={handleExport}>
                 <Upload class="size-4 stroke-[1.5px]" />
-                Export Settings
+                Export Base
               </Button>
               <Button variant="outline" onClick={handleImport}>
                 <Download class="size-4 stroke-[1.5px]" />
-                Import Settings
+                Import Base
               </Button>
             </div>
+            {exportError() && <div class="text-sm text-destructive">{exportError()}</div>}
             {importError() && <div class="text-sm text-destructive">{importError()}</div>}
           </div>
         </div>

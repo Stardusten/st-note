@@ -115,34 +115,34 @@
    ================================ */
 
 .ProseMirror [data-indent="1"] {
-  margin-left: 24px;
+  padding-left: 24px;
 }
 .ProseMirror [data-indent="2"] {
-  margin-left: 48px;
+  padding-left: 48px;
 }
 .ProseMirror [data-indent="3"] {
-  margin-left: 72px;
+  padding-left: 72px;
 }
 .ProseMirror [data-indent="4"] {
-  margin-left: 96px;
+  padding-left: 96px;
 }
 .ProseMirror [data-indent="5"] {
-  margin-left: 120px;
+  padding-left: 120px;
 }
 .ProseMirror [data-indent="6"] {
-  margin-left: 144px;
+  padding-left: 144px;
 }
 .ProseMirror [data-indent="7"] {
-  margin-left: 168px;
+  padding-left: 168px;
 }
 .ProseMirror [data-indent="8"] {
-  margin-left: 192px;
+  padding-left: 192px;
 }
 .ProseMirror [data-indent="9"] {
-  margin-left: 216px;
+  padding-left: 216px;
 }
 .ProseMirror [data-indent="10"] {
-  margin-left: 240px;
+  padding-left: 240px;
 }
 
 /* ================================
@@ -251,41 +251,6 @@
 
 .ProseMirror-dropcursor {
   border-left: 2px solid #6366f1;
-}
-
-/* ================================
-   Backlink Editor Overrides
-   ================================ */
-
-.backlink-editor .backlink-hidden {
-  display: none;
-}
-
-.backlink-editor .backlink-highlight {
-  background-color: rgba(234, 179, 8, 0.2);
-}
-
-.backlink-editor .backlink-collapsed-indicator {
-  color: rgb(100, 100, 100);
-  font-size: 12px;
-  padding: 4px 0;
-  cursor: default;
-}
-
-.backlink-tiptap-wrapper .ProseMirror p {
-  margin: 0.25em 0;
-}
-
-.backlink-tiptap-wrapper .ProseMirror h1.editor-title {
-  font-size: inherit;
-  font-weight: 300;
-  line-height: inherit;
-  margin: 0.25em 0;
-}
-
-.backlink-tiptap-wrapper .ProseMirror .bn-bullet-list-item,
-.backlink-tiptap-wrapper .ProseMirror .bn-numbered-list-item {
-  margin: 0.25em 0;
 }
 
 /* ================================
