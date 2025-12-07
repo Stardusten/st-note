@@ -1,65 +1,53 @@
-import { Component, Show } from "solid-js"
-import type { Accessor } from "solid-js"
-import { Image, Smile } from "lucide-solid"
-import { Button } from "@renderer/ui/solidui/button"
-import TiptapEditor from "./TiptapEditor"
-import type { CardSuggestionItem } from "./extensions/CardRefSuggestion"
-import "./note-editor.css"
+import { Component, JSX } from "solid-js"
+import { ProseMirrorEditor } from "./ProseMirrorEditor"
 
 type NoteEditorProps = {
-  content?: any
-  onUpdate?: (content: any, text: string) => void
-  placeholder?: string
+  content?: object
+  onUpdate?: (content: object, text: string) => void
   titlePlaceholder?: string
+  placeholder?: string
   showTitleToolbar?: boolean
-  class?: string
-  searchCards?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
-  onCardClick?: (cardId: string) => void
-  onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
-  getCardTitle?: (cardId: string) => Accessor<string>
-  isTask?: boolean
-  checked?: boolean
-  onCheckedChange?: (checked: boolean) => void
-  onToggleTask?: () => void
   autoFocus?: boolean
+  class?: string
+  editorId?: string
+  getLastUpdateSource?: () => string | undefined
 }
 
-const NoteEditor: Component<NoteEditorProps> = (props) => {
+const getTextFromDoc = (doc: any): string => {
+  if (!doc || !doc.content) return ""
+  let text = ""
+  for (const node of doc.content) {
+    if (node.type === "title" || node.type === "paragraph" || node.type === "block") {
+      text += getTextFromNode(node) + "\n"
+    }
+  }
+  return text.trim()
+}
+
+const getTextFromNode = (node: any): string => {
+  if (!node) return ""
+  if (node.type === "text") return node.text || ""
+  if (!node.content) return ""
+  return node.content.map(getTextFromNode).join("")
+}
+
+const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
+  const handleUpdate = (json: object) => {
+    if (props.onUpdate) {
+      const text = getTextFromDoc(json)
+      props.onUpdate(json, text)
+    }
+  }
+
   return (
-    <div class={`note-editor w-full text-[#d9d9d9] ${props.class || ""}`}>
-      <Show when={props.showTitleToolbar}>
-        <div class="h-[32px] -ml-[8px] flex items-start opacity-0 hover:opacity-100 transition-opacity">
-          <div class="flex flex-row gap-2 text-sm">
-            <Button variant="ghost" size="sm">
-              <Smile class="size-4" />
-              <span>Add emoji</span>
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Image class="size-4" />
-              <span>Add cover</span>
-            </Button>
-          </div>
-        </div>
-      </Show>
-      <div class="w-full">
-        <TiptapEditor
-          content={props.content}
-          onUpdate={props.onUpdate}
-          titlePlaceholder={props.titlePlaceholder}
-          placeholder={props.placeholder}
-          searchCards={props.searchCards}
-          onCardClick={props.onCardClick}
-          onCreateCard={props.onCreateCard}
-          getCardTitle={props.getCardTitle}
-          isTask={props.isTask}
-          checked={props.checked}
-          onCheckedChange={props.onCheckedChange}
-          onToggleTask={props.onToggleTask}
-          autoFocus={props.autoFocus}
-          class="text-foreground"
-        />
-      </div>
-    </div>
+    <ProseMirrorEditor
+      content={props.content}
+      onUpdate={handleUpdate}
+      placeholder={props.placeholder || props.titlePlaceholder}
+      class={props.class}
+      editorId={props.editorId}
+      getLastUpdateSource={props.getLastUpdateSource}
+    />
   )
 }
 

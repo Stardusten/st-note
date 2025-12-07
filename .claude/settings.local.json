@@ -8,7 +8,14 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm run typecheck:*)",
       "WebFetch(domain:tiptap.dev)",
-      "WebFetch(domain:www.npmjs.com)"
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(pnpm list:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(pnpm typecheck:renderer:*)",
+      "Bash(pnpm typecheck:web:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

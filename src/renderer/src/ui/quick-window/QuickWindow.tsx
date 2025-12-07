@@ -1,44 +1,34 @@
 import { Component, createSignal, Show, onMount, onCleanup } from "solid-js"
-import type { Accessor } from "solid-js"
 import { Button } from "../solidui/button"
 import Kbd from "../solidui/kbd"
 import { Inbox } from "lucide-solid"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
 import { appStoreIpc } from "@renderer/lib/state/AppStoreIpc"
-import type { CardSuggestionItem } from "@renderer/lib/editor/extensions/CardRefSuggestion"
 import "./quick-window.css"
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
 const emptyContent = {
   type: "doc",
-  content: [{ type: "title", attrs: { level: 1 }, content: [] }]
+  content: [{ type: "title" }]
 }
 
 const QuickWindow: Component = () => {
   const [content, setContent] = createSignal<any>(emptyContent)
   const [isEmpty, setIsEmpty] = createSignal(true)
   const [resetKey, setResetKey] = createSignal(1)
-  const [titleCache, setTitleCache] = createSignal<Map<string, string>>(new Map())
-  const [checked, setChecked] = createSignal<boolean | undefined>(undefined)
 
   const resetEditor = () => {
     setContent(emptyContent)
     setIsEmpty(true)
     setResetKey((k) => k + 1)
-    setChecked(undefined)
   }
 
   onMount(() => {
-    // const handleFocus = () => resetEditor()
     const handleWindowKeyDown = (event: KeyboardEvent) => handleKeyDown(event)
-
-    // window.addEventListener("focus", handleFocus)
-    // 在捕获阶段，防止和编辑器打架
     window.addEventListener("keydown", handleWindowKeyDown, true)
 
     onCleanup(() => {
-      // window.removeEventListener("focus", handleFocus)
       window.removeEventListener("keydown", handleWindowKeyDown, true)
     })
   })
@@ -53,22 +43,8 @@ const QuickWindow: Component = () => {
       window.api.hideQuickWindow()
       return
     }
-    await appStoreIpc.captureNote({ content: content(), checked: checked() })
+    await appStoreIpc.captureNote({ content: content(), checked: undefined })
     resetEditor()
-    // Do not hide here, let main process handle it to prevent main window flickering
-    // window.api.hideQuickWindow()
-  }
-
-  const handleToggleTask = () => {
-    // 循环: undefined (不是任务) -> false (未完成) -> true (已完成) -> undefined
-    const current = checked()
-    if (current === undefined) setChecked(false)
-    else if (current === false) setChecked(true)
-    else setChecked(undefined)
-  }
-
-  const handleCheckedChange = (newChecked: boolean) => {
-    setChecked(newChecked)
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -89,29 +65,6 @@ const QuickWindow: Component = () => {
         }
       }
     }
-  }
-
-  const searchCards = async (query: string): Promise<CardSuggestionItem[]> => {
-    const results = await appStoreIpc.searchCards(query)
-    const newCache = new Map(titleCache())
-    for (const r of results) {
-      newCache.set(r.id, r.title)
-    }
-    setTitleCache(newCache)
-    return results.map((r) => ({ id: r.id, title: r.title }))
-  }
-
-  const getCardTitle = (cardId: string): Accessor<string> => {
-    return () => titleCache().get(cardId) || "Untitled"
-  }
-
-  const handleCardClick = (cardId: string) => {
-    window.api.search.selectCard(cardId)
-    window.api.hideQuickWindow()
-  }
-
-  const handleCreateCard = async (title: string): Promise<CardSuggestionItem | null> => {
-    return appStoreIpc.createCard(title)
   }
 
   return (
@@ -156,14 +109,6 @@ const QuickWindow: Component = () => {
                 titlePlaceholder="Untitled"
                 placeholder="Start writing..."
                 showTitleToolbar={false}
-                searchCards={searchCards}
-                onCardClick={handleCardClick}
-                onCreateCard={handleCreateCard}
-                getCardTitle={getCardTitle}
-                isTask={checked() !== undefined}
-                checked={checked() ?? false}
-                onCheckedChange={handleCheckedChange}
-                onToggleTask={handleToggleTask}
                 autoFocus
               />
             )}

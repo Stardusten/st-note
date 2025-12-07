@@ -1,396 +1,109 @@
-/* ================================
-   Base ProseMirror Editor Styles
-   ================================ */
+.prosemirror-editor {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-font-size);
+}
 
-.ProseMirror {
+/* no outline */
+.prosemirror-editor .ProseMirror,
+.prosemirror-editor .ProseMirror:focus {
   outline: none;
-  font-family: "Inter", sans-serif;
 }
 
-.ProseMirror p {
-  margin: 0.5em 0;
+/* title */
+.prosemirror-editor .editor-title {
+  font-size: calc(var(--editor-font-size) * 1.5);
+  font-weight: 300;
+  margin: 0 0 0.5em 0;
+  line-height: 1.3;
 }
 
-.ProseMirror h1.editor-title {
-  font-weight: 600;
+/* all blocks */
+.prosemirror-editor .block {
+  position: relative;
+  margin-left: 24px;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+/* first level block overrides */
+.prosemirror-editor > .ProseMirror > .block {
+  margin-left: 0;
+}
+
+/* basic paragraphs */
+.prosemirror-editor .block p {
   margin: 0;
+  min-height: 1.5em;
+  line-height: 1.5;
 }
 
-.ProseMirror h2 {
-  font-size: 1.5em;
-  font-weight: 600;
-  margin: 1em 0 0.5em;
-}
-
-.ProseMirror h3 {
-  font-size: 1.25em;
-  font-weight: 600;
-  margin: 1em 0 0.5em;
-}
-
-/* ================================
-   Card Ref Styles
-   ================================ */
-
-.ProseMirror .card-ref {
-  border-bottom: 1px solid var(--color-border);
-  color: var(--accent-foreground);
-  cursor: pointer;
-}
-
-.ProseMirror .card-ref.ProseMirror-selectednode,
-.ProseMirror .card-ref:hover {
-  background-color: var(--color-accent);
-}
-
-/* ================================
-   Blockquote Styles
-   ================================ */
-
-.ProseMirror blockquote {
-  position: relative;
-  padding-left: 1em;
-  margin-top: 10px;
-  margin-bottom: 5px;
-}
-
-.ProseMirror blockquote::before {
+/* bullet list */
+.prosemirror-editor .block[data-kind="bullet"] > p::before {
   content: "";
-  position: absolute;
-  left: 0;
-  width: 3px;
-  height: 100%;
-  background: linear-gradient(180deg, rgb(196, 196, 196) 0%, rgba(196, 196, 196, 0) 100%);
-  border-radius: 5rem;
-}
-
-/* ================================
-   Link Styles
-   ================================ */
-
-.ProseMirror a {
-  color: #79c0ff;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-
-.ProseMirror a:hover {
-  color: #a5d6ff;
-}
-
-/* ================================
-   List Item Styles
-   ================================ */
-
-.ProseMirror .bn-bullet-list-item,
-.ProseMirror .bn-numbered-list-item {
-  position: relative;
-  margin: 0.5em 0;
-  padding-left: 1.5em;
-}
-
-.ProseMirror .bn-bullet-list-item::before {
-  content: "";
-  position: absolute;
-  left: 0.5em;
-  top: 0.6em;
-  width: 4px;
-  height: 4px;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
   background: currentColor;
   border-radius: 50%;
+  margin-right: 0.75em;
+  margin-left: 0px;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
-.ProseMirror .bn-numbered-list-item::before {
-  content: attr(data-index) ".";
-  position: absolute;
-  left: 0;
-  color: currentColor;
-  min-width: 1.2em;
+/* ordered list */
+.prosemirror-editor .block[data-kind="ordered"] {
+  counter-increment: ordered-list;
+}
+
+.prosemirror-editor .block[data-kind="ordered"]:first-child,
+.prosemirror-editor .block:not([data-kind="ordered"]) + .block[data-kind="ordered"] {
+  counter-reset: ordered-list;
+}
+
+.prosemirror-editor .block[data-kind="ordered"][data-order] {
+  counter-reset: ordered-list;
+  counter-set: ordered-list var(--block-order);
+}
+
+.prosemirror-editor .block[data-kind="ordered"] > p::before {
+  font-feature-settings: "tnum";
+  content: counter(ordered-list) ".";
+  display: inline-block;
+  min-width: 1.5em;
+  margin-right: 0.5em;
+  margin-left: -10px;
   text-align: right;
+  flex-shrink: 0;
 }
 
-/* ================================
-   Indent Levels
-   ================================ */
-
-.ProseMirror [data-indent="1"] {
-  padding-left: 24px;
-}
-.ProseMirror [data-indent="2"] {
-  padding-left: 48px;
-}
-.ProseMirror [data-indent="3"] {
-  padding-left: 72px;
-}
-.ProseMirror [data-indent="4"] {
-  padding-left: 96px;
-}
-.ProseMirror [data-indent="5"] {
-  padding-left: 120px;
-}
-.ProseMirror [data-indent="6"] {
-  padding-left: 144px;
-}
-.ProseMirror [data-indent="7"] {
-  padding-left: 168px;
-}
-.ProseMirror [data-indent="8"] {
-  padding-left: 192px;
-}
-.ProseMirror [data-indent="9"] {
-  padding-left: 216px;
-}
-.ProseMirror [data-indent="10"] {
-  padding-left: 240px;
+/* bold */
+.prosemirror-editor strong {
+  font-weight: 600;
 }
 
-/* Override indentation for code blocks */
-/* Wrapper handles margin indentation */
-.ProseMirror .code-block-wrapper[data-indent="1"] { margin-left: 24px; }
-.ProseMirror .code-block-wrapper[data-indent="2"] { margin-left: 48px; }
-.ProseMirror .code-block-wrapper[data-indent="3"] { margin-left: 72px; }
-.ProseMirror .code-block-wrapper[data-indent="4"] { margin-left: 96px; }
-.ProseMirror .code-block-wrapper[data-indent="5"] { margin-left: 120px; }
-.ProseMirror .code-block-wrapper[data-indent="6"] { margin-left: 144px; }
-.ProseMirror .code-block-wrapper[data-indent="7"] { margin-left: 168px; }
-.ProseMirror .code-block-wrapper[data-indent="8"] { margin-left: 192px; }
-.ProseMirror .code-block-wrapper[data-indent="9"] { margin-left: 216px; }
-.ProseMirror .code-block-wrapper[data-indent="10"] { margin-left: 240px; }
-
-/* ================================
-   Placeholder Styles
-   ================================ */
-
-.ProseMirror p.is-editor-empty:first-child::before,
-.ProseMirror p.is-empty::before,
-.ProseMirror h2.is-empty::before,
-.ProseMirror h3.is-empty::before {
-  color: rgb(100, 100, 100);
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-
-/* Title placeholder - on .title-content to avoid checkbox conflict */
-.ProseMirror h1.editor-title .title-content {
-  position: relative;
-}
-
-.ProseMirror h1.editor-title.is-empty .title-content::before {
-  color: rgb(100, 100, 100);
-  content: "Untitled";
-  pointer-events: none;
-  position: absolute;
-  left: 0;
-  top: 0;
-}
-
-/* List item placeholder - use ::after to avoid conflict with marker */
-.ProseMirror .bn-bullet-list-item.is-empty::after,
-.ProseMirror .bn-numbered-list-item.is-empty::after {
-  color: rgb(100, 100, 100);
-  content: attr(data-placeholder);
-  position: absolute;
-  left: 1.5em;
-  top: 0;
-  pointer-events: none;
-}
-
-/* ================================
-   Drag Handle Styles
-   ================================ */
-
-.drag-handle {
-  position: fixed;
-  opacity: 1;
-  width: 16px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  border-radius: 2px;
-  background: transparent;
-}
-
-.drag-handle:hover {
-  background: var(--color-accent);
-  opacity: 1 !important;
-}
-
-.drag-handle::before {
-  content: "⋮⋮";
-  font-size: 16px;
-  color: rgb(120, 120, 120);
-  letter-spacing: -2px;
-  margin-left: -2px;
-  margin-top: -1px;
-}
-
-.drag-handle.hide {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.drag-handle:active {
-  cursor: grabbing;
-}
-
-/* 为 checkbox 原点增加一些阴影效果 */
-.ProseMirror .title-checkbox::before {
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  width: 100%;
-  height: 100%;
-  content: " ";
-  background:
-    radial-gradient(
-      39.58% 39.58% at 76.79% 24.58%,
-      rgba(255, 255, 255, 0.2) 0%,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    conic-gradient(rgba(37, 38, 42, 0.9) 100%, transparent 0%);
-  border-radius: 50px;
-  transform: scaleX(-1);
-  transition: background 0.3s ease 0s;
-}
-
-/* ================================
-   Dropcursor
-   ================================ */
-
-.ProseMirror-dropcursor {
-  border-left: 2px solid #6366f1;
-}
-
-/* ================================
-   Code Block Styles
-   ================================ */
-
-.ProseMirror .code-block-wrapper {
-  position: relative;
-  background: rgb(26, 27, 31);
-  border-radius: 4px;
-  margin: 0.75em 0;
-}
-
-.ProseMirror pre {
-  background: transparent;
-  padding: 34px 16px 12px 16px; /* Increased top padding for select */
-  margin: 0;
-  overflow-x: auto;
-  border-radius: 4px;
-  white-space: pre !important; /* Disable wrapping */
-  font-variant-ligatures: none;
-}
-
-.ProseMirror pre code {
-  font-family: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  background: none;
-  padding: 0;
-  white-space: pre !important; /* Disable wrapping */
-  display: inline-block; /* Ensure code expands fully */
-  min-width: 100%;
-}
-
-/* Language selector */
-.code-block-language-select {
-  position: absolute;
-  top: 6px;
-  left: 8px; /* Fixed to top-left */
-  right: auto;
-  background: transparent;
-  border: none;
-  color: rgb(120, 120, 120);
-  font-size: 11px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  outline: none;
-  z-index: 10;
-}
-
-.code-block-language-select:hover,
-.code-block-language-select:focus {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgb(180, 180, 180);
-}
-
-/* ================================
-   Syntax Highlighting (GitHub Dark)
-   ================================ */
-
-.ProseMirror pre .hljs-comment,
-.ProseMirror pre .hljs-quote {
-  color: #8b949e;
+/* italic */
+.prosemirror-editor em {
   font-style: italic;
 }
 
-.ProseMirror pre .hljs-keyword,
-.ProseMirror pre .hljs-selector-tag,
-.ProseMirror pre .hljs-addition {
-  color: #ff7b72;
+/* inline code */
+.prosemirror-editor code {
+  font-family: var(--code-font-family);
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
 }
 
-.ProseMirror pre .hljs-number,
-.ProseMirror pre .hljs-string,
-.ProseMirror pre .hljs-meta .hljs-meta-string,
-.ProseMirror pre .hljs-literal,
-.ProseMirror pre .hljs-doctag,
-.ProseMirror pre .hljs-regexp {
-  color: #a5d6ff;
+/* placeholder */
+.prosemirror-editor .ProseMirror[data-placeholder]:not(:focus)::before {
+  content: attr(data-placeholder);
+  color: rgb(100, 100, 100);
+  position: absolute;
+  pointer-events: none;
 }
 
-.ProseMirror pre .hljs-title,
-.ProseMirror pre .hljs-section,
-.ProseMirror pre .hljs-name,
-.ProseMirror pre .hljs-selector-id,
-.ProseMirror pre .hljs-selector-class {
-  color: #d2a8ff;
-}
-
-.ProseMirror pre .hljs-attribute,
-.ProseMirror pre .hljs-attr,
-.ProseMirror pre .hljs-variable,
-.ProseMirror pre .hljs-template-variable,
-.ProseMirror pre .hljs-class .hljs-title,
-.ProseMirror pre .hljs-type {
-  color: #ffa657;
-}
-
-.ProseMirror pre .hljs-symbol,
-.ProseMirror pre .hljs-bullet,
-.ProseMirror pre .hljs-subst,
-.ProseMirror pre .hljs-meta,
-.ProseMirror pre .hljs-meta .hljs-keyword,
-.ProseMirror pre .hljs-selector-attr,
-.ProseMirror pre .hljs-selector-pseudo,
-.ProseMirror pre .hljs-link {
-  color: #79c0ff;
-}
-
-.ProseMirror pre .hljs-built_in,
-.ProseMirror pre .hljs-deletion {
-  color: #ffa198;
-}
-
-.ProseMirror pre .hljs-function {
-  color: #d2a8ff;
-}
-
-.ProseMirror pre .hljs-params {
-  color: #c9d1d9;
-}
-
-.ProseMirror pre .hljs-property {
-  color: #79c0ff;
-}
-
-.ProseMirror pre .hljs-punctuation {
-  color: #c9d1d9;
+.prosemirror-editor .ProseMirror[data-placeholder=""]:not(:focus)::before {
+  content: none;
 }

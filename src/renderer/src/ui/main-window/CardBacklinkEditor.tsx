@@ -3,11 +3,10 @@ import { ArrowUpRightIcon } from "lucide-solid"
 import type { StObjectId } from "@renderer/lib/common/types"
 import type { BlockContext } from "@renderer/lib/backlink/types"
 import { appStore } from "@renderer/lib/state/AppStore"
-import BacklinkTiptapEditor from "@renderer/lib/editor/BacklinkTiptapEditor"
+import { ProseMirrorEditor } from "@renderer/lib/editor/ProseMirrorEditor"
 import "@renderer/lib/editor/note-editor.css"
 import { Button } from "../solidui/button"
 import { formatRelativeTime } from "@renderer/lib/common/utils/relative-time"
-import { isTask } from "@renderer/lib/common/types/card"
 
 type CardBacklinkEditorProps = {
   cardId: StObjectId
@@ -21,20 +20,14 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
   const card = () => appStore.getCards().find((c) => c.id === props.cardId)
   const [expanded, setExpanded] = createSignal(false)
 
-  const handleUpdate = (content: any, text: string) => {
-    appStore.updateCard(props.cardId, content, text, editorId)
-  }
-
-  const handleCardClick = (cardId: string) => {
-    appStore.selectCard(cardId)
-  }
-
-  const handleCheckedChange = (checked: boolean) => {
-    appStore.updateCardChecked(props.cardId, checked)
-  }
-
-  const handleToggleTask = () => {
-    appStore.toggleCardTask(props.cardId)
+  const handleUpdate = (content: any) => {
+    const extractText = (node: any): string => {
+      if (!node) return ""
+      if (node.type === "text") return node.text || ""
+      if (node.content) return node.content.map(extractText).join("")
+      return ""
+    }
+    appStore.updateCard(props.cardId, content, extractText(content), editorId)
   }
 
   return (
@@ -48,19 +41,11 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
         border: "0.5px solid transparent"
       }}>
       <div class="text-[#d9d9d9]">
-        <BacklinkTiptapEditor
+        <ProseMirrorEditor
           content={card()?.data?.content}
-          blocks={props.blocks}
-          targetCardId={props.targetCardId}
-          editorId={editorId}
-          expanded={expanded()}
           onUpdate={handleUpdate}
-          onCardClick={handleCardClick}
-          getCardTitle={appStore.getCardTitle}
-          isTask={card() ? isTask(card()!) : false}
-          checked={card()?.data.checked ?? false}
-          onCheckedChange={handleCheckedChange}
-          onToggleTask={handleToggleTask}
+          editorId={editorId}
+          getLastUpdateSource={() => appStore.getLastUpdateSource(props.cardId)}
         />
       </div>
       <div class="flex items-center justify-between mt-2">

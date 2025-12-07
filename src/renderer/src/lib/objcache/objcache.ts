@@ -5,14 +5,14 @@ import { StObjectId } from "src/preload"
 import type { Storage } from "../storage/storage"
 
 export type ObjCacheEventOp = {
-  op: 'create' | 'update' | 'delete'
+  op: "create" | "update" | "delete"
   id: StObjectId
   object?: StObject
   oldObject?: StObject
 }
 
 export type ObjCacheEvent = {
-  type: 'committed'
+  type: "committed"
   source?: string
   ops: ObjCacheEventOp[]
 }
@@ -52,7 +52,7 @@ export class ObjCache {
   }
 
   private emit(event: ObjCacheEvent) {
-    this.listeners.forEach(l => l(event))
+    this.listeners.forEach((l) => l(event))
   }
 
   async init(storage: Storage) {
@@ -198,17 +198,22 @@ export class ObjCache {
     }
     tx.status = "committed"
 
-    const eventOps: ObjCacheEventOp[] = tx.executedOps.map(op => {
+    const eventOps: ObjCacheEventOp[] = tx.executedOps.map((op) => {
       switch (op.type) {
         case "create":
-          return { op: 'create' as const, id: op.object.id, object: op.object }
+          return { op: "create" as const, id: op.object.id, object: op.object }
         case "update":
-          return { op: 'update' as const, id: op.newObject.id, object: op.newObject, oldObject: op.oldObject }
+          return {
+            op: "update" as const,
+            id: op.newObject.id,
+            object: op.newObject,
+            oldObject: op.oldObject
+          }
         case "delete":
-          return { op: 'delete' as const, id: op.deletedObject.id, oldObject: op.deletedObject }
+          return { op: "delete" as const, id: op.deletedObject.id, oldObject: op.deletedObject }
       }
     })
-    this.emit({ type: 'committed', source: tx.source, ops: eventOps })
+    this.emit({ type: "committed", source: tx.source, ops: eventOps })
   }
 }
 

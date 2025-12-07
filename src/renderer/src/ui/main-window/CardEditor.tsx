@@ -4,8 +4,8 @@ import { Command, Inbox, Link, Pin, Plus, SquareArrowRight, WandSparkles } from 
 import { Button } from "../solidui/button"
 import { appStore } from "@renderer/lib/state/AppStore"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
-import type { CardSuggestionItem } from "@renderer/lib/editor/extensions/CardRefSuggestion"
-import { isTask } from "@renderer/lib/common/types/card"
+
+const EDITOR_ID = "card-main-editor"
 
 const CardMainEditor: Component = () => {
   let saveTimeout: NodeJS.Timeout
@@ -16,52 +16,12 @@ const CardMainEditor: Component = () => {
 
     clearTimeout(saveTimeout)
     saveTimeout = setTimeout(() => {
-      appStore.updateCard(currentCard.id, content, text)
+      appStore.updateCard(currentCard.id, content, text, EDITOR_ID)
     }, 500)
-  }
-
-  const handleCheckedChange = (checked: boolean) => {
-    const currentCard = appStore.getCurrentCard()
-    if (!currentCard) return
-    appStore.updateCardChecked(currentCard.id, checked)
-  }
-
-  const handleToggleTask = () => {
-    const currentCard = appStore.getCurrentCard()
-    if (!currentCard) return
-    appStore.toggleCardTask(currentCard.id)
   }
 
   const handleCreateNewCard = async () => {
     await appStore.createCard()
-  }
-
-  const searchCards = (query: string): CardSuggestionItem[] => {
-    const currentCardId = appStore.getCurrentCardId()
-    const cards = appStore.getCards()
-
-    if (!query.trim()) {
-      return cards
-        .filter((c) => c.id !== currentCardId)
-        .slice(0, 10)
-        .map((c) => ({ id: c.id, title: appStore.getCardTitle(c.id)() }))
-    }
-
-    const lowerQuery = query.toLowerCase()
-    return cards
-      .filter((c) => c.id !== currentCardId && appStore.getCardTitle(c.id)().toLowerCase().includes(lowerQuery))
-      .slice(0, 10)
-      .map((c) => ({ id: c.id, title: appStore.getCardTitle(c.id)() }))
-  }
-
-  const handleCardClick = (cardId: string) => {
-    appStore.selectCard(cardId)
-  }
-
-  const handleCreateCard = async (title: string) => {
-    const newCard = await appStore.createCardWithoutSelect(title)
-    if (newCard) return { id: newCard.id, title: appStore.getCardTitle(newCard.id)() }
-    return null
   }
 
   const currentCardId = appStore.getCurrentCardId
@@ -118,14 +78,11 @@ const CardMainEditor: Component = () => {
             titlePlaceholder="Untitled"
             placeholder="Start writing..."
             showTitleToolbar={true}
-            searchCards={searchCards}
-            onCardClick={handleCardClick}
-            onCreateCard={handleCreateCard}
-            getCardTitle={appStore.getCardTitle}
-            isTask={appStore.getCurrentCard() ? isTask(appStore.getCurrentCard()!) : false}
-            checked={appStore.getCurrentCard()?.data.checked ?? false}
-            onCheckedChange={handleCheckedChange}
-            onToggleTask={handleToggleTask}
+            editorId={EDITOR_ID}
+            getLastUpdateSource={() => {
+              const cardId = appStore.getCurrentCardId()
+              return cardId ? appStore.getLastUpdateSource(cardId) : undefined
+            }}
           />
         </div>
       </Show>

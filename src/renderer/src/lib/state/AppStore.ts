@@ -43,6 +43,9 @@ class AppStore {
   private searchPanelOpen: Accessor<boolean>
   private setSearchPanelOpen: Setter<boolean>
 
+  // Track last update source for each card (non-reactive, only for checking)
+  private lastUpdateSources: Map<StObjectId, string | undefined> = new Map()
+
   constructor() {
     // Initialize signals
     const [currentCardId, setCurrentCardId] = createSignal<StObjectId | null>(null)
@@ -220,6 +223,7 @@ class AppStore {
   }
 
   async updateCard(id: StObjectId, content: any, text: string, source?: string) {
+    this.lastUpdateSources.set(id, source)
     await this.objCache.withTx(tx => {
       if (source) tx.setSource(source)
       const card = this.cards().find(c => c.id === id)
@@ -238,6 +242,10 @@ class AppStore {
     })
 
     await this.loadCards()
+  }
+
+  getLastUpdateSource(id: StObjectId): string | undefined {
+    return this.lastUpdateSources.get(id)
   }
 
   async updateCardChecked(id: StObjectId, checked: boolean) {

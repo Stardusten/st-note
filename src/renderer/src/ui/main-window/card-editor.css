@@ -17,11 +17,8 @@
 
 /* Card editor title overrides */
 .card-editor .ProseMirror h1.editor-title {
-  font-size: 24px;
-  font-weight: 300 !important;
   border-bottom: 1px solid rgb(27, 27, 29);
   box-shadow: rgba(72, 73, 75, 0.84) 0px 1px 0px;
-  margin-bottom: 18px !important;
+  margin-bottom: 18px;
   padding-bottom: 8px;
-  line-height: 1.2;
 }

@@ -181,12 +181,10 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
             <div
               class="group flex items-center gap-4 py-3 px-8 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
               onClick={() => props.onSelectCard(card.id)}>
-              <div onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={selectedIds().has(card.id)}
-                  onChange={() => toggleSelection(card.id)}
-                />
-              </div>
+              <Checkbox
+                checked={selectedIds().has(card.id)}
+                onChange={() => toggleSelection(card.id)}
+              />
               <div class="flex-1 min-w-0 flex items-center gap-3">
                 <Show
                   when={card.data.checked !== undefined}
