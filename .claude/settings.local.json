@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm vitest run:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm run typecheck:*)",
+      "WebFetch(domain:tiptap.dev)",
+      "WebFetch(domain:www.npmjs.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,9 +1,14 @@
 import { type Component, Show } from "solid-js"
 import { Button } from "../solidui/button"
-import { ArrowLeft, ArrowRight, Database, PanelRight, Search, StickyNoteIcon } from "lucide-solid"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../solidui/dropdown-menu"
+import { ArrowLeft, ArrowRight, Database, MoreVertical, PanelRight, Search, StickyNoteIcon } from "lucide-solid"
 import { appStore } from "@renderer/lib/state/AppStore"
 
-const TitleBar: Component = () => {
+type TitleBarProps = {
+  onOpenSettings: () => void
+}
+
+const TitleBar: Component<TitleBarProps> = (props) => {
   const currentCardTitle = () => {
     const card = appStore.getCurrentCard()
     return card ? appStore.getCardTitle(card.id)() : null
@@ -57,6 +62,20 @@ const TitleBar: Component = () => {
           <Button variant="ghost" size="xs-icon">
             <PanelRight class="size-4 stroke-[1.5]" />
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Button variant="ghost" size="xs-icon">
+                <MoreVertical class="size-4 stroke-[1.5]" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent class="min-w-[180px] mt-2">
+              <DropdownMenuItem onSelect={() => props.onOpenSettings()}>Settings</DropdownMenuItem>
+              <DropdownMenuItem>Open data folder</DropdownMenuItem>
+              <DropdownMenuItem>Check for updates</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive">Quit</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

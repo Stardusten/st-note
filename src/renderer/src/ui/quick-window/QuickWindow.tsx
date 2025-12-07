@@ -30,9 +30,17 @@ const QuickWindow: Component = () => {
   }
 
   onMount(() => {
-    const handleFocus = () => resetEditor()
-    window.addEventListener("focus", handleFocus)
-    onCleanup(() => window.removeEventListener("focus", handleFocus))
+    // const handleFocus = () => resetEditor()
+    const handleWindowKeyDown = (event: KeyboardEvent) => handleKeyDown(event)
+
+    // window.addEventListener("focus", handleFocus)
+    // 在捕获阶段，防止和编辑器打架
+    window.addEventListener("keydown", handleWindowKeyDown, true)
+
+    onCleanup(() => {
+      // window.removeEventListener("focus", handleFocus)
+      window.removeEventListener("keydown", handleWindowKeyDown, true)
+    })
   })
 
   const handleUpdate = (newContent: any, text: string) => {
@@ -47,7 +55,8 @@ const QuickWindow: Component = () => {
     }
     await appStoreIpc.captureNote({ content: content(), checked: checked() })
     resetEditor()
-    window.api.hideQuickWindow()
+    // Do not hide here, let main process handle it to prevent main window flickering
+    // window.api.hideQuickWindow()
   }
 
   const handleToggleTask = () => {
@@ -65,6 +74,7 @@ const QuickWindow: Component = () => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault()
+      e.stopPropagation()
       handleCapture()
       return
     }
@@ -105,7 +115,7 @@ const QuickWindow: Component = () => {
   }
 
   return (
-    <div class="quick-capture-window px-4 pt-4 h-full flex flex-col" onKeyDown={handleKeyDown}>
+    <div class="quick-capture-window px-4 pt-4 h-full flex flex-col" style={{ "-webkit-app-region": "drag" }}>
       <div class="absolute left-0 top-0 h-full w-full flex flex-col">
         <div
           class="flex-1 w-full"
@@ -135,7 +145,8 @@ const QuickWindow: Component = () => {
               "linear-gradient(138.16deg, rgb(49, 49, 53) -14.83%, rgb(31, 32, 36) 92.59%) padding-box padding-box, linear-gradient(94.85deg, rgb(140, 140, 147) 0.63%, rgb(63, 63, 67) 100%) border-box border-box",
             border: "0.5px solid transparent",
             "box-shadow": "rgba(4, 4, 7, 0.25) 0px 2px 2px, rgba(4, 4, 7, 0.4) 0px 8px 24px",
-            transition: "all 300ms ease 0s"
+            transition: "all 300ms ease 0s",
+            "-webkit-app-region": "no-drag"
           }}>
           <Show when={resetKey()} keyed>
             {(_key) => (
@@ -158,7 +169,7 @@ const QuickWindow: Component = () => {
             )}
           </Show>
         </div>
-        <div class="py-3 flex flex-row justify-between items-center ">
+        <div class="py-3 flex flex-row justify-between items-center" style={{ "-webkit-app-region": "no-drag" }}>
           <div class="text-sm text-foreground flex flex-row items-center gap-2 pl-2">
             <Inbox class="size-4 stroke-[1.5px]" />
             Notes Inbox

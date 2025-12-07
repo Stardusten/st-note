@@ -36,6 +36,9 @@ class AppStore {
   private setNavIndex: Setter<number>
   private isNavigating: boolean = false
 
+  private pinnedCardIds: Accessor<string[]>
+  private setPinnedCardIds: Setter<string[]>
+
   // UI state
   private searchPanelOpen: Accessor<boolean>
   private setSearchPanelOpen: Setter<boolean>
@@ -61,6 +64,10 @@ class AppStore {
     const [recentCardIds, setRecentCardIds] = createSignal<string[]>([])
     this.recentCardIds = recentCardIds
     this.setRecentCardIds = setRecentCardIds
+
+    const [pinnedCardIds, setPinnedCardIds] = createSignal<string[]>([])
+    this.pinnedCardIds = pinnedCardIds
+    this.setPinnedCardIds = setPinnedCardIds
 
     // Initialize navigation history
     const [navHistory, setNavHistory] = createSignal<(StObjectId | null)[]>([null])
@@ -89,11 +96,26 @@ class AppStore {
     await this.backlinkIndex.init(this.objCache)
     await this.textContentCache.init(this.objCache)
     await this.loadCards()
+    await this.loadPinnedCards()
   }
 
   private async loadCards() {
     const objects = await this.storage.query({ type: 'card', includeDeleted: false })
     this.setCards(objects as Card[])
+  }
+
+  private async loadPinnedCards() {
+    try {
+      const pinnedStr = await this.storage.getSetting("pinned_cards")
+      if (pinnedStr) {
+        const pinned = JSON.parse(pinnedStr)
+        if (Array.isArray(pinned)) {
+          this.setPinnedCardIds(pinned)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load pinned cards", error)
+    }
   }
 
   // Getters for components
@@ -113,6 +135,28 @@ class AppStore {
       .map(id => allCards.find(c => c.id === id))
       .filter((c): c is Card => c !== undefined)
   }
+
+  getPinnedCards = (): Card[] => {
+    const pinnedIds = this.pinnedCardIds()
+    const allCards = this.cards()
+    return pinnedIds
+      .map(id => allCards.find(c => c.id === id))
+      .filter((c): c is Card => c !== undefined)
+  }
+
+  togglePinCard = async (id: string) => {
+    const current = this.pinnedCardIds()
+    let next: string[]
+    if (current.includes(id)) {
+      next = current.filter(c => c !== id)
+    } else {
+      next = [...current, id]
+    }
+    this.setPinnedCardIds(next)
+    await this.storage.setSetting("pinned_cards", JSON.stringify(next))
+  }
+
+  isPinned = (id: string) => this.pinnedCardIds().includes(id)
 
   // Card operations
   async createCard(initialText?: string): Promise<Card> {
@@ -246,6 +290,49 @@ class AppStore {
 
     await this.loadCards()
     console.log('[toggleCardTask] Done')
+  }
+
+  async toggleCardTaskBulk(cardIds: StObjectId[]) {
+    const allCards = this.cards()
+    const targets = cardIds.map(id => allCards.find(c => c.id === id)).filter((c): c is Card => !!c)
+    
+    if (targets.length === 0) return
+
+    // Determine target state to sync all cards
+    const states = targets.map(c => c.data.checked)
+    const hasUndefined = states.some(s => s === undefined)
+    const hasFalse = states.some(s => s === false)
+    // const hasTrue = states.some(s => s === true)
+
+    let nextState: boolean | undefined
+    
+    if (hasUndefined) {
+      // If any is not a task, make them all incomplete tasks
+      nextState = false
+    } else if (hasFalse) {
+      // If any is incomplete (and none are undefined), make them all completed
+      nextState = true
+    } else {
+      // If all are completed (or empty), make them all not tasks
+      nextState = undefined
+    }
+
+    await this.objCache.withTx(tx => {
+      for (const card of targets) {
+        tx.update(card.id, {
+          id: card.id,
+          type: 'card',
+          data: {
+            ...card.data,
+            checked: nextState
+          },
+          text: card.text,
+          tags: card.tags
+        })
+      }
+    })
+
+    await this.loadCards()
   }
 
   async deleteCard(id: StObjectId) {

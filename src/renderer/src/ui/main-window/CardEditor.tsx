@@ -64,7 +64,7 @@ const CardMainEditor: Component = () => {
     return null
   }
 
-  const currentCard = () => appStore.getCurrentCard()
+  const currentCardId = appStore.getCurrentCardId
 
   return (
     <div
@@ -81,10 +81,10 @@ const CardMainEditor: Component = () => {
         overflow: "visible"
       }}>
       <Show
-        when={currentCard()}
+        when={currentCardId()}
         fallback={
           <div class="flex flex-col items-center justify-center h-[300px]">
-            <p class="text-muted-foreground mb-4">Oops, No card selected</p>
+            <p class="text-muted-foreground mb-4">Oops, No card opened</p>
             <Button variant="outline" onClick={handleCreateNewCard}>
               <Plus class="size-4 stroke-[1.5px]" />
               Create New Card
@@ -113,7 +113,7 @@ const CardMainEditor: Component = () => {
         </div>
         <div class="py-[68px] px-[64px]">
           <NoteEditor
-            content={currentCard()?.data.content}
+            content={appStore.getCurrentCard()?.data.content}
             onUpdate={handleContentChange}
             titlePlaceholder="Untitled"
             placeholder="Start writing..."
@@ -122,8 +122,8 @@ const CardMainEditor: Component = () => {
             onCardClick={handleCardClick}
             onCreateCard={handleCreateCard}
             getCardTitle={appStore.getCardTitle}
-            isTask={currentCard() ? isTask(currentCard()!) : false}
-            checked={currentCard()?.data.checked ?? false}
+            isTask={appStore.getCurrentCard() ? isTask(appStore.getCurrentCard()!) : false}
+            checked={appStore.getCurrentCard()?.data.checked ?? false}
             onCheckedChange={handleCheckedChange}
             onToggleTask={handleToggleTask}
           />

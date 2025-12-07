@@ -1,4 +1,4 @@
-import { Component, onMount, createEffect } from "solid-js"
+import { Component, createEffect, createSignal, onMount } from "solid-js"
 import TitleBar from "./TitleBar"
 import Content from "./Content"
 import { appStore } from "@renderer/lib/state/AppStore"
@@ -6,6 +6,8 @@ import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 import type { SearchResultItem } from "src/preload"
 
 const MainWindow: Component = () => {
+  const [settingsOpen, setSettingsOpen] = createSignal(false)
+
   onMount(async () => {
     await settingsStore.init()
     appStore.init()
@@ -60,8 +62,8 @@ const MainWindow: Component = () => {
     })
 
     window.api.quick.onCapture(async ({ content, checked, responseChannel }) => {
-      await appStore.createCardWithoutSelect(undefined, content, checked)
-      window.api.quick.sendCaptured(responseChannel)
+      const card = await appStore.createCardWithoutSelect(undefined, content, checked)
+      window.api.quick.sendCaptured(responseChannel, card?.id)
     })
   })
 
@@ -75,8 +77,8 @@ const MainWindow: Component = () => {
 
   return (
     <div class="h-screen w-full flex flex-col overflow-hidden">
-      <TitleBar />
-      <Content />
+      <TitleBar onOpenSettings={() => setSettingsOpen(true)} />
+      <Content settingsOpen={settingsOpen()} onSettingsOpenChange={setSettingsOpen} />
     </div>
   )
 }

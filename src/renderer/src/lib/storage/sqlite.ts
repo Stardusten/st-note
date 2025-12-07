@@ -55,4 +55,18 @@ export class SQLiteStorage implements Storage {
     const res = await window.api.storage.query(this.path, options)
     return res.map(stObjectFromRaw)
   }
+
+  async getSetting(key: string): Promise<string | null> {
+    if (!this.path) {
+      throw new Error("Storage not initialized")
+    }
+    return await window.api.storage.getSetting(this.path, key)
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    if (!this.path) {
+      throw new Error("Storage not initialized")
+    }
+    await window.api.storage.setSetting(this.path, key, value)
+  }
 }

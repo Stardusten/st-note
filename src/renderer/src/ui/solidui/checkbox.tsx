@@ -3,7 +3,7 @@ import { splitProps, Show } from "solid-js";
 
 import * as CheckboxPrimitive from "@kobalte/core/checkbox";
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
-import { Check } from "lucide-solid";
+import { Check, Minus } from "lucide-solid";
 
 import { cn } from "@renderer/lib/common/utils/tailwindcss";
 
@@ -28,9 +28,11 @@ const Checkbox = <T extends ValidComponent = "div">(
       <CheckboxPrimitive.Input />
       <CheckboxPrimitive.Control
         class={cn(
-          "size-4 shrink-0 rounded-[4px] border border-input shadow-xs transition-shadow outline-none",
+          "size-4 shrink-0 rounded-[4px] border border-foreground/20 bg-foreground/5 shadow-xs transition-shadow outline-none flex items-center justify-center",
           "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
-          "data-[checked]:bg-primary data-[checked]:text-primary-foreground data-[checked]:border-primary",
+          "hover:bg-foreground/10",
+          "data-[checked]:bg-foreground/10 data-[checked]:text-foreground data-[checked]:border-foreground/50",
+          "data-[indeterminate]:bg-foreground/10 data-[indeterminate]:text-foreground data-[indeterminate]:border-foreground/50",
           "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
           "disabled:cursor-not-allowed disabled:opacity-50"
         )}
@@ -38,9 +40,9 @@ const Checkbox = <T extends ValidComponent = "div">(
         <CheckboxPrimitive.Indicator>
           <Show
             when={others.indeterminate}
-            fallback={<Check class="size-3.5" />}
+            fallback={<Check class="size-3.5" strokeWidth={2.5} />}
           >
-            <div class="h-[2px] w-2 bg-current" />
+            <Minus class="size-3.5" strokeWidth={2.5} />
           </Show>
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Control>

@@ -14,7 +14,9 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, "src/renderer/index.html"), // 主窗口
-          quick: resolve(__dirname, "src/renderer/quick.html") // 悬浮窗
+          quick: resolve(__dirname, "src/renderer/quick.html"), // 悬浮窗
+          search: resolve(__dirname, "src/renderer/search.html"), // 搜索窗口
+          captureSuccess: resolve(__dirname, "src/renderer/capture-success.html") // 捕获成功提示窗口
         }
       }
     },

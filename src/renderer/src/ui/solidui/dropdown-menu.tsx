@@ -31,10 +31,26 @@ const DropdownMenuContent = <T extends ValidComponent = "div">(
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         class={cn(
-          "bg-popover text-popover-foreground data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 z-50 max-h-[var(--kb-menu-content-available-height)] min-w-32 origin-[var(--kb-menu-content-transform-origin)] overflow-visible rounded-md border p-1 shadow-md",
+          "bg-popover text-popover-foreground data-[expanded]:animate-in \
+          data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 \
+          data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 \
+          data-[placement=bottom]:slide-in-from-top-2 \
+          data-[placement=left]:slide-in-from-right-2 \
+          data-[placement=right]:slide-in-from-left-2 \
+          data-[placement=top]:slide-in-from-bottom-2 \
+          z-50 max-h-[var(--kb-menu-content-available-height)] \
+          min-w-32 origin-[var(--kb-menu-content-transform-origin)] \
+          overflow-visible rounded-sm p-1",
           props.class
         )}
         {...rest}
+        style={{
+          background:
+            "rgba(37, 38, 42, 0.7)",
+          border: "0.5px solid rgba(255, 255, 255, 0.16)",
+          "backdrop-filter": "blur(3px)",
+          "box-shadow": "rgba(0, 0, 0, 0.12) 0px 3px 14px 2px, rgba(0, 0, 0, 0.14) 0px 8px 10px 1px, rgba(0, 0, 0, 0.2) 0px 5px 5px -3px"
+        }}
       />
     </DropdownMenuPrimitive.Portal>
   );
@@ -60,7 +76,16 @@ const DropdownMenuItem = <T extends ValidComponent = "div">(
       data-inset={props.inset ? "" : undefined}
       data-variant={props.variant}
       class={cn(
-        'relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4 data-[variant=destructive]:text-destructive-foreground data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive-foreground',
+        'relative flex cursor-default select-none items-center gap-2 \
+        rounded-sm px-2 py-1.5 text-sm outline-none transition-colors \
+        focus:bg-accent \
+        data-[disabled]:pointer-events-none data-[disabled]:opacity-50 \
+        data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 \
+        [&_svg:not([class*="size-"])]:size-4 \
+        data-[variant=destructive]:text-destructive-foreground \
+        data-[variant=destructive]:focus:bg-destructive/10 \
+        dark:data-[variant=destructive]:focus:bg-destructive/10 \
+        data-[variant=destructive]:focus:text-destructive-foreground',
         props.class
       )}
       {...rest}
@@ -110,6 +135,15 @@ const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
     <DropdownMenuPrimitive.Separator
       class={cn("bg-border -mx-1 my-1 h-px", props.class)}
       {...rest}
+      style={{
+            "flex-shrink": 0,
+            "border-image": "unset",
+            height: "1px",
+            "background-color": "rgba(0, 0, 0, 0.4)",
+            "border-style": "solid",
+            "border-width": "0px 0px 0.5px",
+            "border-color": "rgba(255, 255, 255, 0.2)"
+          }}
     />
   );
 };

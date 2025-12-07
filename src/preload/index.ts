@@ -99,6 +99,19 @@ export type DatabaseAPI = {
   getPath: () => Promise<string | null>
 }
 
+export type QuickAPI = {
+  capture: (options: { content: any; checked?: boolean }) => Promise<void>
+  onCapture: (callback: (data: { content: any; checked?: boolean; responseChannel: string }) => void) => void
+  sendCaptured: (channel: string, cardId?: string) => void
+}
+
+export type CaptureSuccessAPI = {
+  onShow: (callback: () => void) => void
+  onHide: (callback: () => void) => void
+  close: () => Promise<void>
+  openLastCaptured: () => Promise<void>
+}
+
 const api = {
   storage: {
     init: (path) => ipcRenderer.invoke("storage:init", path),
@@ -125,8 +138,8 @@ const api = {
     capture: (options: { content: any; checked?: boolean }) => ipcRenderer.invoke("quick:capture", options) as Promise<void>,
     onCapture: (callback: (data: { content: any; checked?: boolean; responseChannel: string }) => void) =>
       ipcRenderer.on("quick:capture", (_e, data) => callback(data)),
-    sendCaptured: (channel: string) => ipcRenderer.send(channel, null)
-  },
+    sendCaptured: (channel: string, cardId?: string) => ipcRenderer.send(channel, cardId)
+  } satisfies QuickAPI,
   search: {
     query: (query) => ipcRenderer.invoke("search:query", query),
     getRecent: () => ipcRenderer.invoke("search:getRecent"),
@@ -149,7 +162,13 @@ const api = {
   globalSettings: {
     get: () => ipcRenderer.invoke("globalSettings:get"),
     update: (partial) => ipcRenderer.invoke("globalSettings:update", partial)
-  } satisfies GlobalSettingsAPI
+  } satisfies GlobalSettingsAPI,
+  captureSuccess: {
+    onShow: (callback: () => void) => ipcRenderer.on("captureSuccess:show", () => callback()),
+    onHide: (callback: () => void) => ipcRenderer.on("captureSuccess:hide", () => callback()),
+    close: () => ipcRenderer.invoke("captureSuccess:close"),
+    openLastCaptured: () => ipcRenderer.invoke("captureSuccess:openLastCaptured")
+  } satisfies CaptureSuccessAPI
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

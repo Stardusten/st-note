@@ -11,6 +11,7 @@ import {
 } from "electron"
 import { join } from "path"
 import { copyFileSync, existsSync } from "fs"
+import { exec } from "child_process"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
 import {
@@ -43,6 +44,32 @@ import {
 let mainWindow: BrowserWindow | null = null
 let quickWindow: BrowserWindow | null = null
 let searchWindow: BrowserWindow | null = null
+let captureSuccessWindow: BrowserWindow | null = null
+let lastCapturedCardId: string | null = null
+
+// Focus Management
+let previousActivePid: number | null = null
+let lastQuickWindowCloseTime = 0
+
+const getActiveAppPidScript = `
+tell application "System Events"
+  try
+    set frontApp to first application process whose frontmost is true
+    return unix id of frontApp
+  on error
+    return ""
+  end try
+end tell
+`
+
+const activateAppScript = (pid: number) => `
+tell application "System Events"
+  try
+    set targetApp to first application process whose unix id is ${pid}
+    set frontmost of targetApp to true
+  end try
+end tell
+`
 
 function createWindow(): void {
   // Create the browser window.
@@ -86,6 +113,7 @@ function createWindow(): void {
 
 function createQuickWindow(): void {
   quickWindow = new BrowserWindow({
+    type: "panel",
     width: 600,
     height: 300,
     show: false, // initially hidden
@@ -112,6 +140,30 @@ function createQuickWindow(): void {
   // })
 }
 
+function hideQuickWindow() {
+  if (!quickWindow || quickWindow.isDestroyed()) return
+
+  if (quickWindow.isVisible()) {
+    lastQuickWindowCloseTime = Date.now()
+    quickWindow.hide()
+
+    // Restore focus to previous app if available
+    if (process.platform === "darwin" && previousActivePid) {
+      // Don't activate if previous app was us (Electron) to avoid loops
+      if (previousActivePid !== process.pid) {
+        exec(`osascript -e '${activateAppScript(previousActivePid)}'`)
+      }
+    } else if (process.platform === "darwin") {
+      // Fallback: hide app if no pid (e.g. first launch)
+      // Only hide if main window is hidden, otherwise we might hide the user's dashboard
+      const isMainWindowVisible = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized()
+      if (!isMainWindowVisible) {
+        app.hide()
+      }
+    }
+  }
+}
+
 function toggleQuickWindow() {
   if (!quickWindow || quickWindow.isDestroyed()) {
     createQuickWindow()
@@ -119,8 +171,20 @@ function toggleQuickWindow() {
   }
 
   if (quickWindow.isVisible()) {
-    quickWindow.hide()
+    hideQuickWindow()
   } else {
+    // Capture current active app PID before showing
+    if (process.platform === "darwin") {
+      exec(`osascript -e '${getActiveAppPidScript}'`, (err, stdout) => {
+        if (!err && stdout.trim()) {
+          const pid = parseInt(stdout.trim(), 10)
+          if (!isNaN(pid) && pid !== process.pid) {
+            previousActivePid = pid
+          }
+        }
+      })
+    }
+
     const point = screen.getCursorScreenPoint()
     const display = screen.getDisplayNearestPoint(point)
     const x = display.bounds.x + (display.bounds.width - 800) / 2
@@ -157,6 +221,81 @@ function createSearchWindow(): void {
   searchWindow.on("blur", () => {
     searchWindow?.hide()
   })
+}
+
+function createCaptureSuccessWindow(): void {
+  captureSuccessWindow = new BrowserWindow({
+    width: 320, // Slightly wider to accommodate shadow
+    height: 120, // Taller to accommodate large shadow without clipping
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    focusable: true, // Allow focus so it can take over from Quick Window
+    fullscreenable: false,
+    hasShadow: false, // Custom shadow in CSS
+    backgroundColor: '#00000000', // Explicitly set transparent background color (ARGB)
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false
+    }
+  })
+
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    captureSuccessWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/capture-success.html`)
+  } else {
+    captureSuccessWindow.loadFile(join(__dirname, "../renderer/capture-success.html"))
+  }
+}
+
+function showCaptureSuccess(cardId: string) {
+  if (!captureSuccessWindow || captureSuccessWindow.isDestroyed()) {
+    createCaptureSuccessWindow()
+  }
+
+  lastCapturedCardId = cardId
+  
+  // Position at top center of the current display
+  const point = screen.getCursorScreenPoint()
+  const display = screen.getDisplayNearestPoint(point)
+  const x = display.bounds.x + (display.bounds.width - 320) / 2
+  // Adjust Y to keep the capsule roughly at the same visual vertical position
+  // Old: height 60, y + 40 -> center at 70px
+  // New: height 120, center at 60px -> y = 70 - 60 = 10px. 
+  // Let's make it 20px to be safe.
+  const y = display.bounds.y + 20 
+
+  captureSuccessWindow?.setPosition(Math.round(x), Math.round(y))
+  // Show and focus to prevent main window from activating
+  captureSuccessWindow?.show() 
+  captureSuccessWindow?.focus()
+  captureSuccessWindow?.webContents.send("captureSuccess:show")
+}
+
+function hideCaptureSuccess() {
+  if (captureSuccessWindow && !captureSuccessWindow.isDestroyed() && captureSuccessWindow.isVisible()) {
+    captureSuccessWindow.webContents.send("captureSuccess:hide")
+    // Give time for exit animation
+    setTimeout(() => {
+      // Check window states
+      const isMainWindowFocused = mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()
+      const isMainWindowVisible = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized()
+      
+      // We only hide the app if:
+      // 1. We are on macOS
+      // 2. Main window is NOT focused (user didn't press Cmd+O)
+      // 3. Main window is NOT visible (it was hidden/minimized, so we want to keep it that way)
+      //    If main window IS visible, we shouldn't hide the app, because that would hide the main window too.
+      //    We prefer keeping the main window visible (even if it might gain focus) over hiding it unexpectedly.
+      if (process.platform === "darwin" && !isMainWindowFocused && !isMainWindowVisible) {
+        app.hide()
+      }
+      
+      captureSuccessWindow?.hide()
+    }, 500)
+  }
 }
 
 function toggleSearchWindow() {
@@ -234,7 +373,7 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:setSetting", restFunc(setSetting))
   ipcMain.handle("storage:getAllSettings", restFunc(getAllSettings))
   ipcMain.handle("storage:deleteSetting", restFunc(deleteSetting))
-  ipcMain.handle("quick:hide", () => quickWindow?.hide())
+  ipcMain.handle("quick:hide", () => hideQuickWindow())
   ipcMain.handle("search:hide", () => searchWindow?.hide())
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
@@ -296,11 +435,40 @@ app.whenReady().then(() => {
 
   // Quick capture IPC: forward to main window
   ipcMain.handle("quick:capture", async (_e, options: { content: any; checked?: boolean }) => {
-    if (!mainWindow) return
+    // if (!mainWindow) return // Do not require mainWindow to be visible or focused
+    // But we need mainWindow instance to send IPC
+    if (!mainWindow) return 
+
+    // quickWindow?.hide() // Let renderer close it to avoid focus issues
     const win = mainWindow
+    
     return new Promise<void>((resolve) => {
       const channel = `quick:captured:${Date.now()}`
-      ipcMain.once(channel, () => resolve())
+      ipcMain.once(channel, (_e, cardId) => {
+        // Strategy: Transfer focus to Success Window
+        // This prevents macOS from activating the Main Window when Quick Window hides.
+        
+        // 1. Show Success Window first and grab focus
+        if (cardId) {
+          showCaptureSuccess(cardId)
+        }
+
+        // 2. Hide Quick Window immediately
+        // Since Success Window is now the focused window of the app, 
+        // hiding Quick Window shouldn't trigger Main Window activation.
+        if (quickWindow && !quickWindow.isDestroyed()) {
+          quickWindow.hide()
+        }
+
+        // 3. Reset Quick Window states (cleanup from previous hacks if any)
+        if (quickWindow && !quickWindow.isDestroyed()) {
+          quickWindow.setOpacity(1)
+          quickWindow.setIgnoreMouseEvents(false)
+        }
+
+        resolve()
+      })
+      // Send to renderer without focusing window
       win.webContents.send("quick:capture", { ...options, responseChannel: channel })
       setTimeout(() => resolve(), 5000)
     })
@@ -347,17 +515,43 @@ app.whenReady().then(() => {
     })
   })
 
+  // Capture Success IPC
+  ipcMain.handle("captureSuccess:close", () => {
+    hideCaptureSuccess()
+  })
+  
+  ipcMain.handle("captureSuccess:openLastCaptured", () => {
+    if (mainWindow && lastCapturedCardId) {
+      mainWindow.show()
+      mainWindow.focus()
+      // Wait a bit for window to show and focus before sending navigation event
+      setTimeout(() => {
+        mainWindow?.webContents.send("search:selectCard", lastCapturedCardId)
+      }, 100)
+      hideCaptureSuccess()
+    }
+  })
+
   createWindow()
   createQuickWindow()
   createSearchWindow()
+  createCaptureSuccessWindow()
 
   globalShortcut.register("CommandOrControl+Shift+C", toggleQuickWindow)
   globalShortcut.register("CommandOrControl+Shift+P", toggleSearchWindow)
 
   app.on("activate", function () {
+    console.log("on activate")
+    // Debounce activation to prevent system from automatically showing main window 
+    // when quick window closes
+    if (Date.now() - lastQuickWindowCloseTime < 300) {
+      return
+    }
+
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    else if (mainWindow) mainWindow.show()
   })
 })
 
