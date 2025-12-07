@@ -102,5 +102,7 @@ export const CodeBlock = CodeBlockLowlight.extend({
   }
 }).configure({
   lowlight,
-  defaultLanguage: "plaintext"
+  defaultLanguage: "plaintext",
+  exitOnArrowDown: true,
+  exitOnTripleEnter: true,
 })

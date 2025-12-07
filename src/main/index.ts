@@ -11,7 +11,6 @@ import {
 } from "electron"
 import { join } from "path"
 import { copyFileSync, existsSync } from "fs"
-import { exec } from "child_process"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
 import {
@@ -46,30 +45,6 @@ let quickWindow: BrowserWindow | null = null
 let searchWindow: BrowserWindow | null = null
 let captureSuccessWindow: BrowserWindow | null = null
 let lastCapturedCardId: string | null = null
-
-// Focus Management
-let previousActivePid: number | null = null
-let lastQuickWindowCloseTime = 0
-
-const getActiveAppPidScript = `
-tell application "System Events"
-  try
-    set frontApp to first application process whose frontmost is true
-    return unix id of frontApp
-  on error
-    return ""
-  end try
-end tell
-`
-
-const activateAppScript = (pid: number) => `
-tell application "System Events"
-  try
-    set targetApp to first application process whose unix id is ${pid}
-    set frontmost of targetApp to true
-  end try
-end tell
-`
 
 function createWindow(): void {
   // Create the browser window.
@@ -141,26 +116,8 @@ function createQuickWindow(): void {
 }
 
 function hideQuickWindow() {
-  if (!quickWindow || quickWindow.isDestroyed()) return
-
-  if (quickWindow.isVisible()) {
-    lastQuickWindowCloseTime = Date.now()
+  if (quickWindow && !quickWindow.isDestroyed() && quickWindow.isVisible()) {
     quickWindow.hide()
-
-    // Restore focus to previous app if available
-    if (process.platform === "darwin" && previousActivePid) {
-      // Don't activate if previous app was us (Electron) to avoid loops
-      if (previousActivePid !== process.pid) {
-        exec(`osascript -e '${activateAppScript(previousActivePid)}'`)
-      }
-    } else if (process.platform === "darwin") {
-      // Fallback: hide app if no pid (e.g. first launch)
-      // Only hide if main window is hidden, otherwise we might hide the user's dashboard
-      const isMainWindowVisible = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized()
-      if (!isMainWindowVisible) {
-        app.hide()
-      }
-    }
   }
 }
 
@@ -173,18 +130,6 @@ function toggleQuickWindow() {
   if (quickWindow.isVisible()) {
     hideQuickWindow()
   } else {
-    // Capture current active app PID before showing
-    if (process.platform === "darwin") {
-      exec(`osascript -e '${getActiveAppPidScript}'`, (err, stdout) => {
-        if (!err && stdout.trim()) {
-          const pid = parseInt(stdout.trim(), 10)
-          if (!isNaN(pid) && pid !== process.pid) {
-            previousActivePid = pid
-          }
-        }
-      })
-    }
-
     const point = screen.getCursorScreenPoint()
     const display = screen.getDisplayNearestPoint(point)
     const x = display.bounds.x + (display.bounds.width - 800) / 2
@@ -225,6 +170,7 @@ function createSearchWindow(): void {
 
 function createCaptureSuccessWindow(): void {
   captureSuccessWindow = new BrowserWindow({
+    type: "panel", // Use panel type for proper focus handling
     width: 320, // Slightly wider to accommodate shadow
     height: 120, // Taller to accommodate large shadow without clipping
     show: false,
@@ -279,20 +225,6 @@ function hideCaptureSuccess() {
     captureSuccessWindow.webContents.send("captureSuccess:hide")
     // Give time for exit animation
     setTimeout(() => {
-      // Check window states
-      const isMainWindowFocused = mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()
-      const isMainWindowVisible = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized()
-      
-      // We only hide the app if:
-      // 1. We are on macOS
-      // 2. Main window is NOT focused (user didn't press Cmd+O)
-      // 3. Main window is NOT visible (it was hidden/minimized, so we want to keep it that way)
-      //    If main window IS visible, we shouldn't hide the app, because that would hide the main window too.
-      //    We prefer keeping the main window visible (even if it might gain focus) over hiding it unexpectedly.
-      if (process.platform === "darwin" && !isMainWindowFocused && !isMainWindowVisible) {
-        app.hide()
-      }
-      
       captureSuccessWindow?.hide()
     }, 500)
   }
@@ -541,13 +473,6 @@ app.whenReady().then(() => {
   globalShortcut.register("CommandOrControl+Shift+P", toggleSearchWindow)
 
   app.on("activate", function () {
-    console.log("on activate")
-    // Debounce activation to prevent system from automatically showing main window 
-    // when quick window closes
-    if (Date.now() - lastQuickWindowCloseTime < 300) {
-      return
-    }
-
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

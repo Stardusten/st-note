@@ -39,7 +39,7 @@ const CodeBlockViewUI = (props: CodeBlockViewProps) => {
   }
 
   return (
-    <pre class="relative" data-indent={props.node.attrs.indent || undefined}>
+    <div class="code-block-wrapper relative" data-indent={props.node.attrs.indent || undefined}>
       <select
         class="code-block-language-select"
         value={lang()}
@@ -50,8 +50,10 @@ const CodeBlockViewUI = (props: CodeBlockViewProps) => {
           {(language) => <option value={language.value}>{language.label}</option>}
         </For>
       </select>
-      <code class="codeblock-content hljs" spellcheck={false}></code>
-    </pre>
+      <pre class="overflow-x-auto" spellcheck={false}>
+        <code class="codeblock-content hljs"></code>
+      </pre>
+    </div>
   )
 }
 
@@ -62,6 +64,9 @@ class CodeBlockNodeViewAdapter implements NodeView {
 
   constructor(props: NodeViewRendererProps) {
     const container = document.createElement("div")
+    // Use a wrapper div for the NodeView container
+    container.classList.add("node-view-container") 
+    
     this.dispose = render(
       () => (
         <CodeBlockViewUI

@@ -10,6 +10,7 @@
   - 所有实现都使用无参构造函数实例化，然后使用 init 初始化（也就是说接口定义中一定要有 init，如果需要初始化）
   - 这样每个模块都是容易组合，容易测试的
 - 如果看到一个组件上有仅用于标识的，非 tailwindcss 类名，一定注意是否在 style 块和 css 中用到了这个类名
+- 如果看到一个组件上有仅用于标识的，非 tailwindcss 类名，一定注意是否在 style 块和 css 中用到了这个类名
 
 ## 其他要求
 
@@ -41,7 +42,24 @@
         - quick-window：快速记录窗口相关视图
         - search-window：搜索窗口相关视图
         - solidui：来自 solid-ui 的 shadcn 风格组件，官网 https://www.solid-ui.com，总是考虑优先使用这里的组件。
+      - ui：与渲染相关的代码，较重的纯数据逻辑都不要放到这里，而应该放到 lib 里
+        - common：通用 UI 组件
+        - main-window：主窗口相关视图（CardEditor, AllCardsView, SettingsPanel 等）
+        - mini-window：迷你窗口相关视图
+        - quick-window：快速记录窗口相关视图
+        - search-window：搜索窗口相关视图
+        - solidui：来自 solid-ui 的 shadcn 风格组件，官网 https://www.solid-ui.com，总是考虑优先使用这里的组件。
       - icons：自定义图标，如果 lucide-solid 中没有想要的图标，才会手工生成放到这里。
+      - lib：与渲染无关的逻辑，尽量不要出现任何来自 ui 框架的和渲染相关的东西（除了 Signal）
+        - backlink：双向链接索引与管理
+        - common：公共工具函数与类型
+          - utils：工具函数 (datetime, fuzzySearch 等)
+          - types：通用类型
+        - editor：编辑器核心逻辑 (TiptapEditor) 与扩展 (extensions)
+        - objcache：对象缓存层，向上提供响应式读取方法和事务化的修改方法
+        - settings：设置管理 (SettingsStore)
+        - state：应用状态管理 (AppStore)
+        - storage：存储层，只负责读写对象，不负责缓存
       - lib：与渲染无关的逻辑，尽量不要出现任何来自 ui 框架的和渲染相关的东西（除了 Signal）
         - backlink：双向链接索引与管理
         - common：公共工具函数与类型
@@ -54,10 +72,23 @@
         - storage：存储层，只负责读写对象，不负责缓存
           - storage.ts：存储层接口
           - mock.ts：mock 实现
+          - mock.ts：mock 实现
           - sqlite.ts：SQLite 实现
+        - textcontent：文本内容缓存与提取
         - textcontent：文本内容缓存与提取
 
 现在 UI 非常不规范，很多颜色等变量都是硬编码的，因为是直接参考设计师出图写的 UI，效果很好看，但组件可能难以复用。请暂时维持现状，不要尝试抽取 / 复用，如果你认为抽取 / 复用可行，请先询问我的意见。
+
+## macOS 窗口管理与焦点最佳实践
+
+在 macOS 上实现类似于 Spotlight/Raycast 的辅助窗口 (Quick/Search Window) 时，为了确保焦点能正确归还给上一个应用（如 Chrome），同时不意外激活主窗口，只需要 BrowserWindow 设置 `type: "panel"` 即可：
+
+```typescript
+new BrowserWindow({
+  type: "panel", // 关键：告诉 macOS 这是一个辅助面板
+  // ...
+})
+```
 
 ## 设置存储
 
