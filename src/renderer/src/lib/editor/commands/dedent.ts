@@ -1,7 +1,7 @@
 import { Fragment, NodeRange, Slice } from "prosemirror-model"
 import { Command, Transaction } from "prosemirror-state"
 import { ReplaceAroundStep } from "prosemirror-transform"
-import { getBlockType, isBlockNode } from "./schema"
+import { getBlockType, isBlockNode } from "../schema"
 import { atStartBlockBoundary, atEndBlockBoundary, zoomInRange, mapPos, findBlocksRange, isBlocksRange, safeLift } from "./utils"
 
 export function createDedentCommand(): Command {
@@ -10,13 +10,12 @@ export function createDedentCommand(): Command {
     const { $from, $to } = tr.selection
 
     const range = findBlocksRange($from, $to)
-    if (!range) return false
+    if (!range) return true
 
     if (dedentRange(range, tr)) {
       dispatch?.(tr)
-      return true
     }
-    return false
+    return true
   }
 }
 
@@ -105,7 +104,7 @@ export function dedentNodeRange(range: NodeRange, tr: Transaction): boolean {
   }
 }
 
-function canUnwrapBlock(tr: Transaction, range: NodeRange): boolean {
+function canUnwrapBlock(_tr: Transaction, range: NodeRange): boolean {
   const { startIndex, parent } = range
   const blockNode = parent.maybeChild(startIndex)
   if (!blockNode) return false

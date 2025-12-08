@@ -13,10 +13,12 @@ import {
 } from "prosemirror-commands"
 import { undo, redo } from "prosemirror-history"
 import { inputRules } from "prosemirror-inputrules"
-import { splitBlock, joinBlockUp } from "./split"
-import { indent } from "./indent"
-import { dedent } from "./dedent"
-import { blockInputRules } from "./inputrules"
+import { splitBlock, joinBlockUp } from "./commands/split"
+import { indent } from "./commands/indent"
+import { dedent } from "./commands/dedent"
+import { bulletListRule, orderedListRule } from "./input-rules/wrapping-block"
+import { codeBlockRule } from "./input-rules/code-block"
+import { inlineCodeRule } from "./input-rules/inline-code"
 import { schema } from "./schema"
 
 export const CODE_INDENT = "  "
@@ -78,11 +80,7 @@ const backspaceCommand = chainCommands(
   selectNodeBackward
 )
 
-const deleteCommand = chainCommands(
-  deleteSelection,
-  joinTextblockForward,
-  selectNodeForward
-)
+const deleteCommand = chainCommands(deleteSelection, joinTextblockForward, selectNodeForward)
 
 const tabCommand = chainCommands(insertCodeIndent, indent)
 
@@ -104,7 +102,10 @@ const exitCodeBlockDown: Command = (state, dispatch) => {
 
   if (dispatch) {
     const insertPos = $head.after(-1)
-    const newBlock = schema.nodes.block.create({ kind: "paragraph" }, schema.nodes.paragraph.create())
+    const newBlock = schema.nodes.block.create(
+      { kind: "paragraph" },
+      schema.nodes.paragraph.create()
+    )
     const tr = state.tr.insert(insertPos, newBlock)
     dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + 2)).scrollIntoView())
   }
@@ -113,12 +114,12 @@ const exitCodeBlockDown: Command = (state, dispatch) => {
 
 export function buildKeymap(): Plugin {
   return keymap({
-    "Enter": enterCommand,
-    "Backspace": backspaceCommand,
-    "Delete": deleteCommand,
+    Enter: enterCommand,
+    Backspace: backspaceCommand,
+    Delete: deleteCommand,
     "Mod-[": dedent,
     "Mod-]": indent,
-    "Tab": tabCommand,
+    Tab: tabCommand,
     "Shift-Tab": dedent,
     "Mod-z": undo,
     "Mod-y": redo,
@@ -127,11 +128,11 @@ export function buildKeymap(): Plugin {
     "Mod-i": toggleMark(schema.marks.italic),
     "Mod-`": toggleMark(schema.marks.code),
     "Mod-a": selectAllInBlock,
-    "ArrowDown": exitCodeBlockDown,
+    ArrowDown: exitCodeBlockDown,
     "Mod-Enter": exitCode
   })
 }
 
 export function buildInputRules(): Plugin {
-  return inputRules({ rules: blockInputRules })
+  return inputRules({ rules: [bulletListRule, orderedListRule, codeBlockRule, inlineCodeRule] })
 }

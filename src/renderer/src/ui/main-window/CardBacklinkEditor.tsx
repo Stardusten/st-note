@@ -1,12 +1,14 @@
-import { Component, createSignal } from "solid-js"
+import { Component } from "solid-js"
 import { ArrowUpRightIcon } from "lucide-solid"
 import type { StObjectId } from "@renderer/lib/common/types"
 import type { BlockContext } from "@renderer/lib/backlink/types"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { ProseMirrorEditor } from "@renderer/lib/editor/ProseMirrorEditor"
 import "@renderer/lib/editor/note-editor.css"
+import "@renderer/lib/editor/backlink-editor.css"
 import { Button } from "../solidui/button"
 import { formatRelativeTime } from "@renderer/lib/common/utils/relative-time"
+import { prepareFuzzySearch } from "@renderer/lib/common/utils/fuzzySearch"
 
 type CardBacklinkEditorProps = {
   cardId: StObjectId
@@ -18,7 +20,6 @@ type CardBacklinkEditorProps = {
 const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
   const editorId = `backlink-editor:${props.cardId}`
   const card = () => appStore.getCards().find((c) => c.id === props.cardId)
-  const [expanded, setExpanded] = createSignal(false)
 
   const handleUpdate = (content: any) => {
     const extractText = (node: any): string => {
@@ -30,9 +31,42 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
     appStore.updateCard(props.cardId, content, extractText(content), editorId)
   }
 
+  const getCardSuggestions = async (query: string) => {
+    const cards = appStore.getCards()
+    if (!query.trim()) {
+      return cards.slice(0, 10).map(c => ({
+        id: c.id,
+        title: appStore.getCardTitle(c.id)() || "Untitled"
+      }))
+    }
+    const fuzzySearch = prepareFuzzySearch(query)
+    return cards
+      .map(c => ({ card: c, score: fuzzySearch(c.text || "").score }))
+      .filter(r => r.score > -Infinity)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map(r => ({
+        id: r.card.id,
+        title: appStore.getCardTitle(r.card.id)() || "Untitled"
+      }))
+  }
+
+  const handleCreateCard = async (title: string) => {
+    const card = await appStore.createCardWithoutSelect(title)
+    return { id: card.id, title }
+  }
+
+  const handleCardClick = (cardId: string) => {
+    appStore.selectCard(cardId)
+  }
+
+  const getCardTitle = (cardId: string) => {
+    return appStore.getCardTitle(cardId)() || "Untitled"
+  }
+
   return (
     <div
-      class="px-[16px] pt-[16px] pb-[12px] w-full min-h-[60px] rounded-md"
+      class="backlink-editor px-[16px] pt-[16px] pb-[12px] w-full min-h-[60px] rounded-md"
       style={{
         "box-shadow":
           "rgba(0, 0, 0, 0.12) 0px 1px 10px, rgba(0, 0, 0, 0.14) 0px 4px 5px, rgba(0, 0, 0, 0.2) 0px 2px 4px -1px",
@@ -46,15 +80,14 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
           onUpdate={handleUpdate}
           editorId={editorId}
           getLastUpdateSource={() => appStore.getLastUpdateSource(props.cardId)}
+          getCardSuggestions={getCardSuggestions}
+          onCreateCard={handleCreateCard}
+          onCardClick={handleCardClick}
+          getCardTitle={getCardTitle}
+          backlinkTargetCardId={props.targetCardId}
         />
       </div>
-      <div class="flex items-center justify-between mt-2">
-        <Button
-          class="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-          onClick={() => setExpanded(!expanded())}
-          variant="text-only">
-          {expanded() ? "Collapse all" : "Expand all"}
-        </Button>
+      <div class="flex items-center justify-end mt-2">
         <div class="flex items-center gap-2">
           <span class="text-xs text-muted-foreground">{formatRelativeTime(card()?.createdAt)}</span>
           <Button

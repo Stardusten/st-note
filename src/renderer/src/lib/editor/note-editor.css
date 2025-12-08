@@ -238,3 +238,27 @@
 .prosemirror-editor .hljs-link {
   text-decoration: underline;
 }
+
+/* card reference */
+.prosemirror-editor .card-ref {
+  border-bottom: 1px solid var(--color-border);
+  color: var(--accent-foreground);
+  cursor: pointer;
+}
+
+.prosemirror-editor .card-ref.ProseMirror-selectednode,
+.prosemirror-editor .card-ref:hover {
+  background-color: var(--color-accent);
+}
+
+/* link */
+.prosemirror-editor a {
+  border-bottom: 1px solid var(--color-border);
+  color: #7aa2c7;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.prosemirror-editor a:hover {
+  background-color: var(--color-accent);
+}

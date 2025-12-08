@@ -13,18 +13,22 @@
   cursor: default;
 }
 
-.backlink-tiptap-wrapper .ProseMirror p {
+.backlink-editor .ProseMirror {
+  font-size: var(--text-sm);
+}
+
+.backlink-editor .ProseMirror p {
   margin: 0.25em 0;
 }
 
-.backlink-tiptap-wrapper .ProseMirror h1.editor-title {
+.backlink-editor .ProseMirror h1.editor-title {
   font-size: inherit;
   font-weight: 300;
   line-height: inherit;
   margin: 0.25em 0;
 }
 
-.backlink-tiptap-wrapper .ProseMirror .bn-bullet-list-item,
-.backlink-tiptap-wrapper .ProseMirror .bn-numbered-list-item {
+.backlink-editor .ProseMirror .block[data-kind="bullet"],
+.backlink-editor .ProseMirror .block[data-kind="ordered"] {
   margin: 0.25em 0;
 }

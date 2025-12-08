@@ -4,6 +4,7 @@ import { Command, Inbox, Link, Pin, Plus, SquareArrowRight, WandSparkles } from 
 import { Button } from "../solidui/button"
 import { appStore } from "@renderer/lib/state/AppStore"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
+import { prepareFuzzySearch } from "@renderer/lib/common/utils/fuzzySearch"
 
 const EDITOR_ID = "card-main-editor"
 
@@ -22,6 +23,39 @@ const CardMainEditor: Component = () => {
 
   const handleCreateNewCard = async () => {
     await appStore.createCard()
+  }
+
+  const getCardSuggestions = async (query: string) => {
+    const cards = appStore.getCards()
+    if (!query.trim()) {
+      return cards.slice(0, 10).map(c => ({
+        id: c.id,
+        title: appStore.getCardTitle(c.id)() || "Untitled"
+      }))
+    }
+    const fuzzySearch = prepareFuzzySearch(query)
+    return cards
+      .map(c => ({ card: c, score: fuzzySearch(c.text || "").score }))
+      .filter(r => r.score > -Infinity)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map(r => ({
+        id: r.card.id,
+        title: appStore.getCardTitle(r.card.id)() || "Untitled"
+      }))
+  }
+
+  const handleCreateCard = async (title: string) => {
+    const card = await appStore.createCardWithoutSelect(title)
+    return { id: card.id, title }
+  }
+
+  const handleCardClick = (cardId: string) => {
+    appStore.selectCard(cardId)
+  }
+
+  const getCardTitle = (cardId: string) => {
+    return appStore.getCardTitle(cardId)() || "Untitled"
   }
 
   const currentCardId = appStore.getCurrentCardId
@@ -83,6 +117,10 @@ const CardMainEditor: Component = () => {
               const cardId = appStore.getCurrentCardId()
               return cardId ? appStore.getLastUpdateSource(cardId) : undefined
             }}
+            getCardSuggestions={getCardSuggestions}
+            onCreateCard={handleCreateCard}
+            onCardClick={handleCardClick}
+            getCardTitle={getCardTitle}
           />
         </div>
       </Show>

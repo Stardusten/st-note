@@ -6,8 +6,13 @@ import { history } from "prosemirror-history"
 import { common, createLowlight } from "lowlight"
 import { schema } from "./schema"
 import { buildKeymap, buildInputRules } from "./keymap"
-import { CodeBlockView } from "./CodeBlockView"
-import { createLowlightPlugin } from "./lowlight-plugin"
+import { CodeBlockView } from "./nodeviews/CodeBlockView"
+import { CardRefView, CardRefOptions } from "./nodeviews/CardRefView"
+import { createLowlightPlugin } from "./plugins/lowlight-plugin"
+import { createCardRefSuggestionPlugin, CardSuggestionItem } from "./plugins/cardref-suggestion-plugin"
+import { createCardRefPopupRenderer } from "./plugins/CardRefPopup"
+import { createAutoLinkPlugin } from "./plugins/auto-link-plugin"
+import { createBacklinkViewPlugin } from "./plugins/backlink-view-plugin"
 import "./note-editor.css"
 
 const lowlight = createLowlight(common)
@@ -19,6 +24,11 @@ export type ProseMirrorEditorProps = {
   class?: string
   editorId?: string
   getLastUpdateSource?: () => string | undefined
+  getCardSuggestions?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
+  onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
+  onCardClick?: (cardId: string) => void
+  getCardTitle?: (cardId: string) => string
+  backlinkTargetCardId?: string
 }
 
 const createPlaceholderPlugin = (placeholder: string) => {
@@ -98,26 +108,51 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   let containerRef: HTMLDivElement | undefined
   let view: EditorView | undefined
 
+  const cardRefOptions: CardRefOptions = {
+    onCardClick: (cardId) => props.onCardClick?.(cardId),
+    getTitle: (cardId) => props.getCardTitle?.(cardId) ?? "Untitled"
+  }
+
   onMount(() => {
     if (!containerRef) return
 
     const doc = createDocFromJSON(props.content)
 
-    const state = EditorState.create({
-      doc,
-      plugins: [
-        buildInputRules(),
-        buildKeymap(),
-        history(),
-        createPlaceholderPlugin(props.placeholder || ""),
-        createLowlightPlugin("code_block", lowlight)
-      ]
-    })
+    const plugins: Plugin[] = []
+
+    if (props.getCardSuggestions) {
+      plugins.push(
+        createCardRefSuggestionPlugin({
+          items: props.getCardSuggestions,
+          render: createCardRefPopupRenderer(props.getCardSuggestions, props.onCreateCard)
+        })
+      )
+    }
+
+    plugins.push(
+      buildInputRules(),
+      buildKeymap(),
+      history(),
+      createPlaceholderPlugin(props.placeholder || ""),
+      createLowlightPlugin("code_block", lowlight),
+      createAutoLinkPlugin()
+    )
+
+    if (props.backlinkTargetCardId) {
+      plugins.push(
+        createBacklinkViewPlugin({
+          targetCardId: props.backlinkTargetCardId
+        })
+      )
+    }
+
+    const state = EditorState.create({ doc, plugins })
 
     view = new EditorView(containerRef, {
       state,
       nodeViews: {
-        code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos)
+        code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos),
+        cardRef: (node, view, getPos) => new CardRefView(node, view, getPos, cardRefOptions)
       },
       dispatchTransaction(transaction) {
         if (!view) return

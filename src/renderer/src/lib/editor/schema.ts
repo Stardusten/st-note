@@ -112,6 +112,27 @@ const textSpec: NodeSpec = {
   group: "inline"
 }
 
+const cardRefSpec: NodeSpec = {
+  group: "inline",
+  inline: true,
+  atom: true,
+  attrs: {
+    cardId: { default: null }
+  },
+  parseDOM: [
+    {
+      tag: 'span[data-type="card-ref"]',
+      getAttrs(dom) {
+        const el = dom as HTMLElement
+        return { cardId: el.getAttribute("data-card-id") }
+      }
+    }
+  ],
+  toDOM(node): DOMOutputSpec {
+    return ["span", { "data-type": "card-ref", "data-card-id": node.attrs.cardId, class: "card-ref" }, ""]
+  }
+}
+
 const boldSpec: MarkSpec = {
   parseDOM: [
     { tag: "strong" },
@@ -142,6 +163,27 @@ const codeSpec: MarkSpec = {
   }
 }
 
+const linkSpec: MarkSpec = {
+  attrs: {
+    href: { default: null },
+    title: { default: null }
+  },
+  inclusive: false,
+  parseDOM: [
+    {
+      tag: "a[href]",
+      getAttrs(dom) {
+        const el = dom as HTMLElement
+        return { href: el.getAttribute("href"), title: el.getAttribute("title") }
+      }
+    }
+  ],
+  toDOM(mark): DOMOutputSpec {
+    const { href, title } = mark.attrs
+    return ["a", { href, title, target: "_blank", rel: "noopener noreferrer" }, 0]
+  }
+}
+
 export const schema = new Schema({
   nodes: {
     doc: docSpec,
@@ -149,12 +191,14 @@ export const schema = new Schema({
     block: blockSpec,
     paragraph: paragraphSpec,
     code_block: codeBlockSpec,
+    cardRef: cardRefSpec,
     text: textSpec
   },
   marks: {
     bold: boldSpec,
     italic: italicSpec,
-    code: codeSpec
+    code: codeSpec,
+    link: linkSpec
   }
 })
 

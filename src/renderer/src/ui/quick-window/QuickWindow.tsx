@@ -67,6 +67,14 @@ const QuickWindow: Component = () => {
     }
   }
 
+  const getCardSuggestions = async (query: string) => {
+    return appStoreIpc.searchCards(query)
+  }
+
+  const handleCreateCard = async (title: string) => {
+    return appStoreIpc.createCard(title)
+  }
+
   return (
     <div class="quick-capture-window px-4 pt-4 h-full flex flex-col" style={{ "-webkit-app-region": "drag" }}>
       <div class="absolute left-0 top-0 h-full w-full flex flex-col">
@@ -110,6 +118,8 @@ const QuickWindow: Component = () => {
                 placeholder="Start writing..."
                 showTitleToolbar={false}
                 autoFocus
+                getCardSuggestions={getCardSuggestions}
+                onCreateCard={handleCreateCard}
               />
             )}
           </Show>

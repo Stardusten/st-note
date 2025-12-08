@@ -1,5 +1,6 @@
 import { Component, JSX } from "solid-js"
 import { ProseMirrorEditor } from "./ProseMirrorEditor"
+import type { CardSuggestionItem } from "./plugins/cardref-suggestion-plugin"
 
 type NoteEditorProps = {
   content?: object
@@ -11,6 +12,10 @@ type NoteEditorProps = {
   class?: string
   editorId?: string
   getLastUpdateSource?: () => string | undefined
+  getCardSuggestions?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
+  onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
+  onCardClick?: (cardId: string) => void
+  getCardTitle?: (cardId: string) => string
 }
 
 const getTextFromDoc = (doc: any): string => {
@@ -47,6 +52,10 @@ const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
       class={props.class}
       editorId={props.editorId}
       getLastUpdateSource={props.getLastUpdateSource}
+      getCardSuggestions={props.getCardSuggestions}
+      onCreateCard={props.onCreateCard}
+      onCardClick={props.onCardClick}
+      getCardTitle={props.getCardTitle}
     />
   )
 }

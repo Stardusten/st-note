@@ -2,7 +2,7 @@ import { NodeRange, ResolvedPos, Node as PMNode } from "prosemirror-model"
 import { Transaction, EditorState, TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { liftTarget } from "prosemirror-transform"
-import { isBlockNode } from "./schema"
+import { isBlockNode } from "../schema"
 
 export function atStartBlockBoundary($pos: ResolvedPos, depth: number): boolean {
   for (let d = depth; d <= $pos.depth; d++) {
