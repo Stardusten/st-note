@@ -1,6 +1,13 @@
+@import "prosemirror-view/style/prosemirror.css";
+
 .prosemirror-editor {
   font-family: var(--editor-font-family);
   font-size: var(--editor-font-size);
+}
+
+.ProseMirror *::selection,
+.ProseMirror *::-moz-selection {
+  background-color: var(--color-selection) !important;
 }
 
 /* no outline */
@@ -106,4 +113,128 @@
 
 .prosemirror-editor .ProseMirror[data-placeholder=""]:not(:focus)::before {
   content: none;
+}
+
+/* code block wrapper */
+.prosemirror-editor .code-block-wrapper {
+  margin: 0.5em 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* code block toolbar */
+.prosemirror-editor .code-block-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px 0 8px;
+}
+
+.prosemirror-editor .code-block-language-select {
+  font-family: var(--editor-font-family);
+  font-size: 12px;
+  padding: 2px 6px;
+  color: var(--color-muted-foreground);
+  outline: none;
+}
+
+.prosemirror-editor .code-block-language-select:hover {
+  color: var(--color-foreground);
+}
+
+/* code block */
+.prosemirror-editor .code-block {
+  margin: 0;
+  padding: 6px 16px 12px 16px;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: var(--code-font-family);
+  font-size: var(--code-font-size);
+  line-height: 1.5;
+  background: transparent;
+}
+
+.prosemirror-editor .code-block code {
+  display: block;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre;
+}
+
+/* highlight.js theme - dark */
+.prosemirror-editor .hljs {
+  color: #abb2bf;
+}
+
+.prosemirror-editor .hljs-comment,
+.prosemirror-editor .hljs-quote {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.prosemirror-editor .hljs-doctag,
+.prosemirror-editor .hljs-keyword,
+.prosemirror-editor .hljs-formula {
+  color: #c678dd;
+}
+
+.prosemirror-editor .hljs-section,
+.prosemirror-editor .hljs-name,
+.prosemirror-editor .hljs-selector-tag,
+.prosemirror-editor .hljs-deletion,
+.prosemirror-editor .hljs-subst {
+  color: #e06c75;
+}
+
+.prosemirror-editor .hljs-literal {
+  color: #56b6c2;
+}
+
+.prosemirror-editor .hljs-string,
+.prosemirror-editor .hljs-regexp,
+.prosemirror-editor .hljs-addition,
+.prosemirror-editor .hljs-attribute,
+.prosemirror-editor .hljs-meta .hljs-string {
+  color: #98c379;
+}
+
+.prosemirror-editor .hljs-attr,
+.prosemirror-editor .hljs-variable,
+.prosemirror-editor .hljs-template-variable,
+.prosemirror-editor .hljs-type,
+.prosemirror-editor .hljs-selector-class,
+.prosemirror-editor .hljs-selector-attr,
+.prosemirror-editor .hljs-selector-pseudo,
+.prosemirror-editor .hljs-number {
+  color: #d19a66;
+}
+
+.prosemirror-editor .hljs-symbol,
+.prosemirror-editor .hljs-bullet,
+.prosemirror-editor .hljs-link,
+.prosemirror-editor .hljs-meta,
+.prosemirror-editor .hljs-selector-id,
+.prosemirror-editor .hljs-title {
+  color: #61aeee;
+}
+
+.prosemirror-editor .hljs-built_in,
+.prosemirror-editor .hljs-title.class_,
+.prosemirror-editor .hljs-class .hljs-title {
+  color: #e6c07b;
+}
+
+.prosemirror-editor .hljs-emphasis {
+  font-style: italic;
+}
+
+.prosemirror-editor .hljs-strong {
+  font-weight: bold;
+}
+
+.prosemirror-editor .hljs-link {
+  text-decoration: underline;
 }

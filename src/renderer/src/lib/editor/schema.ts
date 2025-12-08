@@ -28,6 +28,33 @@ const paragraphSpec: NodeSpec = {
   }
 }
 
+const codeBlockSpec: NodeSpec = {
+  content: "text*",
+  marks: "",
+  group: "blockContent",
+  code: true,
+  defining: true,
+  attrs: {
+    language: { default: "javascript" }
+  },
+  parseDOM: [
+    {
+      tag: "pre",
+      preserveWhitespace: "full" as const,
+      getAttrs(dom) {
+        const el = dom as HTMLElement
+        const code = el.querySelector("code")
+        const classes = code?.className || ""
+        const match = classes.match(/language-(\w+)/)
+        return { language: match ? match[1] : "javascript" }
+      }
+    }
+  ],
+  toDOM(node): DOMOutputSpec {
+    return ["pre", { class: "code-block", "data-language": node.attrs.language }, ["code", { class: `language-${node.attrs.language}` }, 0]]
+  }
+}
+
 const blockSpec: NodeSpec = {
   content: "(blockContent | block)+",
   group: flatBlockGroup,
@@ -121,6 +148,7 @@ export const schema = new Schema({
     title: titleSpec,
     block: blockSpec,
     paragraph: paragraphSpec,
+    code_block: codeBlockSpec,
     text: textSpec
   },
   marks: {

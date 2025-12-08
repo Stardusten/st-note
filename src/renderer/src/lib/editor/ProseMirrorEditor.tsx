@@ -3,9 +3,14 @@ import { EditorState, Plugin } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { Node as ProseMirrorNode } from "prosemirror-model"
 import { history } from "prosemirror-history"
+import { common, createLowlight } from "lowlight"
 import { schema } from "./schema"
 import { buildKeymap, buildInputRules } from "./keymap"
+import { CodeBlockView } from "./CodeBlockView"
+import { createLowlightPlugin } from "./lowlight-plugin"
 import "./note-editor.css"
+
+const lowlight = createLowlight(common)
 
 export type ProseMirrorEditorProps = {
   content?: object
@@ -104,12 +109,16 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
         buildInputRules(),
         buildKeymap(),
         history(),
-        createPlaceholderPlugin(props.placeholder || "")
+        createPlaceholderPlugin(props.placeholder || ""),
+        createLowlightPlugin("code_block", lowlight)
       ]
     })
 
     view = new EditorView(containerRef, {
       state,
+      nodeViews: {
+        code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos)
+      },
       dispatchTransaction(transaction) {
         if (!view) return
         const newState = view.state.apply(transaction)

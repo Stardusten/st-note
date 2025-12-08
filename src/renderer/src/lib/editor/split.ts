@@ -2,7 +2,7 @@ import { chainCommands, createParagraphNear, newlineInCode, splitBlock as pmSpli
 import { NodeRange, Node as PMNode } from "prosemirror-model"
 import { Command, EditorState, Transaction } from "prosemirror-state"
 import { canSplit } from "prosemirror-transform"
-import { getBlockType, isBlockNode, BlockAttrs } from "./schema"
+import { getBlockType, isBlockNode, BlockAttrs, schema } from "./schema"
 import { atTextblockStart, safeLift, createAndFill } from "./utils"
 import { dedentNodeRange } from "./dedent"
 
@@ -102,6 +102,10 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
   const $cursor = atTextblockStart(state, view)
   if (!$cursor) return false
 
+  const parent = $cursor.parent
+  console.log("[joinBlockUp] parent type:", parent.type.name)
+  if (parent.type === schema.nodes.code_block) return false
+
   console.log("[joinBlockUp] cursor at textblock start, depth:", $cursor.depth)
 
   const { depth } = $cursor
@@ -113,7 +117,6 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
   if (!isBlockNode(blockNode)) return false
 
   const indexInBlock = $cursor.index(blockDepth)
-  const parent = $cursor.parent
   const parentEmpty = parent.content.size === 0
   console.log("[joinBlockUp] indexInBlock:", indexInBlock, "blockNode.childCount:", blockNode.childCount, "parentEmpty:", parentEmpty)
 

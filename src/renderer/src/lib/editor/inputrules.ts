@@ -2,7 +2,7 @@ import { InputRule } from "prosemirror-inputrules"
 import { Attrs } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
 import { findWrapping } from "prosemirror-transform"
-import { BlockAttrs, getBlockType, isBlockNode } from "./schema"
+import { BlockAttrs, getBlockType, isBlockNode, schema } from "./schema"
 
 type ListInputRuleAttributesGetter = (options: {
   match: RegExpMatchArray
@@ -59,10 +59,52 @@ function parseInteger(str: string | undefined): number | null {
   return isNaN(num) ? null : num
 }
 
+const LANGUAGE_ALIASES: Record<string, string> = {
+  js: "javascript",
+  ts: "typescript",
+  py: "python",
+  rb: "ruby",
+  sh: "shell",
+  yml: "yaml",
+  md: "markdown",
+  cs: "csharp",
+  rs: "rust",
+  kt: "kotlin"
+}
+
+function resolveLanguage(input: string | undefined): string {
+  if (!input) return "javascript"
+  const lower = input.toLowerCase()
+  return LANGUAGE_ALIASES[lower] || lower
+}
+
+const codeBlockRule = new InputRule(
+  /^```(\w+)?\s$/,
+  (state, match, start, end): Transaction | null => {
+    const language = resolveLanguage(match[1])
+    const $from = state.selection.$from
+
+    const blockNode = $from.node(-1)
+    if (!isBlockNode(blockNode)) return null
+
+    const paragraph = $from.parent
+    if (paragraph.type !== schema.nodes.paragraph) return null
+
+    const blockPos = $from.before(-1)
+    const codeBlock = schema.nodes.code_block.create({ language })
+    const newBlock = schema.nodes.block.create({ kind: "paragraph" }, codeBlock)
+
+    const tr = state.tr.replaceWith(blockPos, blockPos + blockNode.nodeSize, newBlock)
+
+    return tr
+  }
+)
+
 export const blockInputRules: InputRule[] = [
   wrappingBlockInputRule(/^\s?([*-])\s$/, { kind: "bullet", order: null }),
   wrappingBlockInputRule(/^\s?(\d+)\.\s$/, ({ match }) => {
     const order = parseInteger(match[1])
     return { kind: "ordered", order: order != null && order >= 2 ? order : null }
-  })
+  }),
+  codeBlockRule
 ]
