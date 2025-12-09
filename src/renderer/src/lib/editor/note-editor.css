@@ -5,14 +5,16 @@
   font-size: var(--editor-font-size);
 }
 
+/* editor selection bg */
 .ProseMirror *::selection,
 .ProseMirror *::-moz-selection {
   background-color: var(--color-selection) !important;
 }
 
-/* no outline */
+/* editor no outline */
 .prosemirror-editor .ProseMirror,
-.prosemirror-editor .ProseMirror:focus {
+.prosemirror-editor .ProseMirror:focus,
+.ProseMirror .block {
   outline: none;
 }
 
@@ -28,8 +30,66 @@
 .prosemirror-editor .block {
   position: relative;
   margin-left: 24px;
-  margin-top: 0.25em;
-  margin-bottom: 0.25em;
+}
+
+/* block collapse toggle - absolute positioned, not taking space */
+.prosemirror-editor .block-collapse-toggle {
+  position: absolute;
+  left: -18px;
+  top: 0;
+  width: 16px;
+  height: 1.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.prosemirror-editor .block[data-collapsable] > .block-collapse-toggle {
+  cursor: pointer;
+}
+
+/* show toggle on hover or when block has focus */
+.prosemirror-editor .block:hover > .block-collapse-toggle,
+.prosemirror-editor .block.has-focus > .block-collapse-toggle {
+  opacity: 1;
+}
+
+.prosemirror-editor .block[data-collapsable] > .block-collapse-toggle::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 3px 0 3px 4px;
+  border-color: transparent transparent transparent var(--color-muted-foreground);
+  transition: transform 0.15s ease;
+  transform: rotate(90deg);
+}
+
+.prosemirror-editor
+  .block[data-collapsable][data-collapsed="true"]
+  > .block-collapse-toggle::before {
+  transform: rotate(0deg);
+}
+
+/* block content wrapper */
+.prosemirror-editor .block-content {
+  min-width: 0;
+}
+
+/* collapsed block - hide children */
+.prosemirror-editor .block[data-collapsed="true"] > .block-content > .block {
+  display: none;
+}
+
+/* collapsed indicator (added via decoration) */
+.prosemirror-editor .block-collapsed-indicator {
+  color: rgb(120, 120, 120);
+  font-size: 0.85em;
+  margin-left: 0.5em;
+  user-select: none;
 }
 
 /* first level block overrides */
@@ -37,51 +97,62 @@
   margin-left: 0;
 }
 
+.prosemirror-editor > .ProseMirror > .block > .block-collapse-toggle {
+  left: -20px;
+}
+
 /* basic paragraphs */
 .prosemirror-editor .block p {
   margin: 0;
   min-height: 1.5em;
   line-height: 1.5;
+  padding: 0.25em 0;
 }
 
-/* bullet list */
-.prosemirror-editor .block[data-kind="bullet"] > p::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: currentColor;
-  border-radius: 50%;
-  margin-right: 0.75em;
-  margin-left: 0px;
-  vertical-align: middle;
-  flex-shrink: 0;
+/* bullet list - use native list-style */
+.prosemirror-editor .block[data-kind="bullet"]:not([data-marker-hidden]) {
+  display: list-item;
+  list-style: disc;
+  list-style-position: outside;
+  margin-left: 2.5em;
 }
 
-/* ordered list */
+.prosemirror-editor .block[data-kind="bullet"]:not([data-marker-hidden]) > .block-collapse-toggle {
+  left: calc(-18px - 2.5em + 24px);
+}
+
+/* ordered list counter - using contain: style for isolation */
+.prosemirror-editor .block > * {
+  contain: style;
+}
+
 .prosemirror-editor .block[data-kind="ordered"] {
-  counter-increment: ordered-list;
+  counter-increment: ol;
+  margin-left: 2.8em;
+}
+
+.prosemirror-editor .block[data-kind="ordered"]:not([data-marker-hidden]) > .block-collapse-toggle {
+  left: calc(-18px - 2.8em + 24px);
 }
 
 .prosemirror-editor .block[data-kind="ordered"]:first-child,
 .prosemirror-editor .block:not([data-kind="ordered"]) + .block[data-kind="ordered"] {
-  counter-reset: ordered-list;
+  counter-reset: ol;
 }
 
-.prosemirror-editor .block[data-kind="ordered"][data-order] {
-  counter-reset: ordered-list;
-  counter-set: ordered-list var(--block-order);
+/* ordered list - absolute positioned marker */
+.prosemirror-editor .block[data-kind="ordered"]:not([data-marker-hidden])::before {
+  position: absolute;
+  right: 100%;
+  top: 0.25em;
+  margin-right: 0.3em;
+  font-variant-numeric: tabular-nums;
+  content: counter(ol) ".";
 }
 
-.prosemirror-editor .block[data-kind="ordered"] > p::before {
-  font-feature-settings: "tnum";
-  content: counter(ordered-list) ".";
-  display: inline-block;
-  min-width: 1.5em;
-  margin-right: 0.5em;
-  margin-left: -10px;
-  text-align: right;
-  flex-shrink: 0;
+.prosemirror-editor .block[data-kind="ordered"][data-order]:first-child,
+.prosemirror-editor .block:not([data-kind="ordered"]) + .block[data-kind="ordered"][data-order] {
+  counter-set: ol var(--block-order);
 }
 
 /* bold */
@@ -103,12 +174,14 @@
   border-radius: 3px;
 }
 
-/* placeholder */
+/* placeholder - matches title font size */
 .prosemirror-editor .ProseMirror[data-placeholder]:not(:focus)::before {
   content: attr(data-placeholder);
   color: rgb(100, 100, 100);
   position: absolute;
   pointer-events: none;
+  font-size: calc(var(--editor-font-size) * 1.5);
+  font-weight: 300;
 }
 
 .prosemirror-editor .ProseMirror[data-placeholder=""]:not(:focus)::before {
@@ -120,7 +193,7 @@
   margin: 0.5em 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* code block toolbar */
@@ -145,7 +218,7 @@
 /* code block */
 .prosemirror-editor .code-block {
   margin: 0;
-  padding: 6px 16px 12px 16px;
+  padding: 6px 0 12px 16px;
   overflow-x: auto;
   white-space: pre;
   font-family: var(--code-font-family);
@@ -155,13 +228,15 @@
 }
 
 .prosemirror-editor .code-block code {
-  display: block;
+  display: inline-block;
+  min-width: 100%;
   background: transparent;
-  padding: 0;
+  padding-right: 16px;
   border-radius: 0;
   font-family: inherit;
   font-size: inherit;
   white-space: pre;
+  box-sizing: border-box;
 }
 
 /* highlight.js theme - dark */

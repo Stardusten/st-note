@@ -12,6 +12,14 @@ import {
 } from "../solidui/dropdown-menu"
 import "./all-cards-view.css"
 
+const getCardBody = (cardId: string) => {
+  const text = appStore.getCardText(cardId)() || ""
+  const body = text.split("\n").slice(1).join(" ").trim()
+  console.log("[getCardBody] text:", JSON.stringify(text))
+  console.log("[getCardBody] body:", JSON.stringify(body))
+  return body
+}
+
 type AllCardsViewProps = {
   onSelectCard: (id: string) => void
 }
@@ -184,6 +192,7 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
               <Checkbox
                 checked={selectedIds().has(card.id)}
                 onChange={() => toggleSelection(card.id)}
+                onClick={(e: MouseEvent) => e.stopPropagation()}
               />
               <div class="flex-1 min-w-0 flex items-center gap-3">
                 <Show
@@ -213,10 +222,15 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
                   </div>
                 </Show>
 
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm text-foreground truncate">
+                <div class="flex-1 min-w-0 flex items-center">
+                  <span class="text-sm text-foreground shrink-0">
                     {appStore.getCardTitle(card.id)() || "Untitled"}
-                  </div>
+                  </span>
+                  <Show when={getCardBody(card.id)}>
+                    <span class="text-sm text-muted-foreground truncate ml-2">
+                      - {getCardBody(card.id)}
+                    </span>
+                  </Show>
                 </div>
 
                 <div class="text-sm text-muted-foreground whitespace-nowrap shrink-0">

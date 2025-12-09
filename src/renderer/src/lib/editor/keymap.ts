@@ -16,6 +16,7 @@ import { inputRules } from "prosemirror-inputrules"
 import { splitBlock, joinBlockUp } from "./commands/split"
 import { indent } from "./commands/indent"
 import { dedent } from "./commands/dedent"
+import { toggleCollapse } from "./commands/collapse"
 import { bulletListRule, orderedListRule } from "./input-rules/wrapping-block"
 import { codeBlockRule } from "./input-rules/code-block"
 import { inlineCodeRule } from "./input-rules/inline-code"
@@ -50,6 +51,15 @@ const codeBlockEnter: Command = (state, dispatch) => {
 const selectAllInBlock: Command = (state, dispatch) => {
   const { $head } = state.selection
 
+  if ($head.parent.type === schema.nodes.title) {
+    if (dispatch) {
+      const start = $head.start()
+      const end = $head.end()
+      dispatch(state.tr.setSelection(TextSelection.create(state.doc, start, end)))
+    }
+    return true
+  }
+
   if ($head.parent.type === schema.nodes.code_block) {
     if (dispatch) {
       const start = $head.start()
@@ -71,16 +81,43 @@ const selectAllInBlock: Command = (state, dispatch) => {
   return false
 }
 
+const deleteSelectionPreserveTitle: Command = (state, dispatch) => {
+  const { $from, $to, empty } = state.selection
+  if (empty) return false
+
+  const fromInTitle = $from.parent.type === schema.nodes.title
+  const toInTitle = $to.parent.type === schema.nodes.title
+
+  if (fromInTitle && toInTitle) {
+    if (dispatch) {
+      dispatch(state.tr.deleteSelection().scrollIntoView())
+    }
+    return true
+  }
+
+  if (fromInTitle && !toInTitle) {
+    if (dispatch) {
+      const titleEnd = $from.end()
+      const tr = state.tr
+      tr.delete($from.pos, titleEnd)
+      dispatch(tr.scrollIntoView())
+    }
+    return true
+  }
+
+  return deleteSelection(state, dispatch)
+}
+
 const enterCommand = chainCommands(codeBlockEnter, splitBlock)
 
 const backspaceCommand = chainCommands(
-  deleteSelection,
+  deleteSelectionPreserveTitle,
   joinBlockUp,
   joinTextblockBackward,
   selectNodeBackward
 )
 
-const deleteCommand = chainCommands(deleteSelection, joinTextblockForward, selectNodeForward)
+const deleteCommand = chainCommands(deleteSelectionPreserveTitle, joinTextblockForward, selectNodeForward)
 
 const tabCommand = chainCommands(insertCodeIndent, indent)
 
@@ -128,6 +165,7 @@ export function buildKeymap(): Plugin {
     "Mod-i": toggleMark(schema.marks.italic),
     "Mod-`": toggleMark(schema.marks.code),
     "Mod-a": selectAllInBlock,
+    "Mod-.": toggleCollapse,
     ArrowDown: exitCodeBlockDown,
     "Mod-Enter": exitCode
   })

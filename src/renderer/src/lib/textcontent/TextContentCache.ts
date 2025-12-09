@@ -128,6 +128,10 @@ export class TextContentCache {
         this.extractTextFromNode(child, parts, visited)
       }
     }
+
+    if (node.type === 'title' || node.type === 'paragraph' || node.type === 'block' || node.type === 'code_block') {
+      parts.push('\n')
+    }
   }
 
   private getTitleInternal(cardId: StObjectId, visited: Set<StObjectId>): string {

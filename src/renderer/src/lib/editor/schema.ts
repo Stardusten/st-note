@@ -5,6 +5,7 @@ export type BlockKind = "paragraph" | "bullet" | "ordered"
 export type BlockAttrs = {
   kind: BlockKind
   order: number | null
+  collapsed: boolean
 }
 
 export const flatBlockGroup = "flatBlock"
@@ -21,7 +22,7 @@ const titleSpec: NodeSpec = {
 
 const paragraphSpec: NodeSpec = {
   content: "inline*",
-  group: "blockContent",
+  group: "block",
   parseDOM: [{ tag: "p" }],
   toDOM(): DOMOutputSpec {
     return ["p", 0]
@@ -31,7 +32,7 @@ const paragraphSpec: NodeSpec = {
 const codeBlockSpec: NodeSpec = {
   content: "text*",
   marks: "",
-  group: "blockContent",
+  group: "block",
   code: true,
   defining: true,
   attrs: {
@@ -56,13 +57,14 @@ const codeBlockSpec: NodeSpec = {
 }
 
 const blockSpec: NodeSpec = {
-  content: "(blockContent | block)+",
-  group: flatBlockGroup,
+  content: "(paragraph | code_block | block)+",
+  group: `${flatBlockGroup} block`,
   definingForContent: true,
   definingAsContext: false,
   attrs: {
     kind: { default: "paragraph" as BlockKind },
-    order: { default: null as number | null }
+    order: { default: null as number | null },
+    collapsed: { default: false }
   },
   parseDOM: [
     {
@@ -72,12 +74,13 @@ const blockSpec: NodeSpec = {
         const kind = (el.getAttribute("data-kind") || "paragraph") as BlockKind
         const orderStr = el.getAttribute("data-order")
         const order = orderStr ? parseInt(orderStr, 10) : null
-        return { kind, order: isNaN(order as number) ? null : order }
+        const collapsed = el.getAttribute("data-collapsed") === "true"
+        return { kind, order: isNaN(order as number) ? null : order, collapsed }
       }
     },
     {
       tag: "ul > li",
-      getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null })
+      getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null, collapsed: false })
     },
     {
       tag: "ol > li",
@@ -85,22 +88,33 @@ const blockSpec: NodeSpec = {
         const el = dom as HTMLElement
         const orderStr = el.getAttribute("value")
         const order = orderStr ? parseInt(orderStr, 10) : null
-        return { kind: "ordered", order: isNaN(order as number) ? null : order }
+        return { kind: "ordered", order: isNaN(order as number) ? null : order, collapsed: false }
       }
+    },
+    {
+      tag: ":is(ul, ol) > :is(ul, ol)",
+      getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null, collapsed: false })
     }
   ],
   toDOM(node): DOMOutputSpec {
     const attrs = node.attrs as BlockAttrs
     const firstChild = node.firstChild
-    const isNested = firstChild && firstChild.type.name === "block"
-    const kind = isNested ? undefined : attrs.kind
+    const markerHidden = firstChild?.type.name === "block"
+
     const domAttrs: Record<string, string> = { class: "block" }
-    if (kind) domAttrs["data-kind"] = kind
+    domAttrs["data-kind"] = attrs.kind
+    if (markerHidden) domAttrs["data-marker-hidden"] = "true"
     if (attrs.order != null) {
       domAttrs["data-order"] = String(attrs.order)
       domAttrs["style"] = `--block-order: ${attrs.order};`
     }
-    return ["div", domAttrs, 0]
+    if (attrs.collapsed) domAttrs["data-collapsed"] = "true"
+    if (node.childCount >= 2) domAttrs["data-collapsable"] = "true"
+
+    return ["div", domAttrs,
+      ["div", { class: "block-collapse-toggle", contenteditable: "false" }],
+      ["div", { class: "block-content" }, 0]
+    ]
   }
 }
 

@@ -1,6 +1,6 @@
 import { type Component, Show } from "solid-js"
 import { Button } from "../solidui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../solidui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../solidui/dropdown-menu"
 import { ArrowLeft, ArrowRight, Database, MoreVertical, PanelRight, Search, StickyNoteIcon } from "lucide-solid"
 import { appStore } from "@renderer/lib/state/AppStore"
 
@@ -50,12 +50,9 @@ const TitleBar: Component<TitleBarProps> = (props) => {
           </Show>
         </div>
         <div class="flex flex-row items-center gap-2" style={{ "-webkit-app-region": "no-drag" }}>
-          <button
-            class="h-[28px] w-[200px] rounded-full bg-none cursor-pointer border border-border flex items-center px-3 gap-2 text-muted-foreground/50 text-sm hover:bg-input/70 transition-colors"
-            onClick={() => appStore.openSearchPanel()}>
-            <Search class="size-4 stroke-[1.5]bg-none" />
-            <span>Find, create or ask AI</span>
-          </button>
+          <Button variant="ghost" size="xs-icon" onClick={() => appStore.openSearchPanel()}>
+            <Search class="size-4 stroke-[1.5]" />
+          </Button>
           <Button variant="ghost" size="xs-icon">
             <Database class="size-4 stroke-[1.5]" />
           </Button>

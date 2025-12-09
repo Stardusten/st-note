@@ -3,6 +3,7 @@ import { Command, Transaction } from "prosemirror-state"
 import { ReplaceAroundStep } from "prosemirror-transform"
 import { getBlockType, isBlockNode } from "../schema"
 import { atStartBlockBoundary, atEndBlockBoundary, zoomInRange, mapPos, findBlocksRange, isBlocksRange, safeLift } from "./utils"
+import { fixBlocks } from "./auto-fix"
 
 export function createDedentCommand(): Command {
   return (state, dispatch): boolean => {
@@ -13,6 +14,7 @@ export function createDedentCommand(): Command {
     if (!range) return true
 
     if (dedentRange(range, tr)) {
+      fixBlocks(tr)
       dispatch?.(tr)
     }
     return true
@@ -25,12 +27,11 @@ function dedentRange(
   startBoundary?: boolean,
   endBoundary?: boolean
 ): boolean {
-  const { depth, $from, $to } = range
+  const { depth, $from, $to, parent, startIndex, endIndex } = range
 
   startBoundary = startBoundary || atStartBlockBoundary($from, depth + 1)
 
   if (!startBoundary) {
-    const { startIndex, endIndex } = range
     if (endIndex - startIndex === 1) {
       const contentRange = zoomInRange(range)
       return contentRange ? dedentRange(contentRange, tr) : false
@@ -42,6 +43,12 @@ function dedentRange(
   endBoundary = endBoundary || atEndBlockBoundary($to, depth + 1)
 
   if (!endBoundary) {
+    if (endIndex - startIndex === 1) {
+      const child = parent.maybeChild(startIndex)
+      if (child && isBlockNode(child)) {
+        return dedentNodeRange(range, tr)
+      }
+    }
     fixEndBoundary(range, tr)
     const endOfParent = $to.end(depth)
     range = new NodeRange(
@@ -84,22 +91,15 @@ function splitAndDedentRange(range: NodeRange, tr: Transaction, splitIndex: numb
 }
 
 export function dedentNodeRange(range: NodeRange, tr: Transaction): boolean {
-  console.log("[dedentNodeRange] parent:", range.parent.type.name, "isBlockNode:", isBlockNode(range.parent), "isBlocksRange:", isBlocksRange(range))
-
   if (isBlockNode(range.parent)) {
-    console.log("[dedentNodeRange] parent is block, calling safeLiftRange")
     return safeLiftRange(tr, range)
   } else if (isBlocksRange(range)) {
-    console.log("[dedentNodeRange] isBlocksRange, checking canUnwrapBlock")
     if (canUnwrapBlock(tr, range)) {
-      console.log("[dedentNodeRange] can unwrap, calling dedentOutOfBlock")
       return dedentOutOfBlock(tr, range)
     } else {
-      console.log("[dedentNodeRange] cannot unwrap, calling resetBlockKind")
       return resetBlockKind(tr, range)
     }
   } else {
-    console.log("[dedentNodeRange] fallback to safeLiftRange")
     return safeLiftRange(tr, range)
   }
 }
@@ -115,23 +115,17 @@ function resetBlockKind(tr: Transaction, range: NodeRange): boolean {
   const { startIndex, endIndex } = range
   let changed = false
   let pos = range.start
-  console.log("[resetBlockKind] startIndex:", startIndex, "endIndex:", endIndex, "start pos:", pos)
   for (let i = startIndex; i < endIndex; i++) {
     const node = tr.doc.nodeAt(pos)
-    console.log("[resetBlockKind] i:", i, "node:", node?.type.name, "attrs:", node?.attrs)
     if (node && isBlockNode(node)) {
       const attrs = node.attrs as { kind: string; order: number | null }
       if (attrs.kind !== "paragraph") {
-        console.log("[resetBlockKind] changing kind from", attrs.kind, "to paragraph")
-        tr.setNodeMarkup(pos, undefined, { kind: "paragraph", order: null })
+        tr.setNodeMarkup(pos, undefined, { kind: "paragraph", order: null, collapsed: false })
         changed = true
-      } else {
-        console.log("[resetBlockKind] already paragraph, not changing")
       }
     }
     pos += node?.nodeSize || 0
   }
-  console.log("[resetBlockKind] returning changed:", changed)
   return changed
 }
 

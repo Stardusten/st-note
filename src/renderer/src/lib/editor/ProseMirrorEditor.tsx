@@ -8,11 +8,16 @@ import { schema } from "./schema"
 import { buildKeymap, buildInputRules } from "./keymap"
 import { CodeBlockView } from "./nodeviews/CodeBlockView"
 import { CardRefView, CardRefOptions } from "./nodeviews/CardRefView"
+import { createBlockNodeView } from "./nodeviews/BlockView"
 import { createLowlightPlugin } from "./plugins/lowlight-plugin"
+import { createBlockCollapsePlugin } from "./plugins/block-collapse-plugin"
 import { createCardRefSuggestionPlugin, CardSuggestionItem } from "./plugins/cardref-suggestion-plugin"
 import { createCardRefPopupRenderer } from "./plugins/CardRefPopup"
 import { createAutoLinkPlugin } from "./plugins/auto-link-plugin"
 import { createBacklinkViewPlugin } from "./plugins/backlink-view-plugin"
+import { createCollapsedIndicatorPlugin } from "./plugins/collapsed-indicator-plugin"
+import { createBlockFocusPlugin } from "./plugins/block-focus-plugin"
+import { createClipboardPlugin } from "./plugins/clipboard-plugin"
 import "./note-editor.css"
 
 const lowlight = createLowlight(common)
@@ -135,7 +140,11 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       history(),
       createPlaceholderPlugin(props.placeholder || ""),
       createLowlightPlugin("code_block", lowlight),
-      createAutoLinkPlugin()
+      createAutoLinkPlugin(),
+      createCollapsedIndicatorPlugin(),
+      createBlockFocusPlugin(),
+      createBlockCollapsePlugin(),
+      createClipboardPlugin(schema)
     )
 
     if (props.backlinkTargetCardId) {
@@ -151,6 +160,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
     view = new EditorView(containerRef, {
       state,
       nodeViews: {
+        block: (node) => createBlockNodeView(node),
         code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos),
         cardRef: (node, view, getPos) => new CardRefView(node, view, getPos, cardRefOptions)
       },

@@ -1,121 +1,169 @@
-import { chainCommands, createParagraphNear, newlineInCode, splitBlock as pmSplitBlock } from "prosemirror-commands"
 import { NodeRange, Node as PMNode } from "prosemirror-model"
-import { Command, EditorState, TextSelection, Transaction } from "prosemirror-state"
+import { Command, TextSelection } from "prosemirror-state"
 import { canSplit } from "prosemirror-transform"
 import { getBlockType, isBlockNode, BlockAttrs, schema } from "../schema"
-import { atTextblockStart, createAndFill } from "./utils"
+import { atTextblockStart } from "./utils"
 import { dedentNodeRange } from "./dedent"
-
-export const enterWithoutLift: Command = chainCommands(
-  newlineInCode,
-  createParagraphNear,
-  pmSplitBlock
-)
+import { fixBlocks } from "./auto-fix"
 
 function deriveBlockAttrs(blockNode: PMNode): BlockAttrs {
-  return { kind: (blockNode.attrs as BlockAttrs).kind, order: null }
+  return { kind: (blockNode.attrs as BlockAttrs).kind, order: null, collapsed: false }
 }
 
-const splitBlockCommand: Command = (state, dispatch): boolean => {
+export const splitBlock: Command = (state, dispatch): boolean => {
   const { $from, $to } = state.selection
-
   if (!$from.sameParent($to)) return false
+
+  const parent = $from.parent
+
+  // 1. 代码块中：插入换行
+  if (parent.type === schema.nodes.code_block) {
+    if (dispatch) {
+      const tr = state.tr.replaceSelectionWith(schema.text("\n"), true)
+      dispatch(tr.scrollIntoView())
+    }
+    return true
+  }
+
+  // 标题中：按 Enter 跳到第一个 block 或创建新 block
+  if (parent.type === schema.nodes.title) {
+    if (dispatch) {
+      const tr = state.tr
+      const doc = state.doc
+
+      const hasOnlyOneEmptyBlock = doc.childCount === 2 && (() => {
+        const firstBlock = doc.child(1)
+        return isBlockNode(firstBlock) &&
+          firstBlock.childCount === 1 &&
+          firstBlock.firstChild?.type === schema.nodes.paragraph &&
+          firstBlock.firstChild?.content.size === 0
+      })()
+
+      if (hasOnlyOneEmptyBlock) {
+        const blockPos = $from.after() + 2
+        tr.setSelection(TextSelection.create(tr.doc, blockPos))
+        dispatch(tr.scrollIntoView())
+        return true
+      }
+
+      const titleEnd = $from.end()
+      const contentAfter = parent.cut($from.parentOffset)
+      const afterTitle = $from.after()
+
+      const paragraph = contentAfter.content.size > 0
+        ? schema.nodes.paragraph.create(null, contentAfter.content)
+        : schema.nodes.paragraph.create()
+      const newBlock = schema.nodes.block.create({ kind: "paragraph", order: null, collapsed: false }, paragraph)
+
+      tr.insert(afterTitle, newBlock)
+
+      if ($from.parentOffset < parent.content.size) {
+        const mappedPos = tr.mapping.map($from.pos)
+        const mappedEnd = tr.mapping.map(titleEnd)
+        tr.delete(mappedPos, mappedEnd)
+      }
+
+      tr.setSelection(TextSelection.create(tr.doc, afterTitle + 2))
+      dispatch(tr.scrollIntoView())
+    }
+    return true
+  }
+
+  // 段落中
+  if (parent.type !== schema.nodes.paragraph) return false
   if ($from.depth < 2) return false
 
   const blockDepth = $from.depth - 1
   const blockNode = $from.node(blockDepth)
-
   if (!isBlockNode(blockNode)) return false
 
-  const parent = $from.parent
+  const blockAttrs = blockNode.attrs as BlockAttrs
+  const paragraphEmpty = parent.content.size === 0
   const indexInBlock = $from.index(blockDepth)
-  const parentEmpty = parent.content.size === 0
 
-  console.log("[splitBlockCommand] BEFORE:", JSON.stringify(state.doc.toJSON(), null, 2))
-  console.log("[splitBlockCommand] indexInBlock:", indexInBlock, "parentEmpty:", parentEmpty, "blockNode.childCount:", blockNode.childCount, "depth:", $from.depth)
+  // 2. 段落非空或在段落中间/末尾：分割段落
+  if (!paragraphEmpty || indexInBlock > 0) {
+    if (dispatch) {
+      const tr = state.tr
+      tr.delete(tr.selection.from, tr.selection.to)
 
-  if (indexInBlock === 0 && parentEmpty) {
-    const $blockEnd = state.doc.resolve($from.end(blockDepth))
-    const blockParentDepth = blockDepth - 1
-    const blockParent = $from.node(blockParentDepth)
-    const indexInBlockParent = $from.index(blockParentDepth)
-    const isLastChildInBlockParent = indexInBlockParent === blockParent.childCount - 1
+      const { $from: newFrom } = tr.selection
+      const atEnd = newFrom.parentOffset === newFrom.parent.content.size
+      const newAttrs = deriveBlockAttrs(blockNode)
+      const blockType = getBlockType(state.schema)
 
-    const range = isLastChildInBlockParent
-      ? new NodeRange($from, $blockEnd, blockParentDepth)
-      : new NodeRange($from, $blockEnd, blockDepth)
+      if (indexInBlock > 0) {
+        // 段落不是 block 的第一个子节点，在 block 后面插入新 block
+        const blockPos = newFrom.after(blockDepth)
+        const contentAfter = atEnd ? undefined : newFrom.parent.cut(newFrom.parentOffset)
+        const paragraph = contentAfter
+          ? schema.nodes.paragraph.create(null, contentAfter.content)
+          : schema.nodes.paragraph.create()
+        const newBlock = blockType.create(newAttrs, paragraph)
+        tr.insert(blockPos, newBlock)
+        if (!atEnd) tr.delete(newFrom.pos, newFrom.end())
+        tr.setSelection(TextSelection.create(tr.doc, blockPos + 2))
+      } else {
+        // 段落是 block 的第一个子节点，使用 split
+        const typesAfter = [
+          { type: blockType, attrs: newAttrs },
+          atEnd ? { type: schema.nodes.paragraph } : null
+        ]
+
+        if (canSplit(tr.doc, newFrom.pos, 2, typesAfter)) {
+          tr.split(newFrom.pos, 2, typesAfter)
+        }
+      }
+
+      fixBlocks(tr)
+      dispatch(tr.scrollIntoView())
+    }
+    return true
+  }
+
+  // 3 & 4. 空段落在 block 开头
+  // 3. 空 bullet/ordered：转为普通块
+  if (blockAttrs.kind !== "paragraph") {
+    if (dispatch) {
+      const tr = state.tr
+      const blockPos = $from.before(blockDepth)
+      tr.setNodeMarkup(blockPos, undefined, { kind: "paragraph", order: null, collapsed: false })
+      dispatch(tr.scrollIntoView())
+    }
+    return true
+  }
+
+  // 4. 空普通块：尝试减少缩进
+  const blockParentDepth = blockDepth - 1
+  const blockParent = $from.node(blockParentDepth)
+
+  if (isBlockNode(blockParent)) {
+    // 嵌套在另一个 block 中，dedent
+    if (dispatch) {
+      const tr = state.tr
+      const $blockEnd = state.doc.resolve($from.end(blockDepth))
+      const range = new NodeRange($from, $blockEnd, blockDepth)
+      if (dedentNodeRange(range, tr)) {
+        fixBlocks(tr)
+        dispatch(tr.scrollIntoView())
+      }
+    }
+    return true
+  }
+
+  // 5. 已经在最外层，在下方创建新块
+  if (dispatch) {
     const tr = state.tr
-    if (range && dedentNodeRange(range, tr)) {
-      console.log("[splitBlockCommand] AFTER dedent:", JSON.stringify(tr.doc.toJSON(), null, 2))
-      dispatch?.(tr)
-      return true
-    }
-    return false
+    const blockType = getBlockType(state.schema)
+    const blockPos = $from.after(blockDepth)
+    const newBlock = blockType.create(
+      { kind: "paragraph", order: null, collapsed: false },
+      schema.nodes.paragraph.create()
+    )
+    tr.insert(blockPos, newBlock)
+    tr.setSelection(TextSelection.create(tr.doc, blockPos + 2))
+    dispatch(tr.scrollIntoView())
   }
-
-  return doSplitBlock(state, blockNode, blockDepth, dispatch)
-}
-
-function doSplitBlock(
-  state: EditorState,
-  blockNode: PMNode,
-  blockDepth: number,
-  dispatch?: (tr: Transaction) => void
-): boolean {
-  const tr = state.tr
-  const blockType = getBlockType(state.schema)
-  const newAttrs: BlockAttrs = deriveBlockAttrs(blockNode)
-
-  tr.delete(tr.selection.from, tr.selection.to)
-
-  const { $from, $to } = tr.selection
-  const { parentOffset } = $to
-  const indexInBlock = $from.index(blockDepth)
-
-  const atStart = parentOffset === 0
-  const atEnd = parentOffset === $to.parent.content.size
-
-  console.log("[doSplitBlock] atStart:", atStart, "atEnd:", atEnd, "indexInBlock:", indexInBlock)
-
-  if (atStart) {
-    if (dispatch) {
-      const pos = $from.before(-1)
-      tr.insert(pos, createAndFill(blockType, newAttrs))
-      dispatch(tr.scrollIntoView())
-    }
-    return true
-  }
-
-  if (indexInBlock > 0) {
-    console.log("[doSplitBlock] not at first child, creating new sibling block")
-    if (dispatch) {
-      const blockPos = $from.after(blockDepth)
-      const contentAfter = atEnd ? undefined : $to.parent.cut($from.parentOffset)
-      const paragraph = contentAfter
-        ? schema.nodes.paragraph.create(null, contentAfter.content)
-        : schema.nodes.paragraph.create()
-      const newBlock = blockType.create(newAttrs, paragraph)
-      tr.insert(blockPos, newBlock)
-      if (!atEnd) tr.delete($from.pos, $from.end())
-      tr.setSelection(TextSelection.create(tr.doc, blockPos + 2))
-      dispatch(tr.scrollIntoView())
-    }
-    return true
-  }
-
-  const nextType = atEnd ? blockNode.contentMatchAt(0).defaultType : undefined
-  const typesAfter = [
-    { type: blockType, attrs: newAttrs },
-    nextType ? { type: nextType } : null
-  ]
-
-  console.log("[doSplitBlock] trying canSplit with depth 2")
-  if (!canSplit(tr.doc, $from.pos, 2, typesAfter)) {
-    console.log("[doSplitBlock] canSplit failed")
-    return false
-  }
-
-  dispatch?.(tr.split($from.pos, 2, typesAfter).scrollIntoView())
   return true
 }
 
@@ -125,9 +173,7 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
 
   const parent = $cursor.parent
 
-  console.log("[joinBlockUp] BEFORE:", JSON.stringify(state.doc.toJSON(), null, 2))
-  console.log("[joinBlockUp] parent type:", parent.type.name, "depth:", $cursor.depth)
-
+  // 空代码块：转为段落
   if (parent.type === schema.nodes.code_block) {
     if (parent.content.size === 0) {
       if (dispatch) {
@@ -142,7 +188,6 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
           )
           tr.replaceWith(blockPos, blockPos + blockNode.nodeSize, newBlock)
           tr.setSelection(TextSelection.create(tr.doc, blockPos + 2))
-          console.log("[joinBlockUp] AFTER code_block->paragraph:", JSON.stringify(tr.doc.toJSON(), null, 2))
           dispatch(tr)
         }
       }
@@ -165,11 +210,9 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
   const isNestedInBlock = isBlockNode(blockParent)
   const blockAttrs = blockNode.attrs as BlockAttrs
 
-  console.log("[joinBlockUp] indexInBlock:", indexInBlock, "parentEmpty:", parentEmpty, "isNestedInBlock:", isNestedInBlock, "blockAttrs:", blockAttrs)
-
   if (indexInBlock === 0 && parentEmpty) {
+    // 空段落在 block 开头，删除并移到前一个位置
     if (isNestedInBlock) {
-      console.log("[joinBlockUp] deleting nested empty block")
       if (dispatch) {
         const tr = state.tr
         const blockPos = $cursor.before(blockDepth)
@@ -189,39 +232,26 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
         }
 
         tr.setSelection(TextSelection.create(tr.doc, newCursorPos))
-        console.log("[joinBlockUp] AFTER delete nested:", JSON.stringify(tr.doc.toJSON(), null, 2))
+        fixBlocks(tr)
         dispatch(tr.scrollIntoView())
       }
       return true
     }
 
+    // 非空 bullet/ordered 转普通块
     if (blockAttrs.kind !== "paragraph") {
-      console.log("[joinBlockUp] converting list item to paragraph")
       if (dispatch) {
         const tr = state.tr
         const blockPos = $cursor.before(blockDepth)
-        tr.setNodeMarkup(blockPos, undefined, { kind: "paragraph", order: null })
-        console.log("[joinBlockUp] AFTER convert:", JSON.stringify(tr.doc.toJSON(), null, 2))
+        tr.setNodeMarkup(blockPos, undefined, { kind: "paragraph", order: null, collapsed: false })
         dispatch(tr)
       }
       return true
     }
 
-    console.log("[joinBlockUp] trying dedent")
-    const tr = state.tr
-    const blockPos = $cursor.before(blockDepth)
-    const blockEnd = $cursor.after(blockDepth)
-    const range = new NodeRange(tr.doc.resolve(blockPos), tr.doc.resolve(blockEnd), blockParentDepth)
-
-    if (dedentNodeRange(range, tr)) {
-      console.log("[joinBlockUp] AFTER dedent:", JSON.stringify(tr.doc.toJSON(), null, 2))
-      dispatch?.(tr)
-      return true
-    }
+    // 已经是普通块且在最外层，尝试 dedent（实际上已经没法再 dedent 了）
     return false
   }
 
   return false
 }
-
-export const splitBlock = chainCommands(splitBlockCommand, enterWithoutLift)

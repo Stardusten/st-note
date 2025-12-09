@@ -143,6 +143,7 @@ function toggleQuickWindow() {
 
 function createSearchWindow(): void {
   searchWindow = new BrowserWindow({
+    type: "panel",
     width: 650,
     height: 500,
     show: false,
@@ -182,7 +183,7 @@ function createCaptureSuccessWindow(): void {
     focusable: true, // Allow focus so it can take over from Quick Window
     fullscreenable: false,
     hasShadow: false, // Custom shadow in CSS
-    backgroundColor: '#00000000', // Explicitly set transparent background color (ARGB)
+    backgroundColor: "#00000000", // Explicitly set transparent background color (ARGB)
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false
@@ -202,31 +203,41 @@ function showCaptureSuccess(cardId: string) {
   }
 
   lastCapturedCardId = cardId
-  
+
   // Position at top center of the current display
   const point = screen.getCursorScreenPoint()
   const display = screen.getDisplayNearestPoint(point)
   const x = display.bounds.x + (display.bounds.width - 320) / 2
   // Adjust Y to keep the capsule roughly at the same visual vertical position
   // Old: height 60, y + 40 -> center at 70px
-  // New: height 120, center at 60px -> y = 70 - 60 = 10px. 
+  // New: height 120, center at 60px -> y = 70 - 60 = 10px.
   // Let's make it 20px to be safe.
-  const y = display.bounds.y + 20 
+  const y = display.bounds.y + 20
 
   captureSuccessWindow?.setPosition(Math.round(x), Math.round(y))
   // Show and focus to prevent main window from activating
-  captureSuccessWindow?.show() 
+  captureSuccessWindow?.show()
   captureSuccessWindow?.focus()
   captureSuccessWindow?.webContents.send("captureSuccess:show")
 }
 
 function hideCaptureSuccess() {
-  if (captureSuccessWindow && !captureSuccessWindow.isDestroyed() && captureSuccessWindow.isVisible()) {
+  if (
+    captureSuccessWindow &&
+    !captureSuccessWindow.isDestroyed() &&
+    captureSuccessWindow.isVisible()
+  ) {
     captureSuccessWindow.webContents.send("captureSuccess:hide")
     // Give time for exit animation
     setTimeout(() => {
       captureSuccessWindow?.hide()
     }, 500)
+  }
+}
+
+function hideSearchWindow() {
+  if (searchWindow && !searchWindow.isDestroyed() && searchWindow.isVisible()) {
+    searchWindow.hide()
   }
 }
 
@@ -237,7 +248,7 @@ function toggleSearchWindow() {
   }
 
   if (searchWindow.isVisible()) {
-    searchWindow.hide()
+    hideSearchWindow()
   } else {
     const point = screen.getCursorScreenPoint()
     const display = screen.getDisplayNearestPoint(point)
@@ -306,7 +317,7 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:getAllSettings", restFunc(getAllSettings))
   ipcMain.handle("storage:deleteSetting", restFunc(deleteSetting))
   ipcMain.handle("quick:hide", () => hideQuickWindow())
-  ipcMain.handle("search:hide", () => searchWindow?.hide())
+  ipcMain.handle("search:hide", () => hideSearchWindow())
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
   // Database export/import
@@ -344,7 +355,9 @@ app.whenReady().then(() => {
 
   // Global settings IPC
   ipcMain.handle("globalSettings:get", () => loadGlobalSettings())
-  ipcMain.handle("globalSettings:update", (_e, partial: Partial<GlobalSettings>) => updateGlobalSettings(partial))
+  ipcMain.handle("globalSettings:update", (_e, partial: Partial<GlobalSettings>) =>
+    updateGlobalSettings(partial)
+  )
 
   // Vault settings IPC (兼容旧 API)
   ipcMain.handle("settings:get", () => loadSettings())
@@ -369,24 +382,24 @@ app.whenReady().then(() => {
   ipcMain.handle("quick:capture", async (_e, options: { content: any; checked?: boolean }) => {
     // if (!mainWindow) return // Do not require mainWindow to be visible or focused
     // But we need mainWindow instance to send IPC
-    if (!mainWindow) return 
+    if (!mainWindow) return
 
     // quickWindow?.hide() // Let renderer close it to avoid focus issues
     const win = mainWindow
-    
+
     return new Promise<void>((resolve) => {
       const channel = `quick:captured:${Date.now()}`
       ipcMain.once(channel, (_e, cardId) => {
         // Strategy: Transfer focus to Success Window
         // This prevents macOS from activating the Main Window when Quick Window hides.
-        
+
         // 1. Show Success Window first and grab focus
         if (cardId) {
           showCaptureSuccess(cardId)
         }
 
         // 2. Hide Quick Window immediately
-        // Since Success Window is now the focused window of the app, 
+        // Since Success Window is now the focused window of the app,
         // hiding Quick Window shouldn't trigger Main Window activation.
         if (quickWindow && !quickWindow.isDestroyed()) {
           quickWindow.hide()
@@ -451,7 +464,7 @@ app.whenReady().then(() => {
   ipcMain.handle("captureSuccess:close", () => {
     hideCaptureSuccess()
   })
-  
+
   ipcMain.handle("captureSuccess:openLastCaptured", () => {
     if (mainWindow && lastCapturedCardId) {
       mainWindow.show()

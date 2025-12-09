@@ -59,9 +59,9 @@ function parseInteger(str: string | undefined): number | null {
   return isNaN(num) ? null : num
 }
 
-export const bulletListRule = wrappingBlockInputRule(/^\s?([*-])\s$/, { kind: "bullet", order: null })
+export const bulletListRule = wrappingBlockInputRule(/^\s?([*-])\s$/, { kind: "bullet", order: null, collapsed: false })
 
 export const orderedListRule = wrappingBlockInputRule(/^\s?(\d+)\.\s$/, ({ match }) => {
   const order = parseInteger(match[1])
-  return { kind: "ordered", order: order != null && order >= 2 ? order : null }
+  return { kind: "ordered", order: order != null && order >= 2 ? order : null, collapsed: false }
 })
