@@ -1,5 +1,10 @@
 @import "prosemirror-view/style/prosemirror.css";
 
+/* note: we hard coded lots of variables, so if you
+   you want to use different font-size, prefer use 
+   zoom instead of font-size.
+*/
+
 .prosemirror-editor {
   font-family: var(--editor-font-family);
   font-size: var(--editor-font-size);
@@ -24,12 +29,46 @@
   font-weight: 300;
   margin: 0 0 0.5em 0;
   line-height: 1.3;
+  border-bottom: 1px solid rgb(27, 27, 29);
+  box-shadow: rgba(72, 73, 75, 0.84) 0px 1px 0px;
+  margin-bottom: 0.75em;
+  padding-bottom: 0.35em;
 }
 
-/* all blocks */
+/* indent for * under paragraphs */
 .prosemirror-editor .block {
   position: relative;
   margin-left: 24px;
+}
+
+/* indent for paragraphs under ordered lists */
+.prosemirror-editor .block[data-kind="ordered"] > .block-content > .block[data-kind="paragraph"] {
+  margin-left: 3px;
+}
+
+/* indent for bullet lists under ordered lists */
+.prosemirror-editor .block[data-kind="ordered"] > .block-content > .block[data-kind="bullet"] {
+  margin-left: 19px;
+}
+
+/* indent for ordered lists under ordered lists */
+.prosemirror-editor .block[data-kind="ordered"] > .block-content > .block[data-kind="ordered"] {
+  margin-left: 24px;
+}
+
+/* indent for paragraphs under bullet lists */
+.prosemirror-editor .block[data-kind="bullet"] > .block-content > .block[data-kind="paragraph"] {
+  margin-left: 8px;
+}
+
+/* indent for bullet under bullet lists */
+.prosemirror-editor .block[data-kind="bullet"] > .block-content > .block[data-kind="bullet"] {
+  margin-left: 24px;
+}
+
+/* indent for ordered under bullet lists */
+.prosemirror-editor .block[data-kind="bullet"] > .block-content > .block[data-kind="ordered"] {
+  margin-left: 28px;
 }
 
 /* block collapse toggle - absolute positioned, not taking space */
@@ -336,4 +375,11 @@
 
 .prosemirror-editor a:hover {
   background-color: var(--color-accent);
+}
+
+/* search highlight */
+.prosemirror-editor .search-highlight,
+.search-highlight {
+  background-color: rgba(255, 200, 0, 0.35);
+  border-radius: 2px;
 }

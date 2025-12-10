@@ -50,7 +50,7 @@ const TitleBar: Component<TitleBarProps> = (props) => {
           </Show>
         </div>
         <div class="flex flex-row items-center gap-2" style={{ "-webkit-app-region": "no-drag" }}>
-          <Button variant="ghost" size="xs-icon" onClick={() => appStore.openSearchPanel()}>
+          <Button variant="ghost" size="xs-icon" onClick={() => window.api.showSearchWindow()}>
             <Search class="size-4 stroke-[1.5]" />
           </Button>
           <Button variant="ghost" size="xs-icon">

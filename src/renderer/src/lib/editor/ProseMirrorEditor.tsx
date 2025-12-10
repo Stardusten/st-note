@@ -18,6 +18,7 @@ import { createBacklinkViewPlugin } from "./plugins/backlink-view-plugin"
 import { createCollapsedIndicatorPlugin } from "./plugins/collapsed-indicator-plugin"
 import { createBlockFocusPlugin } from "./plugins/block-focus-plugin"
 import { createClipboardPlugin } from "./plugins/clipboard-plugin"
+import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
 import "./note-editor.css"
 
 const lowlight = createLowlight(common)
@@ -34,6 +35,7 @@ export type ProseMirrorEditorProps = {
   onCardClick?: (cardId: string) => void
   getCardTitle?: (cardId: string) => string
   backlinkTargetCardId?: string
+  searchQuery?: string
 }
 
 const createPlaceholderPlugin = (placeholder: string) => {
@@ -144,7 +146,8 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       createCollapsedIndicatorPlugin(),
       createBlockFocusPlugin(),
       createBlockCollapsePlugin(),
-      createClipboardPlugin(schema)
+      createClipboardPlugin(schema),
+      createSearchHighlightPlugin()
     )
 
     if (props.backlinkTargetCardId) {
@@ -190,12 +193,25 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
     if (currentJSON !== newJSON) {
       console.log("[ProseMirrorEditor] createEffect: content changed externally, resetting state")
       const doc = createDocFromJSON(props.content)
-      const state = EditorState.create({
+      let state = EditorState.create({
         doc,
         plugins: view.state.plugins
       })
+      const query = props.searchQuery ?? ""
+      if (query) {
+        state = state.apply(state.tr.setMeta(searchHighlightPluginKey, { query }))
+      }
       view.updateState(state)
     }
+  })
+
+  createEffect(() => {
+    if (!view) return
+    const query = props.searchQuery ?? ""
+    const currentQuery = searchHighlightPluginKey.getState(view.state)?.query ?? ""
+    if (query === currentQuery) return
+    const tr = view.state.tr.setMeta(searchHighlightPluginKey, { query })
+    view.dispatch(tr)
   })
 
   onCleanup(() => {

@@ -16,6 +16,7 @@ type NoteEditorProps = {
   onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
   onCardClick?: (cardId: string) => void
   getCardTitle?: (cardId: string) => string
+  searchQuery?: string
 }
 
 const getTextFromDoc = (doc: any): string => {
@@ -56,6 +57,7 @@ const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
       onCreateCard={props.onCreateCard}
       onCardClick={props.onCardClick}
       getCardTitle={props.getCardTitle}
+      searchQuery={props.searchQuery}
     />
   )
 }

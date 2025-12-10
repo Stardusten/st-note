@@ -109,10 +109,6 @@ function createQuickWindow(): void {
   } else {
     quickWindow.loadFile(join(__dirname, "../renderer/quick.html"))
   }
-
-  // quickWindow.on("blur", () => {
-  //   quickWindow?.hide()
-  // })
 }
 
 function hideQuickWindow() {
@@ -144,7 +140,7 @@ function toggleQuickWindow() {
 function createSearchWindow(): void {
   searchWindow = new BrowserWindow({
     type: "panel",
-    width: 650,
+    width: 900,
     height: 500,
     show: false,
     frame: false,
@@ -152,6 +148,7 @@ function createSearchWindow(): void {
     alwaysOnTop: true,
     skipTaskbar: true,
     fullscreenable: false,
+    vibrancy: "under-window",
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false
@@ -252,8 +249,8 @@ function toggleSearchWindow() {
   } else {
     const point = screen.getCursorScreenPoint()
     const display = screen.getDisplayNearestPoint(point)
-    const x = display.bounds.x + (display.bounds.width - 650) / 2
-    const y = display.bounds.y + 150
+    const x = display.bounds.x + (display.bounds.width - 900) / 2
+    const y = display.bounds.y + 100
 
     searchWindow.setPosition(Math.round(x), Math.round(y))
     searchWindow.show()
@@ -318,6 +315,7 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:deleteSetting", restFunc(deleteSetting))
   ipcMain.handle("quick:hide", () => hideQuickWindow())
   ipcMain.handle("search:hide", () => hideSearchWindow())
+  ipcMain.handle("search:show", () => toggleSearchWindow())
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
   // Database export/import
@@ -431,13 +429,13 @@ app.whenReady().then(() => {
     })
   })
 
-  ipcMain.handle("search:getRecent", async () => {
+  ipcMain.handle("search:getAll", async () => {
     if (!mainWindow) return []
     const win = mainWindow
     return new Promise((resolve) => {
-      const channel = `search:recent:${Date.now()}`
+      const channel = `search:all:${Date.now()}`
       ipcMain.once(channel, (_e, results) => resolve(results))
-      win.webContents.send("search:getRecent", { responseChannel: channel })
+      win.webContents.send("search:getAll", { responseChannel: channel })
       setTimeout(() => resolve([]), 5000)
     })
   })
@@ -458,6 +456,22 @@ app.whenReady().then(() => {
       win.webContents.send("search:createCard", { title, responseChannel: channel })
       setTimeout(() => resolve(null), 5000)
     })
+  })
+
+  ipcMain.handle("search:getCardContent", async (_e, cardId: string) => {
+    if (!mainWindow) return null
+    const win = mainWindow
+    return new Promise((resolve) => {
+      const channel = `search:cardContent:${Date.now()}`
+      ipcMain.once(channel, (_e, content) => resolve(content))
+      win.webContents.send("search:getCardContent", { cardId, responseChannel: channel })
+      setTimeout(() => resolve(null), 5000)
+    })
+  })
+
+  ipcMain.handle("search:updateCardContent", async (_e, cardId: string, content: any) => {
+    if (!mainWindow) return
+    mainWindow.webContents.send("search:updateCardContent", { cardId, content })
   })
 
   // Capture Success IPC

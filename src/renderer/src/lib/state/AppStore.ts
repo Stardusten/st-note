@@ -3,9 +3,14 @@ import { ObjCache, type ObjCacheEvent } from "../objcache/objcache"
 import { SQLiteStorage } from "../storage/sqlite"
 import type { Card } from "../common/types/card"
 import type { StObjectId } from "../common/types"
-import { prepareFuzzySearch } from "../common/utils/fuzzySearch"
+import { prepareSearch } from "../common/utils/search"
 import { BacklinkIndex } from "../backlink/BacklinkIndex"
 import { TextContentCache } from "../textcontent/TextContentCache"
+
+type CardSuggestion = {
+  id: string
+  title: string
+}
 
 class AppStore {
   private objCache: ObjCache
@@ -39,10 +44,6 @@ class AppStore {
   private pinnedCardIds: Accessor<string[]>
   private setPinnedCardIds: Setter<string[]>
 
-  // UI state
-  private searchPanelOpen: Accessor<boolean>
-  private setSearchPanelOpen: Setter<boolean>
-
   // Track last update source for each card (non-reactive, only for checking)
   private lastUpdateSources: Map<StObjectId, string | undefined> = new Map()
 
@@ -60,7 +61,9 @@ class AppStore {
     this.searchQuery = searchQuery
     this.setSearchQuery = setSearchQuery
 
-    const [searchResults, setSearchResults] = createSignal<Array<Card & { searchScore?: number }>>([])
+    const [searchResults, setSearchResults] = createSignal<Array<Card & { searchScore?: number }>>(
+      []
+    )
     this.searchResults = searchResults
     this.setSearchResults = setSearchResults
 
@@ -81,11 +84,6 @@ class AppStore {
     this.navIndex = navIndex
     this.setNavIndex = setNavIndex
 
-    // Initialize UI state
-    const [searchPanelOpen, setSearchPanelOpen] = createSignal(false)
-    this.searchPanelOpen = searchPanelOpen
-    this.setSearchPanelOpen = setSearchPanelOpen
-
     // Initialize storage and cache
     this.storage = new SQLiteStorage()
     this.objCache = new ObjCache()
@@ -100,10 +98,11 @@ class AppStore {
     await this.textContentCache.init(this.objCache)
     await this.loadCards()
     await this.loadPinnedCards()
+    await this.loadLastOpenedCard()
   }
 
   private async loadCards() {
-    const objects = await this.storage.query({ type: 'card', includeDeleted: false })
+    const objects = await this.storage.query({ type: "card", includeDeleted: false })
     this.setCards(objects as Card[])
   }
 
@@ -121,21 +120,35 @@ class AppStore {
     }
   }
 
+  private async loadLastOpenedCard() {
+    try {
+      const lastCardId = await this.storage.getSetting("last_opened_card")
+      if (lastCardId && this.cards().some((c) => c.id === lastCardId)) {
+        this.setCurrentCardId(lastCardId)
+        this.setNavHistory([lastCardId])
+        this.setNavIndex(0)
+      }
+    } catch (error) {
+      console.error("Failed to load last opened card", error)
+    }
+  }
+
   // Getters for components
   getCurrentCardId = () => this.currentCardId()
   getCurrentCard = (): Card | null => {
     const id = this.currentCardId()
     if (!id) return null
-    return this.cards().find(c => c.id === id) || null
+    return this.cards().find((c) => c.id === id) || null
   }
   getCards = () => this.cards()
+  getCard = (id: StObjectId): Card | null => this.cards().find((c) => c.id === id) || null
   getSearchQuery = () => this.searchQuery()
   getSearchResults = () => this.searchResults()
   getRecentCards = (): Card[] => {
     const recentIds = this.recentCardIds()
     const allCards = this.cards()
     return recentIds
-      .map(id => allCards.find(c => c.id === id))
+      .map((id) => allCards.find((c) => c.id === id))
       .filter((c): c is Card => c !== undefined)
   }
 
@@ -143,7 +156,7 @@ class AppStore {
     const pinnedIds = this.pinnedCardIds()
     const allCards = this.cards()
     return pinnedIds
-      .map(id => allCards.find(c => c.id === id))
+      .map((id) => allCards.find((c) => c.id === id))
       .filter((c): c is Card => c !== undefined)
   }
 
@@ -151,7 +164,7 @@ class AppStore {
     const current = this.pinnedCardIds()
     let next: string[]
     if (current.includes(id)) {
-      next = current.filter(c => c !== id)
+      next = current.filter((c) => c !== id)
     } else {
       next = [...current, id]
     }
@@ -166,11 +179,20 @@ class AppStore {
     return this.createCardInternal(initialText, undefined, true)
   }
 
-  async createCardWithoutSelect(initialText?: string, initialContent?: any, checked?: boolean): Promise<Card> {
+  async createCardWithoutSelect(
+    initialText?: string,
+    initialContent?: any,
+    checked?: boolean
+  ): Promise<Card> {
     return this.createCardInternal(initialText, initialContent, false, checked)
   }
 
-  private async createCardInternal(initialText?: string, initialContent?: any, selectAfterCreate = true, checked?: boolean): Promise<Card> {
+  private async createCardInternal(
+    initialText?: string,
+    initialContent?: any,
+    selectAfterCreate = true,
+    checked?: boolean
+  ): Promise<Card> {
     const newId = crypto.randomUUID()
     const content = initialContent || {
       type: "doc",
@@ -183,10 +205,10 @@ class AppStore {
         { type: "paragraph" }
       ]
     }
-    const text = initialContent ? this.extractTextFromContent(initialContent) : (initialText || '')
+    const text = initialContent ? this.extractTextFromContent(initialContent) : initialText || ""
     const card = {
       id: newId,
-      type: 'card' as const,
+      type: "card" as const,
       data: {
         content,
         checked
@@ -195,7 +217,7 @@ class AppStore {
       tags: []
     }
 
-    await this.objCache.withTx(tx => {
+    await this.objCache.withTx((tx) => {
       tx.create(card)
     })
 
@@ -204,7 +226,7 @@ class AppStore {
       this.setCurrentCardId(newId)
     }
 
-    const createdCard = this.cards().find(c => c.id === newId)
+    const createdCard = this.cards().find((c) => c.id === newId)
     if (createdCard) {
       return createdCard
     }
@@ -212,26 +234,26 @@ class AppStore {
   }
 
   private extractTextFromContent(content: any): string {
-    if (!content) return ''
+    if (!content) return ""
     const texts: string[] = []
     const extract = (node: any) => {
       if (node.text) texts.push(node.text)
       if (node.content) node.content.forEach(extract)
     }
     extract(content)
-    return texts.join(' ')
+    return texts.join(" ")
   }
 
   async updateCard(id: StObjectId, content: any, text: string, source?: string) {
     this.lastUpdateSources.set(id, source)
-    await this.objCache.withTx(tx => {
+    await this.objCache.withTx((tx) => {
       if (source) tx.setSource(source)
-      const card = this.cards().find(c => c.id === id)
+      const card = this.cards().find((c) => c.id === id)
       if (!card) return
 
       tx.update(id, {
         id,
-        type: 'card',
+        type: "card",
         data: {
           ...card.data,
           content
@@ -249,13 +271,13 @@ class AppStore {
   }
 
   async updateCardChecked(id: StObjectId, checked: boolean) {
-    await this.objCache.withTx(tx => {
-      const card = this.cards().find(c => c.id === id)
+    await this.objCache.withTx((tx) => {
+      const card = this.cards().find((c) => c.id === id)
       if (!card) return
 
       tx.update(id, {
         id,
-        type: 'card',
+        type: "card",
         data: {
           ...card.data,
           checked
@@ -269,9 +291,9 @@ class AppStore {
   }
 
   async toggleCardTask(cardId: StObjectId) {
-    const card = this.cards().find(c => c.id === cardId)
+    const card = this.cards().find((c) => c.id === cardId)
     if (!card) {
-      console.log('[toggleCardTask] Card not found:', cardId)
+      console.log("[toggleCardTask] Card not found:", cardId)
       return
     }
 
@@ -281,12 +303,12 @@ class AppStore {
     else if (card.data.checked === false) newChecked = true
     else newChecked = undefined
 
-    console.log('[toggleCardTask] checked:', card.data.checked, '->', newChecked)
+    console.log("[toggleCardTask] checked:", card.data.checked, "->", newChecked)
 
-    await this.objCache.withTx(tx => {
+    await this.objCache.withTx((tx) => {
       tx.update(card.id, {
         id: card.id,
-        type: 'card',
+        type: "card",
         data: {
           ...card.data,
           checked: newChecked
@@ -297,23 +319,25 @@ class AppStore {
     })
 
     await this.loadCards()
-    console.log('[toggleCardTask] Done')
+    console.log("[toggleCardTask] Done")
   }
 
   async toggleCardTaskBulk(cardIds: StObjectId[]) {
     const allCards = this.cards()
-    const targets = cardIds.map(id => allCards.find(c => c.id === id)).filter((c): c is Card => !!c)
-    
+    const targets = cardIds
+      .map((id) => allCards.find((c) => c.id === id))
+      .filter((c): c is Card => !!c)
+
     if (targets.length === 0) return
 
     // Determine target state to sync all cards
-    const states = targets.map(c => c.data.checked)
-    const hasUndefined = states.some(s => s === undefined)
-    const hasFalse = states.some(s => s === false)
+    const states = targets.map((c) => c.data.checked)
+    const hasUndefined = states.some((s) => s === undefined)
+    const hasFalse = states.some((s) => s === false)
     // const hasTrue = states.some(s => s === true)
 
     let nextState: boolean | undefined
-    
+
     if (hasUndefined) {
       // If any is not a task, make them all incomplete tasks
       nextState = false
@@ -325,11 +349,11 @@ class AppStore {
       nextState = undefined
     }
 
-    await this.objCache.withTx(tx => {
+    await this.objCache.withTx((tx) => {
       for (const card of targets) {
         tx.update(card.id, {
           id: card.id,
-          type: 'card',
+          type: "card",
           data: {
             ...card.data,
             checked: nextState
@@ -344,7 +368,7 @@ class AppStore {
   }
 
   async deleteCard(id: StObjectId) {
-    await this.objCache.withTx(tx => {
+    await this.objCache.withTx((tx) => {
       tx.delete(id)
     })
 
@@ -372,9 +396,10 @@ class AppStore {
 
     if (id) {
       const recent = this.recentCardIds()
-      const filtered = recent.filter(cid => cid !== id)
+      const filtered = recent.filter((cid) => cid !== id)
       const updated = [id, ...filtered].slice(0, 10)
       this.setRecentCardIds(updated)
+      this.storage.setSetting("last_opened_card", id)
     }
   }
 
@@ -408,17 +433,14 @@ class AppStore {
       return
     }
 
-    const fuzzySearch = prepareFuzzySearch(query)
+    const search = prepareSearch(query)
     const results = this.cards()
-      .map(card => {
-        const result = fuzzySearch(card.text || '')
-        return {
-          ...card,
-          searchScore: result.score
-        }
+      .map((card) => {
+        const score = search(card.text || "")
+        return { ...card, searchScore: score }
       })
-      .filter(card => card.searchScore && card.searchScore > -Infinity)
-      .sort((a, b) => (b.searchScore || 0) - (a.searchScore || 0))
+      .filter((card) => card.searchScore > 0)
+      .sort((a, b) => b.searchScore - a.searchScore)
 
     this.setSearchResults(results)
   }
@@ -428,14 +450,24 @@ class AppStore {
     this.setSearchResults([])
   }
 
-  // Search panel UI
-  isSearchPanelOpen = () => this.searchPanelOpen()
-  openSearchPanel = () => this.setSearchPanelOpen(true)
-  closeSearchPanel = () => this.setSearchPanelOpen(false)
-
   // Text content
   getCardTitle = (cardId: StObjectId) => this.textContentCache.getTitle(cardId)
   getCardText = (cardId: StObjectId) => this.textContentCache.getText(cardId)
+
+  updateCardContent = async (cardId: StObjectId, content: any) => {
+    const card = this.cards().find((c) => c.id === cardId)
+    if (!card) return
+    const text = this.extractTextFromContent(content)
+    await this.updateCard(cardId, content, text)
+  }
+
+  searchCards = async (query: string): Promise<CardSuggestion[]> => {
+    this.performSearch(query)
+    return this.searchResults().map((c) => ({
+      id: c.id,
+      title: this.textContentCache.getTitle(c.id)()
+    }))
+  }
 
   // Backlinks
   getBacklinks(cardId: StObjectId) {

@@ -14,6 +14,7 @@ declare global {
       captureSuccess: CaptureSuccessAPI
       hideQuickWindow: () => void
       hideSearchWindow: () => void
+      showSearchWindow: () => void
       fetchPageTitle: (url: string) => Promise<string | null>
     }
   }

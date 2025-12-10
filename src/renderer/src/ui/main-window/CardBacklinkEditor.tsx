@@ -8,7 +8,7 @@ import "@renderer/lib/editor/note-editor.css"
 import "@renderer/lib/editor/backlink-editor.css"
 import { Button } from "../solidui/button"
 import { formatRelativeTime } from "@renderer/lib/common/utils/relative-time"
-import { prepareFuzzySearch } from "@renderer/lib/common/utils/fuzzySearch"
+import { prepareSearch } from "@renderer/lib/common/utils/search"
 
 type CardBacklinkEditorProps = {
   cardId: StObjectId
@@ -34,18 +34,18 @@ const CardBacklinkEditor: Component<CardBacklinkEditorProps> = (props) => {
   const getCardSuggestions = async (query: string) => {
     const cards = appStore.getCards()
     if (!query.trim()) {
-      return cards.slice(0, 10).map(c => ({
+      return cards.slice(0, 10).map((c) => ({
         id: c.id,
         title: appStore.getCardTitle(c.id)() || "Untitled"
       }))
     }
-    const fuzzySearch = prepareFuzzySearch(query)
+    const search = prepareSearch(query)
     return cards
-      .map(c => ({ card: c, score: fuzzySearch(c.text || "").score }))
-      .filter(r => r.score > -Infinity)
+      .map((c) => ({ card: c, score: search(c.text || "") }))
+      .filter((r) => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
-      .map(r => ({
+      .map((r) => ({
         id: r.card.id,
         title: appStore.getCardTitle(r.card.id)() || "Untitled"
       }))

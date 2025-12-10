@@ -44,17 +44,28 @@ export type SearchResultItem = {
   text: string
 }
 
+export type CardContent = {
+  id: string
+  title: string
+  content: any
+}
+
 export type SearchAPI = {
   query: (query: string) => Promise<SearchResultItem[]>
-  getRecent: () => Promise<SearchResultItem[]>
+  getAll: () => Promise<SearchResultItem[]>
   selectCard: (cardId: string) => Promise<void>
   createCard: (title: string) => Promise<string | null>
+  getCardContent: (cardId: string) => Promise<CardContent | null>
+  updateCardContent: (cardId: string, content: any) => Promise<void>
   onQuery: (callback: (data: { query: string; responseChannel: string }) => void) => void
-  onGetRecent: (callback: (data: { responseChannel: string }) => void) => void
+  onGetAll: (callback: (data: { responseChannel: string }) => void) => void
   onSelectCard: (callback: (cardId: string) => void) => void
   onCreateCard: (callback: (data: { title: string; responseChannel: string }) => void) => void
+  onGetCardContent: (callback: (data: { cardId: string; responseChannel: string }) => void) => void
+  onUpdateCardContent: (callback: (data: { cardId: string; content: any }) => void) => void
   sendResult: (channel: string, results: SearchResultItem[]) => void
   sendCardCreated: (channel: string, cardId: string | null) => void
+  sendCardContent: (channel: string, content: CardContent | null) => void
 }
 
 export type Settings = {
@@ -133,6 +144,7 @@ const api = {
   } satisfies DatabaseAPI,
   hideQuickWindow: () => ipcRenderer.invoke("quick:hide"),
   hideSearchWindow: () => ipcRenderer.invoke("search:hide"),
+  showSearchWindow: () => ipcRenderer.invoke("search:show"),
   fetchPageTitle: (url: string) => ipcRenderer.invoke("fetchPageTitle", url) as Promise<string | null>,
   quick: {
     capture: (options: { content: any; checked?: boolean }) => ipcRenderer.invoke("quick:capture", options) as Promise<void>,
@@ -142,15 +154,20 @@ const api = {
   } satisfies QuickAPI,
   search: {
     query: (query) => ipcRenderer.invoke("search:query", query),
-    getRecent: () => ipcRenderer.invoke("search:getRecent"),
+    getAll: () => ipcRenderer.invoke("search:getAll"),
     selectCard: (cardId) => ipcRenderer.invoke("search:selectCard", cardId),
     createCard: (title) => ipcRenderer.invoke("search:createCard", title),
+    getCardContent: (cardId) => ipcRenderer.invoke("search:getCardContent", cardId),
+    updateCardContent: (cardId, content) => ipcRenderer.invoke("search:updateCardContent", cardId, content),
     onQuery: (callback) => ipcRenderer.on("search:query", (_e, data) => callback(data)),
-    onGetRecent: (callback) => ipcRenderer.on("search:getRecent", (_e, data) => callback(data)),
+    onGetAll: (callback) => ipcRenderer.on("search:getAll", (_e, data) => callback(data)),
     onSelectCard: (callback) => ipcRenderer.on("search:selectCard", (_e, cardId) => callback(cardId)),
     onCreateCard: (callback) => ipcRenderer.on("search:createCard", (_e, data) => callback(data)),
+    onGetCardContent: (callback) => ipcRenderer.on("search:getCardContent", (_e, data) => callback(data)),
+    onUpdateCardContent: (callback) => ipcRenderer.on("search:updateCardContent", (_e, data) => callback(data)),
     sendResult: (channel, results) => ipcRenderer.send(channel, results),
-    sendCardCreated: (channel, cardId) => ipcRenderer.send(channel, cardId)
+    sendCardCreated: (channel, cardId) => ipcRenderer.send(channel, cardId),
+    sendCardContent: (channel, content) => ipcRenderer.send(channel, content)
   } satisfies SearchAPI,
   settings: {
     get: () => ipcRenderer.invoke("settings:get"),

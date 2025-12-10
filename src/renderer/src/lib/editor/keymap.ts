@@ -17,10 +17,11 @@ import { splitBlock, joinBlockUp } from "./commands/split"
 import { indent } from "./commands/indent"
 import { dedent } from "./commands/dedent"
 import { toggleCollapse } from "./commands/collapse"
+import { atTextblockStart } from "./commands/utils"
 import { bulletListRule, orderedListRule } from "./input-rules/wrapping-block"
 import { codeBlockRule } from "./input-rules/code-block"
 import { inlineCodeRule } from "./input-rules/inline-code"
-import { schema } from "./schema"
+import { schema, isBlockNode, type BlockKind } from "./schema"
 
 export const CODE_INDENT = "  "
 
@@ -108,10 +109,40 @@ const deleteSelectionPreserveTitle: Command = (state, dispatch) => {
   return deleteSelection(state, dispatch)
 }
 
+const convertListToParagraph: Command = (state, dispatch) => {
+  const $cursor = atTextblockStart(state)
+  if (!$cursor) return false
+
+  if ($cursor.parent.type !== schema.nodes.paragraph) return false
+
+  const blockDepth = $cursor.depth - 1
+  if (blockDepth < 1) return false
+
+  const block = $cursor.node(blockDepth)
+  if (!isBlockNode(block)) return false
+
+  const kind = block.attrs.kind as BlockKind
+  if (kind !== "bullet" && kind !== "ordered") return false
+
+  if ($cursor.index(blockDepth) !== 0) return false
+
+  if (dispatch) {
+    const blockPos = $cursor.before(blockDepth)
+    const tr = state.tr.setNodeMarkup(blockPos, undefined, {
+      ...block.attrs,
+      kind: "paragraph",
+      order: null
+    })
+    dispatch(tr)
+  }
+  return true
+}
+
 const enterCommand = chainCommands(codeBlockEnter, splitBlock)
 
 const backspaceCommand = chainCommands(
   deleteSelectionPreserveTitle,
+  convertListToParagraph,
   joinBlockUp,
   joinTextblockBackward,
   selectNodeBackward

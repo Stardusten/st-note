@@ -137,11 +137,10 @@ const CardRefPopupUI: Component<CardRefPopupProps> = (props) => {
                   "bg-[rgba(21,22,25,0.9)] border-[0.5px] border-[rgb(78,79,82)]": isCreateSelected(),
                   "border-[0.5px] border-transparent": !isCreateSelected()
                 }}>
-                <span class="text-muted-foreground">
-                  + New note:{" "}
-                  <span class="text-foreground">
-                    "<span class="underline">{props.query().trim()}</span>"
-                  </span>
+                <span class="truncate">
+                  <span class="text-muted-foreground whitespace-nowrap">+ New note: "</span>
+                  <span class="text-foreground underline">{props.query().trim()}</span>
+                  <span class="text-foreground whitespace-nowrap">"</span>
                 </span>
               </div>
             </div>

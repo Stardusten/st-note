@@ -7,6 +7,7 @@ type SearchBoxProps = {
   onSelectCard: (cardId: string) => void
   onCreateNote: (title: string) => void
   onClose?: () => void
+  onFocusedCardChange?: (cardId: string | null) => void
   resetTrigger?: number
 }
 
@@ -25,12 +26,36 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
     })
   }
 
+  const searchResults = () => {
+    const q = query().trim()
+    if (!q) {
+      const allCards = appStore.getCards()
+      const recentIds = new Set(appStore.getRecentCards().map((c) => c.id))
+      const recentCards = appStore.getRecentCards()
+      const otherCards = allCards.filter((c) => !recentIds.has(c.id))
+      return [...recentCards, ...otherCards]
+    }
+    return appStore.getSearchResults()
+  }
+
   const scrollToFocusedItem = () => {
     const el = itemRefs()[focusedIndex()]
     if (el) el.scrollIntoView({ block: "nearest" })
   }
 
   createEffect(on(focusedIndex, scrollToFocusedItem))
+
+  createEffect(
+    on([focusedIndex, searchResults], () => {
+      const index = focusedIndex()
+      const results = searchResults()
+      if (index < results.length) {
+        props.onFocusedCardChange?.(results[index].id)
+      } else {
+        props.onFocusedCardChange?.(null)
+      }
+    })
+  )
 
   createEffect(() => {
     if (props.resetTrigger !== undefined) {
@@ -67,18 +92,6 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
     props.onCreateNote(title)
     appStore.clearSearch()
     setQuery("")
-  }
-
-  const searchResults = () => {
-    const q = query().trim()
-    if (!q) {
-      const allCards = appStore.getCards()
-      const recentIds = new Set(appStore.getRecentCards().map((c) => c.id))
-      const recentCards = appStore.getRecentCards()
-      const otherCards = allCards.filter((c) => !recentIds.has(c.id))
-      return [...recentCards, ...otherCards]
-    }
-    return appStore.getSearchResults()
   }
 
   const totalItems = () => {
@@ -122,10 +135,6 @@ const SearchBox: Component<SearchBoxProps> = (props) => {
   return (
     <>
       <div class="relative">
-        <hr
-          class="absolute -z-0 top-[45px] h-[1px] w-full bg-[#000]/40 border-[#fff]/20"
-          style={{ "border-width": "0px 0px 0.5px" }}
-        />
         <TextField class="px-5 pt-4">
           <TextFieldInput
             ref={inputRef}

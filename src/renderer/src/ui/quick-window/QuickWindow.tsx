@@ -3,7 +3,7 @@ import { Button } from "../solidui/button"
 import Kbd from "../solidui/kbd"
 import { Inbox } from "lucide-solid"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
-import { appStoreIpc } from "@renderer/lib/state/AppStoreIpc"
+import { appStoreIpc } from "@renderer/lib/state/appStoreIpc"
 import "./quick-window.css"
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
@@ -40,10 +40,10 @@ const QuickWindow: Component = () => {
 
   const handleCapture = async () => {
     if (isEmpty()) {
-      window.api.hideQuickWindow()
+      appStoreIpc.hideQuickWindow()
       return
     }
-    await appStoreIpc.captureNote({ content: content(), checked: undefined })
+    await appStoreIpc.capture({ content: content(), checked: undefined })
     resetEditor()
   }
 
@@ -56,19 +56,20 @@ const QuickWindow: Component = () => {
     }
     if (e.key === "Escape") {
       if (isEmpty()) {
-        window.api.hideQuickWindow()
+        appStoreIpc.hideQuickWindow()
       } else {
         const discard = window.confirm("Discard this note?")
         if (discard) {
           resetEditor()
-          window.api.hideQuickWindow()
+          appStoreIpc.hideQuickWindow()
         }
       }
     }
   }
 
   const getCardSuggestions = async (query: string) => {
-    return appStoreIpc.searchCards(query)
+    const results = await appStoreIpc.query(query)
+    return results.map((r) => ({ id: r.id, title: r.title }))
   }
 
   const handleCreateCard = async (title: string) => {

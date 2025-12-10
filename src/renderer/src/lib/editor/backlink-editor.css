@@ -25,7 +25,10 @@
   font-size: inherit;
   font-weight: 300;
   line-height: inherit;
-  margin: 0.25em 0;
+  margin: 0;
+
+  border: none;
+  box-shadow: none;
 }
 
 .backlink-editor .ProseMirror .block[data-kind="bullet"],

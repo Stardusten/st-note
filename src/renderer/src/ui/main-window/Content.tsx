@@ -1,7 +1,6 @@
-import { type Component, Show, onMount, onCleanup, createSignal, Match, Switch } from "solid-js"
+import { type Component, onMount, onCleanup, createSignal, Match, Switch } from "solid-js"
 import LeftSidebar, { type ViewMode } from "./LeftSidebar"
 import AllCardsView from "./AllCardsView"
-import SearchPanel from "./SearchPanel"
 import SettingsPanel from "./SettingsPanel"
 import { appStore } from "@renderer/lib/state/AppStore"
 import CardEditView from "./CardEditView"
@@ -17,20 +16,19 @@ const Content: Component<ContentProps> = (props) => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
       e.preventDefault()
-      appStore.openSearchPanel()
+      window.api.showSearchWindow()
     }
     if ((e.metaKey || e.ctrlKey) && e.key === ',') {
       e.preventDefault()
       props.onSettingsOpenChange(true)
     }
-    if (e.key === 'Escape' && appStore.isSearchPanelOpen()) {
-      e.preventDefault()
-      appStore.closeSearchPanel()
-    }
   }
 
   onMount(() => {
     window.addEventListener('keydown', handleKeyDown)
+    window.api.search.onSelectCard(() => {
+      setActiveView("editor")
+    })
   })
 
   onCleanup(() => {
@@ -57,10 +55,6 @@ const Content: Component<ContentProps> = (props) => {
           </Match>
         </Switch>
       </div>
-
-      <Show when={appStore.isSearchPanelOpen()}>
-        <SearchPanel onClose={() => appStore.closeSearchPanel()} />
-      </Show>
 
       <SettingsPanel open={props.settingsOpen} onOpenChange={props.onSettingsOpenChange} />
     </div>

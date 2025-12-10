@@ -1,4 +1,5 @@
 import { createSignal, onMount, onCleanup } from "solid-js"
+import { appStoreIpc } from "@renderer/lib/state/appStoreIpc"
 import "./capture-success.css"
 
 export function CaptureSuccessWindow() {
@@ -6,16 +7,13 @@ export function CaptureSuccessWindow() {
   let timer: number | null = null
 
   const startTimer = () => {
-    // console.log('[CaptureSuccess] Starting timer')
     if (timer) clearTimeout(timer)
     timer = window.setTimeout(() => {
-      // console.log('[CaptureSuccess] Timer done, closing window')
-      window.api.captureSuccess.close()
+      appStoreIpc.captureSuccess.close()
     }, 3000)
   }
 
   const clearTimer = () => {
-    // console.log('[CaptureSuccess] Clearing timer')
     if (timer) {
       clearTimeout(timer)
       timer = null
@@ -23,17 +21,15 @@ export function CaptureSuccessWindow() {
   }
 
   const handleOpenClick = () => {
-    window.api.captureSuccess.openLastCaptured()
+    appStoreIpc.captureSuccess.openLastCaptured()
   }
 
   onMount(() => {
-    window.api.captureSuccess.onShow(() => {
-      // console.log('[CaptureSuccess] onShow')
+    appStoreIpc.captureSuccess.onShow(() => {
       setVisible(true)
       startTimer()
     })
-    window.api.captureSuccess.onHide(() => {
-      // console.log('[CaptureSuccess] onHide')
+    appStoreIpc.captureSuccess.onHide(() => {
       setVisible(false)
       clearTimer()
     })
@@ -41,10 +37,10 @@ export function CaptureSuccessWindow() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault()
-        window.api.captureSuccess.openLastCaptured()
+        appStoreIpc.captureSuccess.openLastCaptured()
       }
     }
-    
+
     window.addEventListener('keydown', handleKeyDown)
 
     onCleanup(() => {
