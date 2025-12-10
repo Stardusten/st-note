@@ -41,9 +41,7 @@ const Content: Component<ContentProps> = (props) => {
   }
 
   return (
-    <div
-      class="flex-1 w-full flex flex-row overflow-hidden"
-      >
+    <div class="flex-1 w-full flex flex-row overflow-hidden relative">
       <LeftSidebar activeView={activeView()} onViewChange={setActiveView} />
       <div class="flex-1 w-full h-full flex flex-col items-center overflow-hidden">
         <Switch>

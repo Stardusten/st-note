@@ -1,4 +1,6 @@
+import { cn } from "@renderer/lib/common/utils/tailwindcss"
 import { formatRelativeTime } from "@renderer/lib/common/utils/relative-time"
+import { useLayout } from "@renderer/lib/layout/LayoutContext"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { Check, ChevronDown, Plus, SquareCheckBig, StickyNoteIcon, Trash } from "lucide-solid"
 import { Component, createMemo, createSignal, For, Show } from "solid-js"
@@ -25,6 +27,7 @@ type AllCardsViewProps = {
 }
 
 const AllCardsView: Component<AllCardsViewProps> = (props) => {
+  const layout = useLayout()
   const [sortOrder, setSortOrder] = createSignal<"updated" | "created" | "title">("updated")
   const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set())
 
@@ -106,25 +109,31 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
     }
   }
 
+  const toolbarHeight = () => (layout.isCompact() ? "h-[28px]" : "h-[42px]")
+  const toolbarPaddingL = () => (layout.isCompact() ? "pl-2" : "pl-8")
+  const toolbarIconWidth = () => (layout.isCompact() ? "w-[28px]" : "w-[42px]")
+  const itemPadding = () => (layout.isCompact() ? "px-2 py-1" : "px-8 py-3")
+  const textSize = () => (layout.isCompact() ? "text-xs" : "text-sm")
+  const checkboxSize = () => (layout.isCompact() ? "scale-90" : "")
+
   return (
     <div
-      class="flex flex-col w-full h-full relative overflow-hidden"
-      style={{
-        background: "rgba(26, 27, 31, 0.95)"
-      }}>
+      class={`flex flex-col w-full h-full relative overflow-hidden ${textSize()}`}
+      style={{ background: "rgba(26, 27, 31, 0.95)" }}>
       {/* Toolbar */}
-      <div class="flex flex-row items-center justify-between pl-8 h-[42px] border-b shrink-0">
+      <div
+        class={`flex flex-row items-center justify-between  border-b shrink-0 ${toolbarPaddingL()} ${toolbarHeight()}`}>
         <div class="flex flex-row items-center">
           <Checkbox
             checked={isAllSelected()}
             indeterminate={isPartiallySelected()}
             onChange={toggleSelectAll}
-            class="mr-4"
+            class={`mr-4 ${checkboxSize()}`}
           />
-          <div class="text-sm text-muted-foreground mr-2">{appStore.getCards().length} cards</div>
+          <div class="text-muted-foreground mr-2">{appStore.getCards().length} cards</div>
           <Show when={selectedIds().size > 0}>
             <div class="h-3 w-[1px] bg-border mr-2"></div>
-            <div class="text-sm text-muted-foreground">{selectedIds().size} selected</div>
+            <div class="text-muted-foreground">{selectedIds().size} selected</div>
           </Show>
         </div>
 
@@ -134,7 +143,7 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
               as={(props: ButtonProps) => (
                 <Button
                   variant="text-only"
-                  class="h-8 text-sm gap-2 mr-4 text-muted-foreground hover:text-foreground"
+                  class={`h-8 gap-2 mr-4 text-muted-foreground hover:text-foreground ${textSize()}`}
                   {...props}>
                   <span>Sort by</span>
                   <ChevronDown class="size-4 stroke-[1.5px]" />
@@ -154,14 +163,14 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
 
           <Show when={selectedIds().size > 0}>
             <button
-              class="h-full w-[42px] text-sm border-l border-border/40 text-blue-500 hover:bg-blue-500/10 transition-colors flex items-center justify-center cursor-pointer"
+              class={`h-full border-l border-border/40 text-blue-500 hover:bg-blue-500/10 transition-colors flex items-center justify-center cursor-pointer`}
               onClick={handleToggleTaskStatus}
               title="Toggle task status">
               <SquareCheckBig class="size-4 stroke-[1.5px]" />
             </button>
 
             <button
-              class="h-full w-[42px] text-sm border-l border-border/40 text-destructive hover:bg-destructive/10 transition-colors flex items-center justify-center cursor-pointer"
+              class={`h-full ${toolbarIconWidth()} border-l border-border/40 text-destructive hover:bg-destructive/10 transition-colors flex items-center justify-center cursor-pointer`}
               onClick={handleDeleteSelected}
               title="Delete selected">
               <Trash class="size-4 stroke-[1.5px]" />
@@ -169,7 +178,7 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
           </Show>
 
           <button
-            class="h-full w-[42px] border-l border-border/40 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors flex items-center justify-center cursor-pointer"
+            class={`h-full ${toolbarIconWidth()} border-l border-border/40 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors flex items-center justify-center cursor-pointer`}
             onClick={handleCreateCard}
             title="New note">
             <Plus class="size-4 stroke-[1.5px]" />
@@ -187,53 +196,27 @@ const AllCardsView: Component<AllCardsViewProps> = (props) => {
         <For each={sortedCards()}>
           {(card) => (
             <div
-              class="group flex items-center gap-4 py-3 px-8 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
+              class={`group flex items-center gap-4 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer ${itemPadding()}`}
               onClick={() => props.onSelectCard(card.id)}>
               <Checkbox
                 checked={selectedIds().has(card.id)}
                 onChange={() => toggleSelection(card.id)}
                 onClick={(e: MouseEvent) => e.stopPropagation()}
+                class={checkboxSize()}
               />
               <div class="flex-1 min-w-0 flex items-center gap-3">
-                <Show
-                  when={card.data.checked !== undefined}
-                  fallback={
-                    <div class="p-1.5 bg-muted rounded-md shrink-0">
-                      <StickyNoteIcon class="size-4 stroke-[1.5px] text-muted-foreground" />
-                    </div>
-                  }>
-                  <div class="w-7 flex justify-center shrink-0">
-                    <div
-                      class="task-checkbox border rounded-full shadow-[0_1px_0_0_rgba(26,27,31,1)] \
-                      cursor-pointer relative transition-all inline-flex items-center justify-center \
-                      size-[1.25em] border-[1px] border-[#d9d9d9] \
-                      bg-[radial-gradient(\
-                        39.58%_39.58%_at_16.79%_14.58%,\
-                        rgba(255,255,255,0.23)_0%,\
-                        rgba(255,255,255,0)_100%),\
-                        rgba(255,255,255,0.05)\
-                      ]"
-                      onClick={(e) => handleTaskCheckboxClick(e, card.id, card.data.checked)}>
-                      <Check
-                        class="absolute z-1 text-[#fff] transition-opacity size-[0.7em] opacity-0 data-checked:opacity-100 hover:opacity-50"
-                        data-checked={card.data.checked || undefined}
-                      />
-                    </div>
-                  </div>
-                </Show>
-
                 <div class="flex-1 min-w-0 flex items-center">
-                  <span class="text-sm text-foreground shrink-0">
+                  <span class="text-foreground shrink-0">
                     {appStore.getCardTitle(card.id)() || "Untitled"}
                   </span>
                   <Show when={getCardBody(card.id)}>
-                    <span class="text-sm text-muted-foreground truncate ml-2">
+                    <span class="text-muted-foreground truncate ml-2">
                       - {getCardBody(card.id)}
                     </span>
                   </Show>
                 </div>
 
-                <div class="text-sm text-muted-foreground whitespace-nowrap shrink-0">
+                <div class="text-muted-foreground whitespace-nowrap shrink-0">
                   {formatRelativeTime(card.updatedAt)}
                 </div>
               </div>

@@ -5,10 +5,12 @@ import { Button } from "../solidui/button"
 import CardMainEditor from "./CardEditor"
 import CardBacklinkEditor from "./CardBacklinkEditor"
 import { appStore } from "@renderer/lib/state/AppStore"
+import { useLayout } from "@renderer/lib/layout/LayoutContext"
 
 const PAGE_SIZE = 10
 
 const CardEditView: Component = () => {
+  const layout = useLayout()
   const [backlinksExpanded, setBacklinksExpanded] = createSignal(true)
   const [potentialLinksExpanded, setPotentialLinksExpanded] = createSignal(true)
   const [backlinksPage, setBacklinksPage] = createSignal(0)
@@ -71,7 +73,8 @@ const CardEditView: Component = () => {
     <div
       class="w-full h-full flex flex-col p-4 items-center overflow-y-auto"
       style={{
-        background: "linear-gradient(rgb(21, 22, 25) 0%, rgb(37, 38, 42) 100%)"
+        background: "linear-gradient(rgb(21, 22, 25) 0%, rgb(37, 38, 42) 100%)",
+        zoom: layout.isCompact() ? 0.9 : 1
       }}
     >
       <CardMainEditor />

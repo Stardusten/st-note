@@ -3,6 +3,7 @@ import TitleBar from "./TitleBar"
 import Content from "./Content"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
+import { LayoutProvider } from "@renderer/lib/layout/LayoutContext"
 import type { SearchResultItem, CardContent } from "src/preload"
 
 const MainWindow: Component = () => {
@@ -84,10 +85,12 @@ const MainWindow: Component = () => {
   })
 
   return (
-    <div class="h-screen w-full flex flex-col overflow-hidden">
-      <TitleBar onOpenSettings={() => setSettingsOpen(true)} />
-      <Content settingsOpen={settingsOpen()} onSettingsOpenChange={setSettingsOpen} />
-    </div>
+    <LayoutProvider>
+      <div class="h-screen w-full flex flex-col overflow-hidden">
+        <TitleBar onOpenSettings={() => setSettingsOpen(true)} />
+        <Content settingsOpen={settingsOpen()} onSettingsOpenChange={setSettingsOpen} />
+      </div>
+    </LayoutProvider>
   )
 }
 

@@ -53,7 +53,7 @@ function createWindow(): void {
     height: 670,
     show: false,
     autoHideMenuBar: false,
-    titleBarStyle: "hidden",
+    titleBarStyle: "hiddenInset",
     ...(process.platform === "darwin"
       ? { trafficLightPosition: { x: 12, y: Math.round(42 / 2 - 8) } }
       : {}),
