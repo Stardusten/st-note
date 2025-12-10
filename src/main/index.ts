@@ -1,4 +1,14 @@
-import { app, shell, BrowserWindow, ipcMain, IpcMainInvokeEvent, net, dialog } from "electron"
+import {
+  app,
+  shell,
+  BrowserWindow,
+  ipcMain,
+  IpcMainInvokeEvent,
+  net,
+  dialog,
+  Menu,
+  globalShortcut
+} from "electron"
 import { join } from "path"
 import { copyFileSync, existsSync } from "fs"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
@@ -31,6 +41,65 @@ import {
 } from "./settings"
 
 let mainWindow: BrowserWindow | null = null
+let settingsWindow: BrowserWindow | null = null
+let currentBringToFrontShortcut: string | null = null
+
+function registerBringToFrontShortcut(shortcut: string | null): boolean {
+  if (currentBringToFrontShortcut) {
+    globalShortcut.unregister(currentBringToFrontShortcut)
+    currentBringToFrontShortcut = null
+  }
+  if (!shortcut) return true
+  try {
+    const success = globalShortcut.register(shortcut, () => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    })
+    if (success) currentBringToFrontShortcut = shortcut
+    return success
+  } catch {
+    return false
+  }
+}
+
+function createSettingsWindow(): void {
+  if (settingsWindow) {
+    settingsWindow.focus()
+    return
+  }
+
+  settingsWindow = new BrowserWindow({
+    width: 300,
+    height: 260,
+    show: false,
+    resizable: false,
+    titleBarStyle: "hidden",
+    ...(process.platform === "darwin"
+      ? { trafficLightPosition: { x: 12, y: Math.round(34 / 2 - 8) } }
+      : { titleBarOverlay: { color: "#151619", symbolColor: "#999", height: 34 } }),
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false
+    }
+  })
+
+  settingsWindow.on("ready-to-show", () => {
+    settingsWindow?.show()
+  })
+
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    settingsWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/settings.html`)
+  } else {
+    settingsWindow.loadFile(join(__dirname, "../renderer/settings.html"))
+  }
+
+  settingsWindow.on("closed", () => {
+    settingsWindow = null
+  })
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -120,10 +189,10 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:deleteSetting", restFunc(deleteSetting))
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
-  // Database export/import
+  // Database operations
   ipcMain.handle("database:export", async (_e, currentDbPath: string) => {
     const result = await dialog.showSaveDialog({
-      title: "Export Base",
+      title: "Export Database",
       defaultPath: `nv25-backup-${new Date().toISOString().slice(0, 10)}.db`,
       filters: [{ name: "SQLite Database", extensions: ["db"] }]
     })
@@ -138,7 +207,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle("database:import", async () => {
     const result = await dialog.showOpenDialog({
-      title: "Import Base",
+      title: "Open Database",
       filters: [{ name: "SQLite Database", extensions: ["db"] }],
       properties: ["openFile"]
     })
@@ -148,16 +217,37 @@ app.whenReady().then(() => {
     return sourcePath
   })
 
+  ipcMain.handle("database:new", async () => {
+    const result = await dialog.showSaveDialog({
+      title: "New Database",
+      defaultPath: "notes.db",
+      filters: [{ name: "SQLite Database", extensions: ["db"] }]
+    })
+    if (result.canceled || !result.filePath) return null
+    return result.filePath
+  })
+
   ipcMain.handle("database:getPath", () => {
     const global = loadGlobalSettings()
     return global.lastDatabase
   })
 
+  ipcMain.handle("database:getDefaultPath", () => {
+    return join(app.getPath("userData"), "notes.db")
+  })
+
   // Global settings IPC
   ipcMain.handle("globalSettings:get", () => loadGlobalSettings())
-  ipcMain.handle("globalSettings:update", (_e, partial: Partial<GlobalSettings>) =>
-    updateGlobalSettings(partial)
-  )
+  ipcMain.handle("globalSettings:update", (_e, partial: Partial<GlobalSettings>) => {
+    const updated = updateGlobalSettings(partial)
+    if ("bringToFrontShortcut" in partial) {
+      registerBringToFrontShortcut(updated.bringToFrontShortcut)
+    }
+    return updated
+  })
+  ipcMain.handle("globalSettings:registerShortcut", (_e, shortcut: string) => {
+    return registerBringToFrontShortcut(shortcut)
+  })
 
   // Vault settings IPC
   ipcMain.handle("settings:get", () => loadSettings())
@@ -179,6 +269,78 @@ app.whenReady().then(() => {
 
   createWindow()
 
+  // Register initial global shortcut
+  const globalSettings = loadGlobalSettings()
+  if (globalSettings.bringToFrontShortcut) {
+    registerBringToFrontShortcut(globalSettings.bringToFrontShortcut)
+  }
+
+  const menuTemplate: Electron.MenuItemConstructorOptions[] = [
+    ...(process.platform === "darwin"
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: "about" as const },
+              { type: "separator" as const },
+              {
+                label: "Settings...",
+                accelerator: "CmdOrCtrl+,",
+                click: () => createSettingsWindow()
+              },
+              { type: "separator" as const },
+              { role: "services" as const },
+              { type: "separator" as const },
+              { role: "hide" as const },
+              { role: "hideOthers" as const },
+              { role: "unhide" as const },
+              { type: "separator" as const },
+              { role: "quit" as const }
+            ]
+          }
+        ]
+      : []),
+    { role: "fileMenu" as const },
+    { role: "editMenu" as const },
+    {
+      label: "Database",
+      submenu: [
+        {
+          label: "New Database...",
+          accelerator: "CmdOrCtrl+Shift+N",
+          click: () => mainWindow?.webContents.send("menu:newDatabase")
+        },
+        {
+          label: "Open Database...",
+          accelerator: "CmdOrCtrl+O",
+          click: () => mainWindow?.webContents.send("menu:openDatabase")
+        },
+        { type: "separator" },
+        {
+          label: "Import Database...",
+          click: () => mainWindow?.webContents.send("menu:import")
+        },
+        {
+          label: "Export Database...",
+          click: () => mainWindow?.webContents.send("menu:export")
+        },
+        ...(process.platform !== "darwin"
+          ? [
+              { type: "separator" as const },
+              {
+                label: "Settings...",
+                accelerator: "CmdOrCtrl+,",
+                click: () => createSettingsWindow()
+              }
+            ]
+          : [])
+      ]
+    },
+    { role: "viewMenu" as const },
+    { role: "windowMenu" as const }
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate))
+
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
     else if (mainWindow) mainWindow.show()
@@ -189,4 +351,8 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit()
   }
+})
+
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll()
 })

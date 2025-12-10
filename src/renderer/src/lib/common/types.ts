@@ -6,14 +6,12 @@ export type StObject = {
   id: StObjectId
   type: string
   data: any
-  text: string
-  tags: string[]
   updatedAt: Date
   createdAt: Date
   deletedAt: Date | null
 }
 
-export type CreateParams = Pick<StObject, "id" | "type" | "data" | "text" | "tags">
+export type CreateParams = Pick<StObject, "id" | "type" | "data">
 export type UpdateParams = CreateParams
 
 export type QueryOptions = {

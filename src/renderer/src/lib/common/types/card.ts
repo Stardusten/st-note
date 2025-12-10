@@ -19,7 +19,6 @@ export type Card = StObject & {
 export const isTask = (card: Card): boolean => card.data.checked !== undefined
 
 export const getCardTitle = (card: Card): string => {
-  // Try to extract title from the document structure (first title node)
   const content = card.data?.content?.content
   if (Array.isArray(content) && content.length > 0) {
     const titleNode = content[0]
@@ -31,7 +30,5 @@ export const getCardTitle = (card: Card): string => {
       if (text.trim()) return text.trim()
     }
   }
-  // Fallback to first line of text field
-  const firstLine = card.text?.split('\n')[0] || ''
-  return firstLine.trim() || 'Untitled'
+  return 'Untitled'
 }

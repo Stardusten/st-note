@@ -24,7 +24,7 @@
 }
 
 /* title */
-.prosemirror-editor .editor-title {
+/* .prosemirror-editor .editor-title {
   font-size: calc(var(--editor-font-size) * 1.3);
   font-weight: 300;
   margin: 0 0 0.5em 0;
@@ -33,6 +33,12 @@
   box-shadow: rgba(72, 73, 75, 0.84) 0px 1px 0px;
   margin-bottom: 0.75em;
   padding-bottom: 0.35em;
+} */
+
+.prosemirror-editor .editor-title {
+  font-size: inherit;
+  font-weight: 300;
+  padding: 0.25em 0;
 }
 
 /* indent for * under paragraphs */

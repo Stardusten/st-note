@@ -7,14 +7,12 @@ export type StObjectRaw = {
   id: StObjectId
   type: string
   data: string
-  text: string
-  tags: string
   updated_at: number
   created_at: number
   deleted_at: number
 }
 
-export type CreateParamsRaw = Pick<StObjectRaw, "id" | "type" | "data" | "text" | "tags">
+export type CreateParamsRaw = Pick<StObjectRaw, "id" | "type" | "data">
 export type UpdateParamsRaw = CreateParamsRaw
 
 export type QueryOptionsRaw = {
@@ -60,11 +58,13 @@ export type SettingsAPI = {
 export type GlobalSettings = {
   lastDatabase: string | null
   recentDatabases: string[]
+  bringToFrontShortcut: string
 }
 
 export type GlobalSettingsAPI = {
   get: () => Promise<GlobalSettings>
   update: (partial: Partial<GlobalSettings>) => Promise<GlobalSettings>
+  registerShortcut: (shortcut: string) => Promise<boolean>
 }
 
 export type DatabaseExportResult = {
@@ -77,7 +77,17 @@ export type DatabaseExportResult = {
 export type DatabaseAPI = {
   export: (currentDbPath: string) => Promise<DatabaseExportResult>
   import: () => Promise<string | null>
+  new: () => Promise<string | null>
   getPath: () => Promise<string | null>
+  getDefaultPath: () => Promise<string>
+}
+
+export type MenuAPI = {
+  onImport: (callback: () => void) => void
+  onExport: (callback: () => void) => void
+  onNewDatabase: (callback: () => void) => void
+  onOpenDatabase: (callback: () => void) => void
+  onSettings: (callback: () => void) => void
 }
 
 const api = {
@@ -97,7 +107,9 @@ const api = {
   database: {
     export: (currentDbPath) => ipcRenderer.invoke("database:export", currentDbPath),
     import: () => ipcRenderer.invoke("database:import"),
-    getPath: () => ipcRenderer.invoke("database:getPath")
+    new: () => ipcRenderer.invoke("database:new"),
+    getPath: () => ipcRenderer.invoke("database:getPath"),
+    getDefaultPath: () => ipcRenderer.invoke("database:getDefaultPath")
   } satisfies DatabaseAPI,
   fetchPageTitle: (url: string) => ipcRenderer.invoke("fetchPageTitle", url) as Promise<string | null>,
   settings: {
@@ -109,8 +121,16 @@ const api = {
   } satisfies SettingsAPI,
   globalSettings: {
     get: () => ipcRenderer.invoke("globalSettings:get"),
-    update: (partial) => ipcRenderer.invoke("globalSettings:update", partial)
-  } satisfies GlobalSettingsAPI
+    update: (partial) => ipcRenderer.invoke("globalSettings:update", partial),
+    registerShortcut: (shortcut) => ipcRenderer.invoke("globalSettings:registerShortcut", shortcut)
+  } satisfies GlobalSettingsAPI,
+  menu: {
+    onImport: (callback) => ipcRenderer.on("menu:import", () => callback()),
+    onExport: (callback) => ipcRenderer.on("menu:export", () => callback()),
+    onNewDatabase: (callback) => ipcRenderer.on("menu:newDatabase", () => callback()),
+    onOpenDatabase: (callback) => ipcRenderer.on("menu:openDatabase", () => callback()),
+    onSettings: (callback) => ipcRenderer.on("menu:settings", () => callback())
+  } satisfies MenuAPI
 }
 
 if (process.contextIsolated) {

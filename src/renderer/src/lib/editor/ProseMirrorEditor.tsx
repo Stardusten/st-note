@@ -1,5 +1,5 @@
 import { onMount, onCleanup, JSX, createEffect } from "solid-js"
-import { EditorState, Plugin, Selection } from "prosemirror-state"
+import { EditorState, Plugin, Selection, TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { Node as ProseMirrorNode } from "prosemirror-model"
 import { history } from "prosemirror-history"
@@ -27,10 +27,12 @@ const lowlight = createLowlight(common)
 export type ProseMirrorEditorHandle = {
   focus: () => void
   focusFirstMatch: () => void
+  selectTitle: () => void
 }
 
 export type ProseMirrorEditorProps = {
   ref?: ProseMirrorEditorHandle | ((ref: ProseMirrorEditorHandle) => void)
+  cardId?: string
   content?: object
   onUpdate?: (json: object) => void
   placeholder?: string
@@ -121,6 +123,7 @@ const createDocFromJSON = (json: any): ProseMirrorNode => {
 export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element => {
   let containerRef: HTMLDivElement | undefined
   let view: EditorView | undefined
+  let lastCardId: string | undefined
 
   const findFirstMatchPos = (): number | null => {
     if (!view) return null
@@ -154,6 +157,17 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
         )
         view.dispatch(tr.scrollIntoView())
       }
+    },
+    selectTitle: () => {
+      if (!view) return
+      view.focus()
+      const title = view.state.doc.firstChild
+      if (title && title.type.name === "title") {
+        const start = 1
+        const end = 1 + title.content.size
+        const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, start, end))
+        view.dispatch(tr)
+      }
     }
   }
 
@@ -168,6 +182,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   onMount(() => {
     if (!containerRef) return
 
+    lastCardId = props.cardId
     const doc = createDocFromJSON(props.content)
 
     const plugins: Plugin[] = []
@@ -229,7 +244,26 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   })
 
   createEffect(() => {
-    if (!view || !props.content) return
+    if (!view) return
+
+    const cardIdChanged = props.cardId !== lastCardId
+    lastCardId = props.cardId
+
+    if (cardIdChanged) {
+      const doc = createDocFromJSON(props.content)
+      let state = EditorState.create({
+        doc,
+        plugins: view.state.plugins
+      })
+      const query = props.searchQuery ?? ""
+      if (query) {
+        state = state.apply(state.tr.setMeta(searchHighlightPluginKey, { query }))
+      }
+      view.updateState(state)
+      return
+    }
+
+    if (!props.content) return
 
     if (props.editorId && props.getLastUpdateSource) {
       const lastSource = props.getLastUpdateSource()

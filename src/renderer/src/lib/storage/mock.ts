@@ -4,13 +4,23 @@ import { CreateParams, QueryOptions, StObject, UpdateParams } from "../common/ty
 
 export class MockStorage implements Storage {
   private items: Map<StObjectId, StObject> = new Map()
+  private settings: Map<string, string> = new Map()
+  private path: string | null = null
 
-  async init(_path: string): Promise<void> {
+  async init(path: string): Promise<void> {
+    this.path = path
     this.items.clear()
+    this.settings.clear()
   }
 
   async close(): Promise<void> {
+    this.path = null
     this.items.clear()
+    this.settings.clear()
+  }
+
+  getPath(): string | null {
+    return this.path
   }
 
   async insert(object: CreateParams): Promise<StObject> {
@@ -80,5 +90,13 @@ export class MockStorage implements Storage {
     }
 
     return results
+  }
+
+  async getSetting(key: string): Promise<string | null> {
+    return this.settings.get(key) ?? null
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    this.settings.set(key, value)
   }
 }

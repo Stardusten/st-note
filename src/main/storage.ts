@@ -16,21 +16,53 @@ function getDb(path: string): Database.Database {
   return db
 }
 
-export function initStorage(path: string): void {
-  if (databases.has(path)) return
-  const db = new Database(path)
+function migration1(db: Database.Database): void {
+  const columns = db.prepare("PRAGMA table_info(objects)").all() as { name: string }[]
+  const hasTextColumn = columns.some((col) => col.name === "text")
+  if (!hasTextColumn) return
+
   db.exec(`
-    CREATE TABLE IF NOT EXISTS objects (
+    CREATE TABLE objects_new (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
       data TEXT,
-      text TEXT,
-      tags TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       deleted_at INTEGER NOT NULL
     )
   `)
+  db.exec(`
+    INSERT INTO objects_new (id, type, data, created_at, updated_at, deleted_at)
+    SELECT id, type, data, created_at, updated_at, deleted_at FROM objects
+  `)
+  db.exec("DROP TABLE objects")
+  db.exec("ALTER TABLE objects_new RENAME TO objects")
+}
+
+export function initStorage(path: string): void {
+  if (databases.has(path)) return
+  const db = new Database(path)
+  db.pragma("journal_mode = DELETE")
+
+  const tableExists = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='objects'")
+    .get()
+
+  if (tableExists) {
+    migration1(db)
+  } else {
+    db.exec(`
+      CREATE TABLE objects (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        data TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER NOT NULL
+      )
+    `)
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
@@ -52,9 +84,9 @@ export function insertObject(path: string, params: CreateParamsRaw): StObjectRaw
   const db = getDb(path)
   const now = Date.now()
   db.prepare(
-    `INSERT INTO objects (id, type, data, text, tags, created_at, updated_at, deleted_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(params.id, params.type, params.data, params.text, params.tags, now, now, 0)
+    `INSERT INTO objects (id, type, data, created_at, updated_at, deleted_at)
+    VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(params.id, params.type, params.data, now, now, 0)
   return { ...params, created_at: now, updated_at: now, deleted_at: 0 }
 }
 
@@ -70,15 +102,17 @@ export function updateObject(path: string, params: UpdateParamsRaw) {
   const current = fetchObject(path, params.id)
   if (!current) throw new Error(`Object with id ${params.id} not found`)
   if (current.deleted_at !== 0)
-    throw new Error(`Object with id ${params.id} is deleted, update a deleted object is not allowed`)
+    throw new Error(
+      `Object with id ${params.id} is deleted, update a deleted object is not allowed`
+    )
 
   const now = Date.now()
   const stmt = db.prepare(`
     UPDATE objects
-    SET type = ?, data = ?, text = ?, tags = ?, updated_at = ?
+    SET type = ?, data = ?, updated_at = ?
     WHERE id = ?
   `)
-  stmt.run(params.type, params.data, params.text, params.tags, now, params.id)
+  stmt.run(params.type, params.data, now, params.id)
 }
 
 export function deleteObject(path: string, id: StObjectId): void {
@@ -126,7 +160,9 @@ export function queryObjects(path: string, options?: QueryOptionsRaw): StObjectR
 
 export function getSetting(path: string, key: string): string | null {
   const db = getDb(path)
-  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
+    | { value: string }
+    | undefined
   return row?.value ?? null
 }
 
@@ -137,7 +173,10 @@ export function setSetting(path: string, key: string, value: string): void {
 
 export function getAllSettings(path: string): Record<string, string> {
   const db = getDb(path)
-  const rows = db.prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[]
+  const rows = db.prepare("SELECT key, value FROM settings").all() as {
+    key: string
+    value: string
+  }[]
   const result: Record<string, string> = {}
   for (const row of rows) result[row.key] = row.value
   return result

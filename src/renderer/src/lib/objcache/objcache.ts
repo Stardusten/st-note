@@ -57,9 +57,7 @@ export class ObjCache {
 
   async init(storage: Storage) {
     this.storage = storage
-
     const allObjects = await storage.query()
-
     createRoot(() => {
       for (const obj of allObjects) {
         const signal = createSignal<StObject | null>(obj)
@@ -68,10 +66,14 @@ export class ObjCache {
     })
   }
 
+  dispose() {
+    this.storage = null
+    this.cache.clear()
+    this.listeners.clear()
+  }
+
   private getStorage(): Storage {
-    if (!this.storage) {
-      throw new Error("Storage not initialized")
-    }
+    if (!this.storage) throw new Error("Storage not initialized")
     return this.storage
   }
 
@@ -118,8 +120,8 @@ export class ObjCache {
             break
           }
           case "update": {
-            const { id, type, data, text, tags } = op.oldObject
-            await storage.update({ id, type, data, text, tags })
+            const { id, type, data } = op.oldObject
+            await storage.update({ id, type, data })
 
             const signal = this.cache.get(op.oldObject.id)
             if (signal) signal[1](op.oldObject)
@@ -127,8 +129,8 @@ export class ObjCache {
             break
           }
           case "delete": {
-            const { id, type, data, text, tags } = op.deletedObject
-            await storage.update({ id, type, data, text, tags })
+            const { id, type, data } = op.deletedObject
+            await storage.update({ id, type, data })
 
             let signal = this.cache.get(op.deletedObject.id)
             if (!signal) {

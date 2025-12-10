@@ -101,6 +101,25 @@ class AppStore {
     await this.loadLastOpenedCard()
   }
 
+  async initWithPath(dbPath: string) {
+    await this.init(dbPath)
+  }
+
+  getDbPath(): string | null {
+    return this.storage.getPath()
+  }
+
+  async close() {
+    this.backlinkIndex.dispose()
+    this.textContentCache.dispose()
+    this.objCache.dispose()
+    await this.storage.close()
+    this.setCards([])
+    this.setCurrentCardId(null)
+    this.setNavHistory([null])
+    this.setNavIndex(0)
+  }
+
   private async loadCards() {
     const objects = await this.storage.query({ type: "card", includeDeleted: false })
     this.setCards(objects as Card[])
@@ -205,16 +224,13 @@ class AppStore {
         { type: "paragraph" }
       ]
     }
-    const text = initialContent ? this.extractTextFromContent(initialContent) : initialText || ""
     const card = {
       id: newId,
       type: "card" as const,
       data: {
         content,
         checked
-      },
-      text,
-      tags: []
+      }
     }
 
     await this.objCache.withTx((tx) => {
@@ -233,18 +249,7 @@ class AppStore {
     throw new Error("Failed to create card")
   }
 
-  private extractTextFromContent(content: any): string {
-    if (!content) return ""
-    const texts: string[] = []
-    const extract = (node: any) => {
-      if (node.text) texts.push(node.text)
-      if (node.content) node.content.forEach(extract)
-    }
-    extract(content)
-    return texts.join(" ")
-  }
-
-  async updateCard(id: StObjectId, content: any, text: string, source?: string) {
+  async updateCard(id: StObjectId, content: any, source?: string) {
     this.lastUpdateSources.set(id, source)
     await this.objCache.withTx((tx) => {
       if (source) tx.setSource(source)
@@ -257,9 +262,7 @@ class AppStore {
         data: {
           ...card.data,
           content
-        },
-        text,
-        tags: card.tags
+        }
       })
     })
 
@@ -281,9 +284,7 @@ class AppStore {
         data: {
           ...card.data,
           checked
-        },
-        text: card.text,
-        tags: card.tags
+        }
       })
     })
 
@@ -312,9 +313,7 @@ class AppStore {
         data: {
           ...card.data,
           checked: newChecked
-        },
-        text: card.text,
-        tags: card.tags
+        }
       })
     })
 
@@ -357,9 +356,7 @@ class AppStore {
           data: {
             ...card.data,
             checked: nextState
-          },
-          text: card.text,
-          tags: card.tags
+          }
         })
       }
     })
@@ -436,7 +433,8 @@ class AppStore {
     const search = prepareSearch(query)
     const results = this.cards()
       .map((card) => {
-        const score = search(card.text || "")
+        const text = this.textContentCache.getText(card.id)()
+        const score = search(text)
         return { ...card, searchScore: score }
       })
       .filter((card) => card.searchScore > 0)
@@ -457,8 +455,7 @@ class AppStore {
   updateCardContent = async (cardId: StObjectId, content: any) => {
     const card = this.cards().find((c) => c.id === cardId)
     if (!card) return
-    const text = this.extractTextFromContent(content)
-    await this.updateCard(cardId, content, text)
+    await this.updateCard(cardId, content)
   }
 
   searchCards = async (query: string): Promise<CardSuggestion[]> => {

@@ -61,11 +61,13 @@ export function updateVaultSettings(dbPath: string, partial: Partial<VaultSettin
 export type GlobalSettings = {
   lastDatabase: string | null
   recentDatabases: string[]
+  bringToFrontShortcut: string
 }
 
 const defaultGlobalSettings: GlobalSettings = {
   lastDatabase: null,
-  recentDatabases: []
+  recentDatabases: [],
+  bringToFrontShortcut: "CommandOrControl+Shift+Space"
 }
 
 function getGlobalSettingsPath(): string {
@@ -99,6 +101,7 @@ export function addRecentDatabase(dbPath: string): GlobalSettings {
   const current = loadGlobalSettings()
   const filtered = current.recentDatabases.filter((p) => p !== dbPath)
   const updated: GlobalSettings = {
+    ...current,
     lastDatabase: dbPath,
     recentDatabases: [dbPath, ...filtered].slice(0, 10)
   }

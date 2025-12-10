@@ -5,12 +5,14 @@ import type { CardSuggestionItem } from "./plugins/cardref-suggestion-plugin"
 export type NoteEditorHandle = {
   focus: () => void
   focusFirstMatch: () => void
+  selectTitle: () => void
 }
 
 type NoteEditorProps = {
   ref?: NoteEditorHandle | ((ref: NoteEditorHandle) => void)
+  cardId?: string
   content?: object
-  onUpdate?: (content: object, text: string) => void
+  onUpdate?: (content: object) => void
   titlePlaceholder?: string
   placeholder?: string
   showTitleToolbar?: boolean
@@ -25,45 +27,26 @@ type NoteEditorProps = {
   searchQuery?: string
 }
 
-const getTextFromDoc = (doc: any): string => {
-  if (!doc || !doc.content) return ""
-  let text = ""
-  for (const node of doc.content) {
-    if (node.type === "title" || node.type === "paragraph" || node.type === "block") {
-      text += getTextFromNode(node) + "\n"
-    }
-  }
-  return text.trim()
-}
-
-const getTextFromNode = (node: any): string => {
-  if (!node) return ""
-  if (node.type === "text") return node.text || ""
-  if (!node.content) return ""
-  return node.content.map(getTextFromNode).join("")
-}
-
 const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
   let editorHandle: ProseMirrorEditorHandle | undefined
 
   const handle: NoteEditorHandle = {
     focus: () => editorHandle?.focus(),
-    focusFirstMatch: () => editorHandle?.focusFirstMatch()
+    focusFirstMatch: () => editorHandle?.focusFirstMatch(),
+    selectTitle: () => editorHandle?.selectTitle()
   }
 
   if (typeof props.ref === "function") props.ref(handle)
   else if (props.ref) Object.assign(props.ref, handle)
 
   const handleUpdate = (json: object) => {
-    if (props.onUpdate) {
-      const text = getTextFromDoc(json)
-      props.onUpdate(json, text)
-    }
+    props.onUpdate?.(json)
   }
 
   return (
     <ProseMirrorEditor
       ref={(r) => { editorHandle = r }}
+      cardId={props.cardId}
       content={props.content}
       onUpdate={handleUpdate}
       placeholder={props.placeholder || props.titlePlaceholder}
