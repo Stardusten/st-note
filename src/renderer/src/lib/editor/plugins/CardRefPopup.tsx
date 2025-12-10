@@ -1,5 +1,6 @@
 import { Component, createSignal, createMemo, createEffect, For, Show, Setter, JSX } from "solid-js"
 import { render } from "solid-js/web"
+import { Plus } from "lucide-solid"
 import type { CardSuggestionItem, SuggestionProps, SuggestionRenderer } from "./cardref-suggestion-plugin"
 
 type CardRefPopupProps = {
@@ -12,8 +13,8 @@ type CardRefPopupProps = {
   position: () => { left: number; top: number; lineHeight: number } | null
 }
 
-const POPUP_WIDTH = 250
-const POPUP_MAX_HEIGHT = 240
+const POPUP_WIDTH = 280
+const POPUP_MAX_HEIGHT = 200
 const POPUP_SPACING = 4
 const WINDOW_PADDING = 8
 
@@ -68,14 +69,12 @@ const CardRefPopupUI: Component<CardRefPopupProps> = (props) => {
     if (!listRef || props.selectedIndex() < 0 || props.items().length === 0) return
     const activeItem = itemRefs.get(props.selectedIndex())
     if (!activeItem) return
-    activeItem.scrollIntoView({ block: "nearest", inline: "nearest" })
+    activeItem.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" })
   })
 
   const showPopup = createMemo(() => {
     const pos = props.position()
-    const hasItems = props.items().length > 0
-    const hasQuery = props.query().trim().length > 0
-    return pos && (hasItems || hasQuery)
+    return pos !== null
   })
 
   const isCreateSelected = createMemo(() => {
@@ -86,63 +85,39 @@ const CardRefPopupUI: Component<CardRefPopupProps> = (props) => {
   return (
     <Show when={showPopup()}>
       <div
-        class="fixed z-[9999] w-[250px] flex flex-col rounded-lg border-[0.5px] border-white/16 bg-[rgb(26,27,31)] py-1.5 pr-1.5"
+        class="fixed z-[9999] flex flex-col rounded border border-border/50 overflow-hidden text-xs"
         style={{
-          filter: "drop-shadow(rgba(0, 0, 0, 0.16) 0px 8px 12px)",
+          width: `${POPUP_WIDTH}px`,
+          background: "rgba(26, 27, 31, 0.98)",
+          "box-shadow": "0 4px 12px rgba(0, 0, 0, 0.3)",
           ...popupStyle()
         }}>
-        <div class="pt-0.5 pb-1.5 pl-2.5 text-muted-foreground/60 font-medium text-[0.625rem] tracking-[0.8px]">
-          INSERT REFERENCES
-        </div>
-        <div ref={listRef} class="overflow-y-auto" style={{ "max-height": "200px" }}>
+        <div ref={listRef} class="overflow-y-auto">
           <For each={props.items()}>
             {(item, index) => (
               <div
                 ref={(el) => setItemRef(el, index())}
-                class="relative flex items-center h-7 text-sm cursor-pointer select-none leading-[120%]"
+                class={`flex items-center px-2 py-1 cursor-pointer ${
+                  props.selectedIndex() === index() ? "bg-blue-500/30" : "hover:bg-muted/30"
+                }`}
                 onMouseEnter={() => props.setSelectedIndex(index())}
                 onClick={() => props.onSelect(item)}>
-                <Show when={props.selectedIndex() === index()}>
-                  <div
-                    class="absolute bg-[#b8b8b8] w-[2px] h-4 rounded-r-[2px] left-0"
-                    style={{ "box-shadow": "rgba(255, 255, 255, 0.4) 0px 0px 8px" }}
-                  />
-                </Show>
-                <div
-                  class="flex-1 flex items-center h-full ml-1.5 mr-0.5 px-2 rounded-sm overflow-hidden"
-                  classList={{
-                    "bg-[rgba(21,22,25,0.9)] border-[0.5px] border-[rgb(78,79,82)]": props.selectedIndex() === index(),
-                    "border-[0.5px] border-transparent": props.selectedIndex() !== index()
-                  }}>
-                  <span class="truncate">{item.title || "Untitled"}</span>
-                </div>
+                <span class="truncate text-foreground">{item.title || "Untitled"}</span>
               </div>
             )}
           </For>
           <Show when={props.query().trim().length > 0}>
             <div
               ref={(el) => setItemRef(el, props.items().length)}
-              class="relative flex items-center h-7 text-sm cursor-pointer select-none leading-[120%]"
+              class={`flex items-center gap-2 px-2 py-1 cursor-pointer ${
+                isCreateSelected() ? "bg-blue-500/30" : "hover:bg-muted/30"
+              }`}
               onMouseEnter={() => props.setSelectedIndex(props.items().length)}
               onClick={() => props.onCreateCard(props.query().trim())}>
-              <Show when={isCreateSelected()}>
-                <div
-                  class="absolute bg-[#b8b8b8] w-[2px] h-4 rounded-r-[2px] left-0"
-                  style={{ "box-shadow": "rgba(255, 255, 255, 0.4) 0px 0px 8px" }}
-                />
-              </Show>
-              <div
-                class="flex-1 flex items-center gap-1.5 h-full ml-1.5 mr-0.5 px-2 rounded-sm text-muted-foreground overflow-hidden"
-                classList={{
-                  "bg-[rgba(21,22,25,0.9)] border-[0.5px] border-[rgb(78,79,82)]": isCreateSelected(),
-                  "border-[0.5px] border-transparent": !isCreateSelected()
-                }}>
-                <span class="truncate">
-                  <span class="text-muted-foreground whitespace-nowrap">+ New note: "</span>
-                  <span class="text-foreground underline">{props.query().trim()}</span>
-                  <span class="text-foreground whitespace-nowrap">"</span>
-                </span>
-              </div>
+              <Plus class="size-3 stroke-[1.5px] text-muted-foreground shrink-0" />
+              <span class="text-muted-foreground truncate">
+                New note: "<span class="text-foreground">{props.query().trim()}</span>"
+              </span>
             </div>
           </Show>
         </div>

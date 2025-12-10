@@ -240,7 +240,7 @@ export class AsyncTaskQueue {
     }
 
     const task = this.queue.shift()!
-    const { id, callback, canceller, recursive, condition, timeout, meta, awareness } = task
+    const { id, callback, canceller, recursive, condition, timeout, meta: _meta, awareness } = task
 
     this.ongoingTask = task
 

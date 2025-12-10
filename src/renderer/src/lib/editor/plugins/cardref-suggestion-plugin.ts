@@ -37,13 +37,21 @@ function checkCompletionStatus(view: EditorView): CompletionStatus | null {
   const { selection } = state
   const { $from } = selection
 
-  if (!selection.empty || !$from.parent.isTextblock) return null
+  if (!selection.empty || !$from.parent.isTextblock) {
+    console.log("[cardref] checkCompletionStatus: selection not empty or not textblock")
+    return null
+  }
 
   const textBefore = $from.parent.textBetween(0, $from.parentOffset)
+  console.log("[cardref] checkCompletionStatus: textBefore =", JSON.stringify(textBefore))
   const match = textBefore.match(/(\[\[|【【)([^\]】]*)$/)
 
-  if (!match) return null
+  if (!match) {
+    console.log("[cardref] checkCompletionStatus: no match found")
+    return null
+  }
 
+  console.log("[cardref] checkCompletionStatus: match found!", match)
   return {
     from: $from.pos - match[0].length,
     to: $from.pos,
@@ -56,6 +64,8 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
   const pluginKey = new PluginKey("cardRefSuggestion")
   let renderer: SuggestionRenderer | null = null
   let isComposing = false
+
+  console.log("[cardref] createCardRefSuggestionPlugin called")
 
   const createProps = (view: EditorView, status: CompletionStatus): SuggestionProps => {
     const { from, query } = status
@@ -96,6 +106,7 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
   return new Plugin({
     key: pluginKey,
     view(view) {
+      console.log("[cardref] plugin view() called, initializing renderer")
       renderer = options.render()
 
       const handleCompositionStart = () => {
@@ -117,6 +128,7 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
 
       return {
         update: async (view: EditorView) => {
+          console.log("[cardref] plugin update() called, renderer:", !!renderer, "isComposing:", isComposing)
           if (!renderer || isComposing) return
 
           const status = checkCompletionStatus(view)
@@ -125,6 +137,7 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
             return
           }
 
+          console.log("[cardref] calling renderer.onUpdate with status:", status)
           renderer.onUpdate(createProps(view, status))
         },
         destroy() {

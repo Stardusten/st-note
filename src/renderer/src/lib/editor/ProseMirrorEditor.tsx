@@ -1,5 +1,5 @@
 import { onMount, onCleanup, JSX, createEffect } from "solid-js"
-import { EditorState, Plugin } from "prosemirror-state"
+import { EditorState, Plugin, Selection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { Node as ProseMirrorNode } from "prosemirror-model"
 import { history } from "prosemirror-history"
@@ -19,11 +19,18 @@ import { createCollapsedIndicatorPlugin } from "./plugins/collapsed-indicator-pl
 import { createBlockFocusPlugin } from "./plugins/block-focus-plugin"
 import { createClipboardPlugin } from "./plugins/clipboard-plugin"
 import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
+import { findHighlightRanges } from "@renderer/lib/common/utils/highlight"
 import "./note-editor.css"
 
 const lowlight = createLowlight(common)
 
+export type ProseMirrorEditorHandle = {
+  focus: () => void
+  focusFirstMatch: () => void
+}
+
 export type ProseMirrorEditorProps = {
+  ref?: ProseMirrorEditorHandle | ((ref: ProseMirrorEditorHandle) => void)
   content?: object
   onUpdate?: (json: object) => void
   placeholder?: string
@@ -115,6 +122,44 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   let containerRef: HTMLDivElement | undefined
   let view: EditorView | undefined
 
+  const findFirstMatchPos = (): number | null => {
+    if (!view) return null
+    const query = props.searchQuery ?? ""
+    if (!query.trim()) return null
+
+    let firstPos: number | null = null
+    view.state.doc.descendants((node, pos) => {
+      if (firstPos !== null) return false
+      if (node.isText && node.text) {
+        const ranges = findHighlightRanges(node.text, query)
+        if (ranges.length > 0) {
+          firstPos = pos + ranges[0][0]
+          return false
+        }
+      }
+      return true
+    })
+    return firstPos
+  }
+
+  const handle: ProseMirrorEditorHandle = {
+    focus: () => view?.focus(),
+    focusFirstMatch: () => {
+      if (!view) return
+      view.focus()
+      const pos = findFirstMatchPos()
+      if (pos !== null) {
+        const tr = view.state.tr.setSelection(
+          Selection.near(view.state.doc.resolve(pos))
+        )
+        view.dispatch(tr.scrollIntoView())
+      }
+    }
+  }
+
+  if (typeof props.ref === "function") props.ref(handle)
+  else if (props.ref) Object.assign(props.ref, handle)
+
   const cardRefOptions: CardRefOptions = {
     onCardClick: (cardId) => props.onCardClick?.(cardId),
     getTitle: (cardId) => props.getCardTitle?.(cardId) ?? "Untitled"
@@ -127,7 +172,10 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
 
     const plugins: Plugin[] = []
 
+    console.log("[ProseMirrorEditor] onMount, getCardSuggestions:", !!props.getCardSuggestions)
+
     if (props.getCardSuggestions) {
+      console.log("[ProseMirrorEditor] Adding cardref suggestion plugin")
       plugins.push(
         createCardRefSuggestionPlugin({
           items: props.getCardSuggestions,

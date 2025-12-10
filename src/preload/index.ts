@@ -38,36 +38,6 @@ export type StorageAPI = {
   deleteSetting: (path: string, key: string) => Promise<void>
 }
 
-export type SearchResultItem = {
-  id: string
-  title: string
-  text: string
-}
-
-export type CardContent = {
-  id: string
-  title: string
-  content: any
-}
-
-export type SearchAPI = {
-  query: (query: string) => Promise<SearchResultItem[]>
-  getAll: () => Promise<SearchResultItem[]>
-  selectCard: (cardId: string) => Promise<void>
-  createCard: (title: string) => Promise<string | null>
-  getCardContent: (cardId: string) => Promise<CardContent | null>
-  updateCardContent: (cardId: string, content: any) => Promise<void>
-  onQuery: (callback: (data: { query: string; responseChannel: string }) => void) => void
-  onGetAll: (callback: (data: { responseChannel: string }) => void) => void
-  onSelectCard: (callback: (cardId: string) => void) => void
-  onCreateCard: (callback: (data: { title: string; responseChannel: string }) => void) => void
-  onGetCardContent: (callback: (data: { cardId: string; responseChannel: string }) => void) => void
-  onUpdateCardContent: (callback: (data: { cardId: string; content: any }) => void) => void
-  sendResult: (channel: string, results: SearchResultItem[]) => void
-  sendCardCreated: (channel: string, cardId: string | null) => void
-  sendCardContent: (channel: string, content: CardContent | null) => void
-}
-
 export type Settings = {
   theme: "light" | "dark" | "system"
   fontSize: "small" | "medium" | "large"
@@ -110,19 +80,6 @@ export type DatabaseAPI = {
   getPath: () => Promise<string | null>
 }
 
-export type QuickAPI = {
-  capture: (options: { content: any; checked?: boolean }) => Promise<void>
-  onCapture: (callback: (data: { content: any; checked?: boolean; responseChannel: string }) => void) => void
-  sendCaptured: (channel: string, cardId?: string) => void
-}
-
-export type CaptureSuccessAPI = {
-  onShow: (callback: () => void) => void
-  onHide: (callback: () => void) => void
-  close: () => Promise<void>
-  openLastCaptured: () => Promise<void>
-}
-
 const api = {
   storage: {
     init: (path) => ipcRenderer.invoke("storage:init", path),
@@ -142,33 +99,7 @@ const api = {
     import: () => ipcRenderer.invoke("database:import"),
     getPath: () => ipcRenderer.invoke("database:getPath")
   } satisfies DatabaseAPI,
-  hideQuickWindow: () => ipcRenderer.invoke("quick:hide"),
-  hideSearchWindow: () => ipcRenderer.invoke("search:hide"),
-  showSearchWindow: () => ipcRenderer.invoke("search:show"),
   fetchPageTitle: (url: string) => ipcRenderer.invoke("fetchPageTitle", url) as Promise<string | null>,
-  quick: {
-    capture: (options: { content: any; checked?: boolean }) => ipcRenderer.invoke("quick:capture", options) as Promise<void>,
-    onCapture: (callback: (data: { content: any; checked?: boolean; responseChannel: string }) => void) =>
-      ipcRenderer.on("quick:capture", (_e, data) => callback(data)),
-    sendCaptured: (channel: string, cardId?: string) => ipcRenderer.send(channel, cardId)
-  } satisfies QuickAPI,
-  search: {
-    query: (query) => ipcRenderer.invoke("search:query", query),
-    getAll: () => ipcRenderer.invoke("search:getAll"),
-    selectCard: (cardId) => ipcRenderer.invoke("search:selectCard", cardId),
-    createCard: (title) => ipcRenderer.invoke("search:createCard", title),
-    getCardContent: (cardId) => ipcRenderer.invoke("search:getCardContent", cardId),
-    updateCardContent: (cardId, content) => ipcRenderer.invoke("search:updateCardContent", cardId, content),
-    onQuery: (callback) => ipcRenderer.on("search:query", (_e, data) => callback(data)),
-    onGetAll: (callback) => ipcRenderer.on("search:getAll", (_e, data) => callback(data)),
-    onSelectCard: (callback) => ipcRenderer.on("search:selectCard", (_e, cardId) => callback(cardId)),
-    onCreateCard: (callback) => ipcRenderer.on("search:createCard", (_e, data) => callback(data)),
-    onGetCardContent: (callback) => ipcRenderer.on("search:getCardContent", (_e, data) => callback(data)),
-    onUpdateCardContent: (callback) => ipcRenderer.on("search:updateCardContent", (_e, data) => callback(data)),
-    sendResult: (channel, results) => ipcRenderer.send(channel, results),
-    sendCardCreated: (channel, cardId) => ipcRenderer.send(channel, cardId),
-    sendCardContent: (channel, content) => ipcRenderer.send(channel, content)
-  } satisfies SearchAPI,
   settings: {
     get: () => ipcRenderer.invoke("settings:get"),
     set: (partial) => ipcRenderer.invoke("settings:set", partial),
@@ -179,18 +110,9 @@ const api = {
   globalSettings: {
     get: () => ipcRenderer.invoke("globalSettings:get"),
     update: (partial) => ipcRenderer.invoke("globalSettings:update", partial)
-  } satisfies GlobalSettingsAPI,
-  captureSuccess: {
-    onShow: (callback: () => void) => ipcRenderer.on("captureSuccess:show", () => callback()),
-    onHide: (callback: () => void) => ipcRenderer.on("captureSuccess:hide", () => callback()),
-    close: () => ipcRenderer.invoke("captureSuccess:close"),
-    openLastCaptured: () => ipcRenderer.invoke("captureSuccess:openLastCaptured")
-  } satisfies CaptureSuccessAPI
+  } satisfies GlobalSettingsAPI
 }
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld("electron", electronAPI)

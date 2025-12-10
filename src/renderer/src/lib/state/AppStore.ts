@@ -462,6 +462,19 @@ class AppStore {
   }
 
   searchCards = async (query: string): Promise<CardSuggestion[]> => {
+    if (!query.trim()) {
+      return this.cards()
+        .slice()
+        .sort((a, b) => {
+          const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+          const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+          return timeB - timeA
+        })
+        .map((c) => ({
+          id: c.id,
+          title: this.textContentCache.getTitle(c.id)()
+        }))
+    }
     this.performSearch(query)
     return this.searchResults().map((c) => ({
       id: c.id,

@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档描述了 st-note 中 Backlinks 功能的完整实现，包括从索引构建、缓存管理、到反链面板编辑器的全流程。
+本文档描述了 nv25 中 Backlinks 功能的完整实现，包括从索引构建、缓存管理、到反链面板编辑器的全流程。
 
 ## 架构层次
 
@@ -70,20 +70,22 @@ if (event.source === myEditorId) return  // 忽略自己的更新
 #### 实现细节
 
 **ObjCache 类型定义**:
+
 ```typescript
 export type ObjCacheEvent = {
-  type: 'committed'
-  source?: string  // 事务来源标记
+  type: "committed"
+  source?: string // 事务来源标记
   ops: ObjCacheEventOp[]
 }
 
 export type TxObj = {
-  setSource: (source: string) => void  // 新增方法
+  setSource: (source: string) => void // 新增方法
   // ... 其他方法
 }
 ```
 
 **AppStore 支持**:
+
 ```typescript
 async updateCard(id: StObjectId, content: any, text: string, source?: string) {
   await objCache.withTx(tx => {
@@ -121,11 +123,11 @@ onMount(() => {
 
   // 订阅更新，忽略自己的更新
   const unsubscribe = appStore.subscribeToUpdates((event) => {
-    if (event.source === props.editorId) return  // 关键！
+    if (event.source === props.editorId) return // 关键！
 
     // 处理来自其他编辑器的更新
     for (const op of event.ops) {
-      if (op.op === 'update' && op.id === myCardId) {
+      if (op.op === "update" && op.id === myCardId) {
         editor.commands.setContent(newContent)
       }
     }
@@ -155,22 +157,24 @@ import { Key } from "@solid-primitives/keyed"
 
 #### 工作原理
 
-| 操作 | 默认 `For` | `Key` 组件 |
-|------|----------|----------|
-| 数组项新增 | 创建新组件 | 创建新组件 |
-| 数组项删除 | 删除组件 | 删除组件 |
-| 数组项值变化 | 重建组件 | 更新值，**不重建组件** |
+| 操作           | 默认 `For`   | `Key` 组件                    |
+| -------------- | ------------ | ----------------------------- |
+| 数组项新增     | 创建新组件   | 创建新组件                    |
+| 数组项删除     | 删除组件     | 删除组件                      |
+| 数组项值变化   | 重建组件     | 更新值，**不重建组件**        |
 | 数组项顺序变化 | 重建所有组件 | 根据 key 重新排序，**不重建** |
 
 #### 对比
 
 **不使用 Key（原始 For）**:
+
 ```
 编辑 backlink A → updateCard(A) → 索引更新 → getBacklinks() 返回新数组
 → For 检测数组引用变化 → 重建所有组件 → 编辑器失焦
 ```
 
 **使用 Key + Source**:
+
 ```
 编辑 backlink A → updateCard(A, source='backlink-editor:A')
 → 索引更新 → getBacklinks() 返回新数组但 key 不变
@@ -222,17 +226,20 @@ BacklinkTiptapEditor 收到 props 变化
 ### 1. 防抖延迟 (500ms)
 
 **原因**:
+
 - 避免频繁的索引重建
 - 合并连续的编辑操作
 - 减少 Signal 更新频率
 
 **权衡**:
+
 - 延迟: backlinks 反应不是实时的
 - 性能: 避免频繁重新计算
 
 ### 2. 缓存而非响应式计算
 
 **原因**:
+
 ```typescript
 // 不好的做法：每次都访问 Signal
 getBacklinks(cardId): Accessor<BacklinkContext[]> {
@@ -249,6 +256,7 @@ getBacklinks(cardId): Accessor<BacklinkContext[]> {
 这样会导致任何 card 更新都触发重新计算。
 
 **解决**:
+
 ```typescript
 // 只在索引变化时清空缓存，否则返回缓存结果
 getBacklinks(cardId): Accessor<BacklinkContext[]> {
@@ -272,18 +280,19 @@ getBacklinks(cardId): Accessor<BacklinkContext[]> {
 ```
 
 **优点**:
+
 - 易于识别来源类型（backlink-editor / main-editor / search-editor）
 - 包含相关 ID，便于调试
 - 可扩展性强
 
 ## 性能优化总结
 
-| 优化点 | 技术 | 效果 |
-|------|------|------|
-| 避免索引频繁更新 | 防抖 500ms | 减少计算 |
-| 避免不必要的计算 | 缓存 + Signal 分离 | 只在真正需要时计算 |
-| 避免编辑器失焦 | Key + Source | 编辑器实例复用 |
-| 避免大量编辑器实例 | 分页 (10 per page) | 内存和渲染优化 |
+| 优化点             | 技术               | 效果               |
+| ------------------ | ------------------ | ------------------ |
+| 避免索引频繁更新   | 防抖 500ms         | 减少计算           |
+| 避免不必要的计算   | 缓存 + Signal 分离 | 只在真正需要时计算 |
+| 避免编辑器失焦     | Key + Source       | 编辑器实例复用     |
+| 避免大量编辑器实例 | 分页 (10 per page) | 内存和渲染优化     |
 
 ## 可能的改进方向
 

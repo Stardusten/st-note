@@ -1,8 +1,14 @@
 import { Component, JSX } from "solid-js"
-import { ProseMirrorEditor } from "./ProseMirrorEditor"
+import { ProseMirrorEditor, ProseMirrorEditorHandle } from "./ProseMirrorEditor"
 import type { CardSuggestionItem } from "./plugins/cardref-suggestion-plugin"
 
+export type NoteEditorHandle = {
+  focus: () => void
+  focusFirstMatch: () => void
+}
+
 type NoteEditorProps = {
+  ref?: NoteEditorHandle | ((ref: NoteEditorHandle) => void)
   content?: object
   onUpdate?: (content: object, text: string) => void
   titlePlaceholder?: string
@@ -38,6 +44,16 @@ const getTextFromNode = (node: any): string => {
 }
 
 const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
+  let editorHandle: ProseMirrorEditorHandle | undefined
+
+  const handle: NoteEditorHandle = {
+    focus: () => editorHandle?.focus(),
+    focusFirstMatch: () => editorHandle?.focusFirstMatch()
+  }
+
+  if (typeof props.ref === "function") props.ref(handle)
+  else if (props.ref) Object.assign(props.ref, handle)
+
   const handleUpdate = (json: object) => {
     if (props.onUpdate) {
       const text = getTextFromDoc(json)
@@ -47,6 +63,7 @@ const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
 
   return (
     <ProseMirrorEditor
+      ref={(r) => { editorHandle = r }}
       content={props.content}
       onUpdate={handleUpdate}
       placeholder={props.placeholder || props.titlePlaceholder}
