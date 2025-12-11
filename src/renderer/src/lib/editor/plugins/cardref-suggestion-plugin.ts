@@ -1,6 +1,6 @@
 import { Plugin, PluginKey } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
-import { schema } from "../schema"
+import { schema, CardRefVariant } from "../schema"
 
 export type CardSuggestionItem = {
   id: string
@@ -11,6 +11,7 @@ export type SuggestionProps = {
   query: string
   command: (item: CardSuggestionItem) => void
   clientRect: (() => DOMRect | null) | null
+  variant: CardRefVariant
 }
 
 export type SuggestionRenderer = {
@@ -25,11 +26,14 @@ export type CardRefSuggestionOptions = {
   render: () => SuggestionRenderer
 }
 
+type TriggerType = "[[" | "【【" | "#"
+
 type CompletionStatus = {
   from: number
   to: number
   query: string
-  trigger: "[[" | "【【"
+  trigger: TriggerType
+  variant: CardRefVariant
 }
 
 function checkCompletionStatus(view: EditorView): CompletionStatus | null {
@@ -44,20 +48,34 @@ function checkCompletionStatus(view: EditorView): CompletionStatus | null {
 
   const textBefore = $from.parent.textBetween(0, $from.parentOffset)
   console.log("[cardref] checkCompletionStatus: textBefore =", JSON.stringify(textBefore))
-  const match = textBefore.match(/(\[\[|【【)([^\]】]*)$/)
 
-  if (!match) {
-    console.log("[cardref] checkCompletionStatus: no match found")
-    return null
+  const linkMatch = textBefore.match(/(\[\[|【【)([^\]】]*)$/)
+  if (linkMatch) {
+    console.log("[cardref] checkCompletionStatus: link match found!", linkMatch)
+    return {
+      from: $from.pos - linkMatch[0].length,
+      to: $from.pos,
+      query: linkMatch[2] || "",
+      trigger: linkMatch[1] as TriggerType,
+      variant: "link"
+    }
   }
 
-  console.log("[cardref] checkCompletionStatus: match found!", match)
-  return {
-    from: $from.pos - match[0].length,
-    to: $from.pos,
-    query: match[2] || "",
-    trigger: match[1] as "[[" | "【【"
+  const tagMatch = textBefore.match(/(^|[\s，。！？、；：""''（）【】])#([^\s#]*)$/)
+  if (tagMatch) {
+    console.log("[cardref] checkCompletionStatus: tag match found!", tagMatch)
+    const prefixLen = tagMatch[1].length
+    return {
+      from: $from.pos - tagMatch[0].length + prefixLen,
+      to: $from.pos,
+      query: tagMatch[2] || "",
+      trigger: "#",
+      variant: "tag"
+    }
   }
+
+  console.log("[cardref] checkCompletionStatus: no match found")
+  return null
 }
 
 export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions): Plugin {
@@ -68,30 +86,37 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
   console.log("[cardref] createCardRefSuggestionPlugin called")
 
   const createProps = (view: EditorView, status: CompletionStatus): SuggestionProps => {
-    const { from, query } = status
+    const { from, query, variant } = status
     return {
       query,
+      variant,
       command: (item: CardSuggestionItem) => {
         const { state, dispatch } = view
 
         const currentStatus = checkCompletionStatus(view)
         if (!currentStatus) return
 
-        const endPattern = currentStatus.trigger === "[[" ? "]]" : "】】"
-        const { $from } = state.selection
-        const textAfter = $from.parent.textBetween(
-          $from.parentOffset,
-          $from.parent.nodeSize - 2
-        )
-
         let deleteEnd = currentStatus.to
-        if (textAfter.startsWith(endPattern)) {
-          deleteEnd += endPattern.length
-        } else if (textAfter.startsWith(endPattern.charAt(0))) {
-          deleteEnd += 1
+
+        if (currentStatus.trigger === "[[" || currentStatus.trigger === "【【") {
+          const endPattern = currentStatus.trigger === "[[" ? "]]" : "】】"
+          const { $from } = state.selection
+          const textAfter = $from.parent.textBetween(
+            $from.parentOffset,
+            $from.parent.nodeSize - 2
+          )
+
+          if (textAfter.startsWith(endPattern)) {
+            deleteEnd += endPattern.length
+          } else if (textAfter.startsWith(endPattern.charAt(0))) {
+            deleteEnd += 1
+          }
         }
 
-        const cardRefNode = schema.nodes.cardRef.create({ cardId: item.id })
+        const cardRefNode = schema.nodes.cardRef.create({
+          cardId: item.id,
+          variant: currentStatus.variant
+        })
         const tr = state.tr.replaceWith(currentStatus.from, deleteEnd, cardRefNode)
         dispatch(tr)
         renderer?.onExit()

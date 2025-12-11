@@ -198,6 +198,7 @@ app.whenReady().then(() => {
 
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window)
+    window.on("focus", () => rebuildMenu(loadSettings()))
   })
 
   // IPC methods
@@ -383,7 +384,20 @@ app.whenReady().then(() => {
     rebuildMenu(updated)
   }
 
+  const togglePinWindow = () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win) {
+      const newState = !win.isAlwaysOnTop()
+      win.setAlwaysOnTop(newState)
+      win.webContents.send("window:pinChanged", newState)
+      rebuildMenu(loadSettings())
+    }
+  }
+
   const rebuildMenu = (settings: Settings) => {
+    const focusedWindow = BrowserWindow.getFocusedWindow()
+    const isPinned = focusedWindow?.isAlwaysOnTop() ?? false
+
     const menuTemplate: Electron.MenuItemConstructorOptions[] = [
       ...(process.platform === "darwin"
         ? [
@@ -446,6 +460,14 @@ app.whenReady().then(() => {
       {
         label: "View",
         submenu: [
+          {
+            label: "Pin Window",
+            type: "checkbox",
+            checked: isPinned,
+            accelerator: "CmdOrCtrl+Shift+P",
+            click: () => togglePinWindow()
+          },
+          { type: "separator" },
           {
             label: "Auto Layout",
             type: "checkbox",

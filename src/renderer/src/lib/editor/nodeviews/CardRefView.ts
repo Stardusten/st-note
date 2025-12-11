@@ -1,5 +1,6 @@
 import { Node as PMNode } from "prosemirror-model"
 import { EditorView, NodeView } from "prosemirror-view"
+import type { CardRefVariant } from "../schema"
 
 export type CardRefOptions = {
   onCardClick?: (cardId: string) => void
@@ -16,9 +17,10 @@ export class CardRefView implements NodeView {
     private options: CardRefOptions
   ) {
     this.dom = document.createElement("span")
-    this.dom.className = "card-ref"
+    this.updateClassName()
     this.dom.setAttribute("data-type", "card-ref")
     this.dom.setAttribute("data-card-id", node.attrs.cardId || "")
+    this.dom.setAttribute("data-variant", node.attrs.variant || "link")
     this.dom.contentEditable = "false"
 
     this.updateTitle()
@@ -31,12 +33,19 @@ export class CardRefView implements NodeView {
     })
   }
 
+  private updateClassName() {
+    const variant = this.node.attrs.variant as CardRefVariant
+    this.dom.className = variant === "tag" ? "card-ref card-ref-tag" : "card-ref"
+  }
+
   private updateTitle() {
     const cardId = this.node.attrs.cardId
+    const variant = this.node.attrs.variant as CardRefVariant
     if (this.options.getTitle && cardId) {
-      this.dom.textContent = this.options.getTitle(cardId)
+      const title = this.options.getTitle(cardId)
+      this.dom.textContent = variant === "tag" ? `#${title}` : title
     } else {
-      this.dom.textContent = "Untitled"
+      this.dom.textContent = variant === "tag" ? "#Untitled" : "Untitled"
     }
   }
 
@@ -44,6 +53,8 @@ export class CardRefView implements NodeView {
     if (node.type !== this.node.type) return false
     this.node = node
     this.dom.setAttribute("data-card-id", node.attrs.cardId || "")
+    this.dom.setAttribute("data-variant", node.attrs.variant || "link")
+    this.updateClassName()
     this.updateTitle()
     return true
   }

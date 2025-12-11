@@ -1,4 +1,5 @@
 import { Component, createSignal, onMount, Show, createEffect } from "solid-js"
+import { Pin } from "lucide-solid"
 
 const TITLE_BAR_HEIGHT = 34
 const MIN_WIDTH = 400
@@ -16,6 +17,7 @@ const ImageViewer: Component = () => {
   const [currentFile, setCurrentFile] = createSignal<{ data: Uint8Array; mimeType: string; filename: string | null } | null>(null)
   const [naturalSize, setNaturalSize] = createSignal({ width: 0, height: 0 })
   const [isFirstLoad, setIsFirstLoad] = createSignal(true)
+  const [isPinned, setIsPinned] = createSignal(false)
 
   onMount(() => {
     const params = new URLSearchParams(window.location.search)
@@ -25,6 +27,8 @@ const ImageViewer: Component = () => {
     setImageIds(ids)
     setCurrentIndex(idx)
     setDbPath(path)
+
+    window.api.window.onPinChanged((pinned) => setIsPinned(pinned))
   })
 
   createEffect(() => {
@@ -113,10 +117,13 @@ const ImageViewer: Component = () => {
   return (
     <div class="h-screen w-full flex flex-col bg-black/95 select-none overflow-hidden">
       <div
-        class="shrink-0 h-[34px] flex items-center justify-center bg-black/80"
+        class="shrink-0 h-[34px] flex items-center justify-center bg-black/80 relative"
         style={{ "-webkit-app-region": "drag" }}
       >
         <span class="text-[13px] font-medium text-white/70 truncate px-16 max-w-full">{title()}</span>
+        {isPinned() && (
+          <Pin class="absolute right-2 w-3.5 h-3.5 text-white/70" />
+        )}
       </div>
 
       <div

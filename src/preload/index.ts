@@ -130,6 +130,10 @@ export type ImageAPI = {
   saveFile: (data: Uint8Array, mimeType: string) => Promise<SaveFileResult>
 }
 
+export type WindowAPI = {
+  onPinChanged: (callback: (isPinned: boolean) => void) => void
+}
+
 const api = {
   storage: {
     init: (path) => ipcRenderer.invoke("storage:init", path),
@@ -187,7 +191,10 @@ const api = {
     openViewer: (params) => ipcRenderer.invoke("image:openViewer", params),
     resizeAndShow: (width, height) => ipcRenderer.invoke("image:resizeAndShow", width, height),
     saveFile: (data, mimeType) => ipcRenderer.invoke("image:saveFile", data, mimeType)
-  } satisfies ImageAPI
+  } satisfies ImageAPI,
+  window: {
+    onPinChanged: (callback) => ipcRenderer.on("window:pinChanged", (_e, isPinned) => callback(isPinned))
+  } satisfies WindowAPI
 }
 
 if (process.contextIsolated) {

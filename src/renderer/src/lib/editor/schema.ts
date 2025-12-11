@@ -139,26 +139,39 @@ const textSpec: NodeSpec = {
   group: "inline"
 }
 
+export type CardRefVariant = "link" | "tag"
+
 const cardRefSpec: NodeSpec = {
   group: "inline",
   inline: true,
   atom: true,
   attrs: {
-    cardId: { default: null }
+    cardId: { default: null },
+    variant: { default: "link" as CardRefVariant }
   },
   parseDOM: [
     {
       tag: 'span[data-type="card-ref"]',
       getAttrs(dom) {
         const el = dom as HTMLElement
-        return { cardId: el.getAttribute("data-card-id") }
+        return {
+          cardId: el.getAttribute("data-card-id"),
+          variant: (el.getAttribute("data-variant") || "link") as CardRefVariant
+        }
       }
     }
   ],
   toDOM(node): DOMOutputSpec {
+    const variant = node.attrs.variant as CardRefVariant
+    const className = variant === "tag" ? "card-ref card-ref-tag" : "card-ref"
     return [
       "span",
-      { "data-type": "card-ref", "data-card-id": node.attrs.cardId, class: "card-ref" },
+      {
+        "data-type": "card-ref",
+        "data-card-id": node.attrs.cardId,
+        "data-variant": variant,
+        class: className
+      },
       ""
     ]
   }

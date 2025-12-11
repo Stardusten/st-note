@@ -382,6 +382,22 @@
   background-color: var(--color-accent);
 }
 
+/* card reference - tag variant */
+.prosemirror-editor .card-ref.card-ref-tag {
+  border-bottom: none;
+  color: var(--color-muted-foreground);
+  background-color: var(--color-muted);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.prosemirror-editor .card-ref.card-ref-tag.ProseMirror-selectednode,
+.prosemirror-editor .card-ref.card-ref-tag:hover {
+  background-color: var(--color-accent);
+  color: var(--accent-foreground);
+}
+
 /* link */
 .prosemirror-editor a {
   border-bottom: 1px solid var(--color-border);

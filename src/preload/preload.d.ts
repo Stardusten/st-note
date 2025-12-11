@@ -1,5 +1,5 @@
 import { ElectronAPI } from "@electron-toolkit/preload"
-import type { StorageAPI, SettingsAPI, GlobalSettingsAPI, DatabaseAPI, MenuAPI, FileAPI, ImageAPI } from "./index"
+import type { StorageAPI, SettingsAPI, GlobalSettingsAPI, DatabaseAPI, MenuAPI, FileAPI, ImageAPI, WindowAPI } from "./index"
 
 declare global {
   interface Window {
@@ -12,6 +12,7 @@ declare global {
       menu: MenuAPI
       file: FileAPI
       image: ImageAPI
+      window: WindowAPI
       fetchPageTitle: (url: string) => Promise<string | null>
     }
   }
