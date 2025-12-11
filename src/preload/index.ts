@@ -46,6 +46,8 @@ export type Settings = {
   language: "zh-CN" | "en-US"
   autoSave: boolean
   timestampFormat: string
+  autoLayout: boolean
+  preferredLayout: "vertical" | "horizontal"
 }
 
 export type SettingsAPI = {
@@ -56,10 +58,14 @@ export type SettingsAPI = {
   onChange: (callback: (settings: Settings) => void) => void
 }
 
+export type WindowSize = { width: number; height: number }
+
 export type GlobalSettings = {
   lastDatabase: string | null
   recentDatabases: string[]
   bringToFrontShortcut: string
+  windowSizeVertical: WindowSize
+  windowSizeHorizontal: WindowSize
 }
 
 export type GlobalSettingsAPI = {

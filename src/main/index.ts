@@ -319,6 +319,7 @@ app.whenReady().then(() => {
     BrowserWindow.getAllWindows().forEach((win) => {
       win.webContents.send("settings:changed", updated)
     })
+    rebuildMenu(updated)
     return updated
   })
   ipcMain.handle("settings:export", () => exportSettings())
@@ -327,6 +328,7 @@ app.whenReady().then(() => {
     BrowserWindow.getAllWindows().forEach((win) => {
       win.webContents.send("settings:changed", updated)
     })
+    rebuildMenu(updated)
     return updated
   })
 
@@ -338,71 +340,161 @@ app.whenReady().then(() => {
     registerBringToFrontShortcut(globalSettings.bringToFrontShortcut)
   }
 
-  const menuTemplate: Electron.MenuItemConstructorOptions[] = [
-    ...(process.platform === "darwin"
-      ? [
+  type LayoutType = "vertical" | "horizontal"
+
+  const getCurrentEffectiveLayout = (): LayoutType => {
+    const settings = loadSettings()
+    if (settings.autoLayout && mainWindow) {
+      const [width] = mainWindow.getSize()
+      return width >= 600 ? "horizontal" : "vertical"
+    }
+    return settings.preferredLayout
+  }
+
+  const resizeWindowForLayout = (layout: LayoutType) => {
+    if (!mainWindow) return
+    const global = loadGlobalSettings()
+    const size = layout === "horizontal" ? global.windowSizeHorizontal : global.windowSizeVertical
+    mainWindow.setSize(size.width, size.height)
+  }
+
+  const saveCurrentWindowSize = () => {
+    if (!mainWindow) return
+    const layout = getCurrentEffectiveLayout()
+    const [width, height] = mainWindow.getSize()
+    const key = layout === "horizontal" ? "windowSizeHorizontal" : "windowSizeVertical"
+    updateGlobalSettings({ [key]: { width, height } })
+  }
+
+  const setLayout = (layout: LayoutType) => {
+    const updated = updateSettings({ preferredLayout: layout, autoLayout: false })
+    BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send("settings:changed", updated)
+    })
+    resizeWindowForLayout(layout)
+    rebuildMenu(updated)
+  }
+
+  const setAutoLayout = (enabled: boolean) => {
+    const updated = updateSettings({ autoLayout: enabled })
+    BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send("settings:changed", updated)
+    })
+    rebuildMenu(updated)
+  }
+
+  const rebuildMenu = (settings: Settings) => {
+    const menuTemplate: Electron.MenuItemConstructorOptions[] = [
+      ...(process.platform === "darwin"
+        ? [
+            {
+              label: app.name,
+              submenu: [
+                { role: "about" as const },
+                { type: "separator" as const },
+                {
+                  label: "Settings...",
+                  accelerator: "CmdOrCtrl+,",
+                  click: () => createSettingsWindow()
+                },
+                { type: "separator" as const },
+                { role: "services" as const },
+                { type: "separator" as const },
+                { role: "hide" as const },
+                { role: "hideOthers" as const },
+                { role: "unhide" as const },
+                { type: "separator" as const },
+                { role: "quit" as const }
+              ]
+            }
+          ]
+        : []),
+      { role: "fileMenu" as const },
+      { role: "editMenu" as const },
+      {
+        label: "Database",
+        submenu: [
           {
-            label: app.name,
-            submenu: [
-              { role: "about" as const },
-              { type: "separator" as const },
-              {
-                label: "Settings...",
-                accelerator: "CmdOrCtrl+,",
-                click: () => createSettingsWindow()
-              },
-              { type: "separator" as const },
-              { role: "services" as const },
-              { type: "separator" as const },
-              { role: "hide" as const },
-              { role: "hideOthers" as const },
-              { role: "unhide" as const },
-              { type: "separator" as const },
-              { role: "quit" as const }
-            ]
-          }
+            label: "New Database...",
+            click: () => mainWindow?.webContents.send("menu:newDatabase")
+          },
+          {
+            label: "Open Database...",
+            click: () => mainWindow?.webContents.send("menu:openDatabase")
+          },
+          { type: "separator" },
+          {
+            label: "Import Database...",
+            click: () => mainWindow?.webContents.send("menu:import")
+          },
+          {
+            label: "Export Database...",
+            click: () => mainWindow?.webContents.send("menu:export")
+          },
+          ...(process.platform !== "darwin"
+            ? [
+                { type: "separator" as const },
+                {
+                  label: "Settings...",
+                  accelerator: "CmdOrCtrl+,",
+                  click: () => createSettingsWindow()
+                }
+              ]
+            : [])
         ]
-      : []),
-    { role: "fileMenu" as const },
-    { role: "editMenu" as const },
-    {
-      label: "Database",
-      submenu: [
-        {
-          label: "New Database...",
-          accelerator: "CmdOrCtrl+Shift+N",
-          click: () => mainWindow?.webContents.send("menu:newDatabase")
-        },
-        {
-          label: "Open Database...",
-          accelerator: "CmdOrCtrl+O",
-          click: () => mainWindow?.webContents.send("menu:openDatabase")
-        },
-        { type: "separator" },
-        {
-          label: "Import Database...",
-          click: () => mainWindow?.webContents.send("menu:import")
-        },
-        {
-          label: "Export Database...",
-          click: () => mainWindow?.webContents.send("menu:export")
-        },
-        ...(process.platform !== "darwin"
-          ? [
-              { type: "separator" as const },
+      },
+      {
+        label: "View",
+        submenu: [
+          {
+            label: "Auto Layout",
+            type: "checkbox",
+            checked: settings.autoLayout,
+            click: () => setAutoLayout(!settings.autoLayout)
+          },
+          {
+            label: "Layout",
+            submenu: [
               {
-                label: "Settings...",
-                accelerator: "CmdOrCtrl+,",
-                click: () => createSettingsWindow()
+                label: "Vertical",
+                type: "radio",
+                accelerator: "CmdOrCtrl+Option+1",
+                checked: !settings.autoLayout && settings.preferredLayout === "vertical",
+                click: () => setLayout("vertical")
+              },
+              {
+                label: "Horizontal",
+                type: "radio",
+                accelerator: "CmdOrCtrl+Option+2",
+                checked: !settings.autoLayout && settings.preferredLayout === "horizontal",
+                click: () => setLayout("horizontal")
               }
             ]
-          : [])
-      ]
-    },
-    { role: "viewMenu" as const },
-    { role: "windowMenu" as const }
-  ]
-  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate))
+          },
+          { type: "separator" },
+          { role: "reload" },
+          { role: "forceReload" },
+          { role: "toggleDevTools" },
+          { type: "separator" },
+          { role: "resetZoom" },
+          { role: "zoomIn" },
+          { role: "zoomOut" },
+          { type: "separator" },
+          { role: "togglefullscreen" }
+        ]
+      },
+      { role: "windowMenu" as const }
+    ]
+    Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate))
+  }
+
+  const initialSettings = loadSettings()
+  rebuildMenu(initialSettings)
+
+  // Track window resize to save size per layout
+  mainWindow?.on("resize", () => {
+    saveCurrentWindowSize()
+  })
 
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

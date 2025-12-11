@@ -151,12 +151,34 @@ function wrapParagraphsInBlocks(fragment: Fragment, schema: Schema): Fragment {
   return hasParagraphAtTop ? Fragment.from(result) : splitBlockWithMultipleParagraphs(fragment, schema)
 }
 
+function shouldInsertInline(slice: Slice): boolean {
+  if (slice.openStart < 1 || slice.openEnd < 1) return false
+  if (slice.content.childCount !== 1) return false
+  const node = slice.content.child(0)
+  if (node.type.name !== "paragraph") return false
+  return true
+}
+
 function transformPastedSlice(slice: Slice, schema: Schema): Slice {
-  console.log("[transformPasted] input slice:", JSON.stringify(slice.toJSON()))
-  console.log("[transformPasted] openStart:", slice.openStart, "openEnd:", slice.openEnd)
+  console.log("[clipboard] ========== transformPasted ==========")
+  console.log("[clipboard] input slice JSON:", JSON.stringify(slice.toJSON(), null, 2))
+  console.log("[clipboard] openStart:", slice.openStart, "openEnd:", slice.openEnd)
+  console.log("[clipboard] content childCount:", slice.content.childCount)
+  slice.content.forEach((node, _offset, index) => {
+    console.log(`[clipboard] child[${index}]:`, node.type.name, JSON.stringify(node.toJSON()))
+  })
+
+  if (shouldInsertInline(slice)) {
+    console.log("[clipboard] -> inserting inline (keeping original slice)")
+    console.log("[clipboard] ========== end transformPasted ==========")
+    return slice
+  }
+
   const newContent = wrapParagraphsInBlocks(slice.content, schema)
   const newSlice = new Slice(newContent, 0, 0)
-  console.log("[transformPasted] output slice:", JSON.stringify(newSlice.toJSON()))
+
+  console.log("[clipboard] output slice JSON:", JSON.stringify(newSlice.toJSON(), null, 2))
+  console.log("[clipboard] ========== end transformPasted ==========")
   return newSlice
 }
 
@@ -165,7 +187,24 @@ export function createClipboardPlugin(schema: Schema): Plugin {
     props: {
       clipboardSerializer: BlockDOMSerializer.fromSchema(schema),
       transformCopied: (slice) => unwrapBlockSlice(slice),
-      transformPasted: (slice) => transformPastedSlice(slice, schema)
+      transformPasted: (slice) => transformPastedSlice(slice, schema),
+      handlePaste: (view, event) => {
+        const clipboard = event.clipboardData
+        if (!clipboard) return false
+
+        console.log("[clipboard] ========== handlePaste ==========")
+        console.log("[clipboard] available types:", clipboard.types)
+        console.log("[clipboard] text/plain:", clipboard.getData("text/plain"))
+        console.log("[clipboard] text/html:", clipboard.getData("text/html"))
+
+        const selection = view.state.selection
+        console.log("[clipboard] selection:", selection.$from.pos, "-", selection.$to.pos)
+        console.log("[clipboard] selection parent:", selection.$from.parent.type.name)
+        console.log("[clipboard] selection depth:", selection.$from.depth)
+
+        console.log("[clipboard] ========== end handlePaste (returning false to continue) ==========")
+        return false
+      }
     }
   })
 }

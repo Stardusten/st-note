@@ -16,7 +16,9 @@ type NoteListProps = {
   cards: Card[]
   focusedIndex: number
   listHasFocus: boolean
+  compact?: boolean
   onFocusIndex: (index: number) => void
+  onFocusList?: () => void
   onCreateNote: (title: string) => void
 }
 
@@ -38,41 +40,73 @@ const NoteList: Component<NoteListProps> = (props) => {
     return props.listHasFocus ? "bg-list-active" : "bg-list-active-muted"
   }
 
+  const handleItemClick = (index: number) => {
+    props.onFocusIndex(index)
+    props.onFocusList?.()
+  }
+
+  const compact = () => props.compact ?? true
+
   return (
-    <div class="flex flex-col w-full h-[200px] shrink-0 overflow-hidden text-xs border-b bg-surface/95">
+    <div
+      class="flex flex-col w-full overflow-hidden text-xs bg-surface/95"
+      classList={{ "h-[200px] shrink-0 border-b": compact(), "flex-1 min-h-0": !compact() }}>
       <div
         ref={listRef}
         class="flex-1 overflow-y-auto min-h-0"
         style={{ transform: "translate3d(0, 0, 0)", "will-change": "transform" }}>
         <For each={props.cards}>
           {(card, index) => (
-            <div
-              class={`group flex items-center gap-2 border-b border-border/40 cursor-pointer px-2 py-0.5 ${getItemClass(props.focusedIndex === index())}`}
-              onClick={() => props.onFocusIndex(index())}>
-              <div class="flex-1 min-w-0 flex items-center gap-2">
-                <div class="flex-1 min-w-0 flex items-center">
-                  <span class="text-foreground shrink-0">
+            <Show when={compact()} fallback={
+              <div
+                class={`group flex flex-col border-b border-border/40 cursor-pointer px-2 py-1.5 ${getItemClass(props.focusedIndex === index())}`}
+                onClick={() => handleItemClick(index())}>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-foreground truncate">
                     <HighlightedText
                       text={appStore.getCardTitle(card.id)() || "Untitled"}
                       query={props.highlightQuery}
                     />
                   </span>
-                  <Show when={getCardBody(card.id)}>
-                    <span class="text-muted-foreground truncate ml-2">
-                      - <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
-                    </span>
-                  </Show>
+                  <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
+                    {formatRelativeTime(card.updatedAt)}
+                  </div>
                 </div>
-                <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
-                  {formatRelativeTime(card.updatedAt)}
+                <Show when={getCardBody(card.id)}>
+                  <div class="text-muted-foreground mt-0.5 line-clamp-2 text-[11px] leading-relaxed">
+                    <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
+                  </div>
+                </Show>
+              </div>
+            }>
+              <div
+                class={`group flex items-center gap-2 border-b border-border/40 cursor-pointer px-2 py-0.5 ${getItemClass(props.focusedIndex === index())}`}
+                onClick={() => handleItemClick(index())}>
+                <div class="flex-1 min-w-0 flex items-center gap-2">
+                  <div class="flex-1 min-w-0 flex items-center">
+                    <span class="text-foreground shrink-0">
+                      <HighlightedText
+                        text={appStore.getCardTitle(card.id)() || "Untitled"}
+                        query={props.highlightQuery}
+                      />
+                    </span>
+                    <Show when={getCardBody(card.id)}>
+                      <span class="text-muted-foreground truncate ml-2">
+                        - <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
+                      </span>
+                    </Show>
+                  </div>
+                  <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
+                    {formatRelativeTime(card.updatedAt)}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Show>
           )}
         </For>
         <div
-          class={`flex items-center gap-3 border-b border-border/40 cursor-pointer px-2 py-0.5 ${getItemClass(isNewNoteItem(props.focusedIndex))}`}
-          onClick={() => props.onFocusIndex(props.cards.length)}>
+          class={`flex items-center gap-3 border-b border-border/40 cursor-pointer px-2 ${compact() ? "py-0.5" : "py-1.5"} ${getItemClass(isNewNoteItem(props.focusedIndex))}`}
+          onClick={() => handleItemClick(props.cards.length)}>
           <Plus class="size-3.5 stroke-[1.5px] text-muted-foreground ml-0.5" />
           <span class="text-muted-foreground">
             New note: "<span class="text-foreground">{props.query || "Untitled"}</span>"

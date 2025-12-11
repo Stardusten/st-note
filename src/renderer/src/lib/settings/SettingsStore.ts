@@ -10,7 +10,9 @@ const defaultSettings: Settings = {
   searchShortcut: "CommandOrControl+Shift+P",
   language: "zh-CN",
   autoSave: true,
-  timestampFormat: "MM-dd HH:mm"
+  timestampFormat: "MM-dd HH:mm",
+  autoLayout: true,
+  preferredLayout: "horizontal"
 }
 
 class SettingsStore {
@@ -46,6 +48,8 @@ class SettingsStore {
   getLanguage = () => this.settings().language
   getAutoSave = () => this.settings().autoSave
   getTimestampFormat = () => this.settings().timestampFormat
+  getAutoLayout = () => this.settings().autoLayout
+  getPreferredLayout = () => this.settings().preferredLayout
 
   async setTheme(theme: Settings["theme"]) {
     const updated = await window.api.settings.set({ theme })
@@ -84,6 +88,16 @@ class SettingsStore {
 
   async setAutoSave(autoSave: boolean) {
     const updated = await window.api.settings.set({ autoSave })
+    this.setSettings(updated)
+  }
+
+  async setAutoLayout(autoLayout: boolean) {
+    const updated = await window.api.settings.set({ autoLayout })
+    this.setSettings(updated)
+  }
+
+  async setPreferredLayout(preferredLayout: Settings["preferredLayout"]) {
+    const updated = await window.api.settings.set({ preferredLayout })
     this.setSettings(updated)
   }
 

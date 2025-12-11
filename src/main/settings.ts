@@ -15,6 +15,8 @@ export type VaultSettings = {
   language: "zh-CN" | "en-US"
   autoSave: boolean
   timestampFormat: string
+  autoLayout: boolean
+  preferredLayout: "vertical" | "horizontal"
 }
 
 export const defaultVaultSettings: VaultSettings = {
@@ -26,7 +28,9 @@ export const defaultVaultSettings: VaultSettings = {
   searchShortcut: "CommandOrControl+Shift+P",
   language: "zh-CN",
   autoSave: true,
-  timestampFormat: "MM-dd HH:mm"
+  timestampFormat: "MM-dd HH:mm",
+  autoLayout: true,
+  preferredLayout: "horizontal"
 }
 
 export function loadVaultSettings(dbPath: string): VaultSettings {
@@ -60,16 +64,22 @@ export function updateVaultSettings(dbPath: string, partial: Partial<VaultSettin
 
 // ============ 全局设置（存储在 userData JSON） ============
 
+export type WindowSize = { width: number; height: number }
+
 export type GlobalSettings = {
   lastDatabase: string | null
   recentDatabases: string[]
   bringToFrontShortcut: string
+  windowSizeVertical: WindowSize
+  windowSizeHorizontal: WindowSize
 }
 
 const defaultGlobalSettings: GlobalSettings = {
   lastDatabase: null,
   recentDatabases: [],
-  bringToFrontShortcut: "CommandOrControl+Shift+Space"
+  bringToFrontShortcut: "CommandOrControl+Shift+Space",
+  windowSizeVertical: { width: 400, height: 500 },
+  windowSizeHorizontal: { width: 700, height: 500 }
 }
 
 function getGlobalSettingsPath(): string {

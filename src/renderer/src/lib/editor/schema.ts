@@ -1,4 +1,11 @@
-import { Schema, NodeSpec, MarkSpec, DOMOutputSpec, Node as PMNode, NodeType } from "prosemirror-model"
+import {
+  Schema,
+  NodeSpec,
+  MarkSpec,
+  DOMOutputSpec,
+  Node as PMNode,
+  NodeType
+} from "prosemirror-model"
 
 export type BlockKind = "paragraph" | "bullet" | "ordered"
 
@@ -52,7 +59,11 @@ const codeBlockSpec: NodeSpec = {
     }
   ],
   toDOM(node): DOMOutputSpec {
-    return ["pre", { class: "code-block", "data-language": node.attrs.language }, ["code", { class: `language-${node.attrs.language}` }, 0]]
+    return [
+      "pre",
+      { class: "code-block", "data-language": node.attrs.language },
+      ["code", { class: `language-${node.attrs.language}`, spellcheck: false }, 0]
+    ]
   }
 }
 
@@ -111,7 +122,9 @@ const blockSpec: NodeSpec = {
     if (attrs.collapsed) domAttrs["data-collapsed"] = "true"
     if (node.childCount >= 2) domAttrs["data-collapsable"] = "true"
 
-    return ["div", domAttrs,
+    return [
+      "div",
+      domAttrs,
       ["div", { class: "block-collapse-toggle", contenteditable: "false" }],
       ["div", { class: "block-content" }, 0]
     ]
@@ -143,7 +156,11 @@ const cardRefSpec: NodeSpec = {
     }
   ],
   toDOM(node): DOMOutputSpec {
-    return ["span", { "data-type": "card-ref", "data-card-id": node.attrs.cardId, class: "card-ref" }, ""]
+    return [
+      "span",
+      { "data-type": "card-ref", "data-card-id": node.attrs.cardId, class: "card-ref" },
+      ""
+    ]
   }
 }
 
@@ -158,7 +175,7 @@ const imageSpec: NodeSpec = {
   },
   parseDOM: [
     {
-      tag: 'img[data-file-id]',
+      tag: "img[data-file-id]",
       getAttrs(dom) {
         const el = dom as HTMLElement
         return {
@@ -193,11 +210,7 @@ const boldSpec: MarkSpec = {
 }
 
 const italicSpec: MarkSpec = {
-  parseDOM: [
-    { tag: "i" },
-    { tag: "em" },
-    { style: "font-style=italic" }
-  ],
+  parseDOM: [{ tag: "i" }, { tag: "em" }, { style: "font-style=italic" }],
   toDOM(): DOMOutputSpec {
     return ["em", 0]
   }
