@@ -1,4 +1,5 @@
 @import "prosemirror-view/style/prosemirror.css";
+@import "prosemirror-gapcursor/style/gapcursor.css";
 
 /* note: we hard coded lots of variables, so if you
    you want to use different font-size, prefer use 
@@ -388,4 +389,46 @@
 .search-highlight {
   background-color: rgba(255, 200, 0, 0.35);
   border-radius: 2px;
+}
+
+/* image */
+.prosemirror-editor .editor-image-wrapper {
+  position: relative;
+  display: inline-block;
+  margin: 0.5em 0;
+  line-height: 0;
+}
+
+.prosemirror-editor .editor-image {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  cursor: default;
+}
+
+.prosemirror-editor .editor-image-resize-handle {
+  position: absolute;
+  right: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.prosemirror-editor .editor-image-resize-handle::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 32px;
+  background: var(--color-ring);
+  border-radius: 2px;
+}
+
+.prosemirror-editor .editor-image-wrapper:hover .editor-image-resize-handle,
+.prosemirror-editor .editor-image-wrapper.ProseMirror-selectednode .editor-image-resize-handle {
+  opacity: 1;
 }

@@ -24,7 +24,10 @@ import {
   getSetting,
   setSetting,
   getAllSettings,
-  deleteSetting
+  deleteSetting,
+  insertFile,
+  fetchFile,
+  deleteFile
 } from "./storage"
 import {
   loadSettings,
@@ -99,6 +102,37 @@ function createSettingsWindow(): void {
   settingsWindow.on("closed", () => {
     settingsWindow = null
   })
+}
+
+type ImageViewerParams = {
+  dbPath: string
+  imageIds: string[]
+  currentIndex: number
+}
+
+function createImageViewerWindow(params: ImageViewerParams): void {
+  const imageViewerWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    minWidth: 400,
+    minHeight: 200,
+    show: false,
+    titleBarStyle: "hidden",
+    ...(process.platform === "darwin"
+      ? { trafficLightPosition: { x: 12, y: Math.round(34 / 2 - 8) } }
+      : { titleBarOverlay: { color: "#000", symbolColor: "#999", height: 34 } }),
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false
+    }
+  })
+
+  const search = `?dbPath=${encodeURIComponent(params.dbPath)}&imageIds=${encodeURIComponent(JSON.stringify(params.imageIds))}&currentIndex=${params.currentIndex}`
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    imageViewerWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/image-viewer.html${search}`)
+  } else {
+    imageViewerWindow.loadFile(join(__dirname, "../renderer/image-viewer.html"), { search })
+  }
 }
 
 function createWindow(): void {
@@ -187,6 +221,35 @@ app.whenReady().then(() => {
   ipcMain.handle("storage:setSetting", restFunc(setSetting))
   ipcMain.handle("storage:getAllSettings", restFunc(getAllSettings))
   ipcMain.handle("storage:deleteSetting", restFunc(deleteSetting))
+  ipcMain.handle("file:insert", restFunc(insertFile))
+  ipcMain.handle("file:fetch", restFunc(fetchFile))
+  ipcMain.handle("file:delete", restFunc(deleteFile))
+  ipcMain.handle("image:openViewer", (_e, params: ImageViewerParams) =>
+    createImageViewerWindow(params)
+  )
+  ipcMain.handle("image:resizeAndShow", (e, width: number, height: number) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (win) {
+      win.setSize(Math.round(width), Math.round(height))
+      win.show()
+    }
+  })
+  ipcMain.handle("image:saveFile", async (_e, data: Uint8Array, mimeType: string) => {
+    const ext = mimeType.split("/")[1] || "png"
+    const result = await dialog.showSaveDialog({
+      title: "Save Image",
+      defaultPath: `image.${ext}`,
+      filters: [{ name: "Image", extensions: [ext] }]
+    })
+    if (result.canceled || !result.filePath) return { success: false, canceled: true }
+    try {
+      const { writeFileSync } = await import("fs")
+      writeFileSync(result.filePath, Buffer.from(data))
+      return { success: true, canceled: false, path: result.filePath }
+    } catch (e) {
+      return { success: false, canceled: false, error: String(e) }
+    }
+  })
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
   // Database operations

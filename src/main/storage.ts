@@ -69,6 +69,23 @@ export function initStorage(path: string): void {
       value TEXT NOT NULL
     )
   `)
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS files (
+      id TEXT PRIMARY KEY,
+      filename TEXT,
+      mime_type TEXT NOT NULL,
+      data BLOB NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `)
+
+  // Migration: add filename column if not exists
+  const fileColumns = db.prepare("PRAGMA table_info(files)").all() as { name: string }[]
+  if (!fileColumns.some((col) => col.name === "filename")) {
+    db.exec("ALTER TABLE files ADD COLUMN filename TEXT")
+  }
+
   databases.set(path, db)
 }
 
@@ -185,4 +202,44 @@ export function getAllSettings(path: string): Record<string, string> {
 export function deleteSetting(path: string, key: string): void {
   const db = getDb(path)
   db.prepare("DELETE FROM settings WHERE key = ?").run(key)
+}
+
+// ============ Files ============
+
+export type FileRecord = {
+  id: string
+  filename: string | null
+  mime_type: string
+  data: Buffer
+  created_at: number
+}
+
+export function insertFile(
+  path: string,
+  id: string,
+  filename: string | null,
+  mimeType: string,
+  data: Buffer
+): FileRecord {
+  const db = getDb(path)
+  const now = Date.now()
+  db.prepare("INSERT INTO files (id, filename, mime_type, data, created_at) VALUES (?, ?, ?, ?, ?)").run(
+    id,
+    filename,
+    mimeType,
+    data,
+    now
+  )
+  return { id, filename, mime_type: mimeType, data, created_at: now }
+}
+
+export function fetchFile(path: string, id: string): FileRecord | null {
+  const db = getDb(path)
+  const row = db.prepare("SELECT * FROM files WHERE id = ?").get(id) as FileRecord | undefined
+  return row ?? null
+}
+
+export function deleteFile(path: string, id: string): void {
+  const db = getDb(path)
+  db.prepare("DELETE FROM files WHERE id = ?").run(id)
 }

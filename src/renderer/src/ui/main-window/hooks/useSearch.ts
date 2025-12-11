@@ -1,16 +1,19 @@
 import { createMemo, createSignal } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { prepareSearch } from "@renderer/lib/common/utils/search"
+import type { Card } from "@renderer/lib/common/types/card"
 
 export function useSearch() {
   const [query, setQuery] = createSignal("")
   const [isComposing, setIsComposing] = createSignal(false)
   const [showHighlight, setShowHighlight] = createSignal(true)
   const [lastCommittedQuery, setLastCommittedQuery] = createSignal("")
+  const [isPaused, setIsPaused] = createSignal(false)
+  const [frozenCards, setFrozenCards] = createSignal<Card[] | null>(null)
 
   const searchQuery = createMemo(() => (isComposing() ? lastCommittedQuery() : query()))
 
-  const filteredCards = createMemo(() => {
+  const computeFilteredCards = () => {
     const q = searchQuery()
     let cards = appStore.getCards()
     if (q.trim()) {
@@ -26,6 +29,11 @@ export function useSearch() {
       const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
       return timeB - timeA
     })
+  }
+
+  const filteredCards = createMemo(() => {
+    if (isPaused()) return frozenCards() || computeFilteredCards()
+    return computeFilteredCards()
   })
 
   const highlightQuery = createMemo(() => (showHighlight() ? searchQuery() : ""))
@@ -49,6 +57,18 @@ export function useSearch() {
     setIsComposing(false)
   }
 
+  const pause = () => {
+    if (!isPaused()) {
+      setFrozenCards(filteredCards())
+      setIsPaused(true)
+    }
+  }
+
+  const resume = () => {
+    setIsPaused(false)
+    setFrozenCards(null)
+  }
+
   return {
     query,
     filteredCards,
@@ -56,7 +76,10 @@ export function useSearch() {
     updateQuery,
     commitComposition,
     clearQuery,
-    hideHighlight: () => setShowHighlight(false)
+    hideHighlight: () => setShowHighlight(false),
+    pause,
+    resume,
+    isPaused
   }
 }
 

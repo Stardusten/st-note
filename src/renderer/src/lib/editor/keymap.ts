@@ -1,5 +1,5 @@
 import { keymap } from "prosemirror-keymap"
-import { Plugin, TextSelection } from "prosemirror-state"
+import { Plugin, TextSelection, NodeSelection } from "prosemirror-state"
 import { Command } from "prosemirror-state"
 import {
   chainCommands,
@@ -138,7 +138,84 @@ const convertListToParagraph: Command = (state, dispatch) => {
   return true
 }
 
-const enterCommand = chainCommands(codeBlockEnter, splitBlock)
+const exitImageNode: Command = (state, dispatch) => {
+  const sel = state.selection
+  if (!(sel instanceof NodeSelection)) return false
+  if (sel.node.type !== schema.nodes.image) return false
+
+  const $pos = state.doc.resolve(sel.from)
+  const blockDepth = $pos.depth
+  if (blockDepth < 1) return false
+
+  const parentBlock = $pos.node(blockDepth)
+  if (!isBlockNode(parentBlock)) return false
+
+  if (dispatch) {
+    const insertPos = $pos.after(blockDepth)
+    const newBlock = schema.nodes.block.create(
+      { kind: "paragraph" },
+      schema.nodes.paragraph.create()
+    )
+    const tr = state.tr.insert(insertPos, newBlock)
+    dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + 2)).scrollIntoView())
+  }
+  return true
+}
+
+const imageArrowDown: Command = (state, dispatch) => {
+  const sel = state.selection
+  if (!(sel instanceof NodeSelection)) return false
+  if (sel.node.type !== schema.nodes.image) return false
+
+  const $pos = state.doc.resolve(sel.from)
+  const blockDepth = $pos.depth
+  if (blockDepth < 1) return false
+
+  const parent = $pos.node(blockDepth - 1)
+  const indexInParent = $pos.index(blockDepth - 1)
+  const isLastChild = indexInParent === parent.childCount - 1
+
+  if (!isLastChild) return false
+
+  if (dispatch) {
+    const insertPos = $pos.after(blockDepth)
+    const newBlock = schema.nodes.block.create(
+      { kind: "paragraph" },
+      schema.nodes.paragraph.create()
+    )
+    const tr = state.tr.insert(insertPos, newBlock)
+    dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + 2)).scrollIntoView())
+  }
+  return true
+}
+
+const imageArrowUp: Command = (state, dispatch) => {
+  const sel = state.selection
+  if (!(sel instanceof NodeSelection)) return false
+  if (sel.node.type !== schema.nodes.image) return false
+
+  const $pos = state.doc.resolve(sel.from)
+  const blockDepth = $pos.depth
+  if (blockDepth < 1) return false
+
+  const indexInParent = $pos.index(blockDepth - 1)
+  const isFirstChild = indexInParent === 0
+
+  if (!isFirstChild) return false
+
+  if (dispatch) {
+    const insertPos = $pos.before(blockDepth)
+    const newBlock = schema.nodes.block.create(
+      { kind: "paragraph" },
+      schema.nodes.paragraph.create()
+    )
+    const tr = state.tr.insert(insertPos, newBlock)
+    dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + 2)).scrollIntoView())
+  }
+  return true
+}
+
+const enterCommand = chainCommands(exitImageNode, codeBlockEnter, splitBlock)
 
 const backspaceCommand = chainCommands(
   deleteSelectionPreserveTitle,
@@ -197,7 +274,8 @@ export function buildKeymap(): Plugin {
     "Mod-`": toggleMark(schema.marks.code),
     "Mod-a": selectAllInBlock,
     "Mod-.": toggleCollapse,
-    ArrowDown: exitCodeBlockDown,
+    ArrowDown: chainCommands(imageArrowDown, exitCodeBlockDown),
+    ArrowUp: imageArrowUp,
     "Mod-Enter": exitCode
   })
 }

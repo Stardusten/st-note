@@ -13,6 +13,8 @@ type NoteEditorProps = {
   cardId?: string
   content?: object
   onUpdate?: (content: object) => void
+  onFocus?: () => void
+  onBlur?: () => void
   titlePlaceholder?: string
   placeholder?: string
   showTitleToolbar?: boolean
@@ -24,6 +26,7 @@ type NoteEditorProps = {
   onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
   onCardClick?: (cardId: string) => void
   getCardTitle?: (cardId: string) => string
+  getDbPath?: () => string
   searchQuery?: string
 }
 
@@ -49,6 +52,8 @@ const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
       cardId={props.cardId}
       content={props.content}
       onUpdate={handleUpdate}
+      onFocus={props.onFocus}
+      onBlur={props.onBlur}
       placeholder={props.placeholder || props.titlePlaceholder}
       class={props.class}
       editorId={props.editorId}
@@ -57,6 +62,7 @@ const NoteEditor: Component<NoteEditorProps> = (props): JSX.Element => {
       onCreateCard={props.onCreateCard}
       onCardClick={props.onCardClick}
       getCardTitle={props.getCardTitle}
+      getDbPath={props.getDbPath}
       searchQuery={props.searchQuery}
     />
   )

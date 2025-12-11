@@ -3,11 +3,14 @@ import { EditorState, Plugin, Selection, TextSelection } from "prosemirror-state
 import { EditorView } from "prosemirror-view"
 import { Node as ProseMirrorNode } from "prosemirror-model"
 import { history } from "prosemirror-history"
+import { gapCursor } from "prosemirror-gapcursor"
+import { dropCursor } from "prosemirror-dropcursor"
 import { common, createLowlight } from "lowlight"
 import { schema } from "./schema"
 import { buildKeymap, buildInputRules } from "./keymap"
 import { CodeBlockView } from "./nodeviews/CodeBlockView"
 import { CardRefView, CardRefOptions } from "./nodeviews/CardRefView"
+import { ImageView } from "./nodeviews/ImageView"
 import { createBlockNodeView } from "./nodeviews/BlockView"
 import { createLowlightPlugin } from "./plugins/lowlight-plugin"
 import { createBlockCollapsePlugin } from "./plugins/block-collapse-plugin"
@@ -18,6 +21,7 @@ import { createBacklinkViewPlugin } from "./plugins/backlink-view-plugin"
 import { createCollapsedIndicatorPlugin } from "./plugins/collapsed-indicator-plugin"
 import { createBlockFocusPlugin } from "./plugins/block-focus-plugin"
 import { createClipboardPlugin } from "./plugins/clipboard-plugin"
+import { createImagePlugin, createImageSelectionPlugin } from "./plugins/image-plugin"
 import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
 import { findHighlightRanges } from "@renderer/lib/common/utils/highlight"
 import "./note-editor.css"
@@ -35,6 +39,8 @@ export type ProseMirrorEditorProps = {
   cardId?: string
   content?: object
   onUpdate?: (json: object) => void
+  onFocus?: () => void
+  onBlur?: () => void
   placeholder?: string
   class?: string
   editorId?: string
@@ -43,6 +49,7 @@ export type ProseMirrorEditorProps = {
   onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
   onCardClick?: (cardId: string) => void
   getCardTitle?: (cardId: string) => string
+  getDbPath?: () => string
   backlinkTargetCardId?: string
   searchQuery?: string
 }
@@ -203,6 +210,8 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       buildInputRules(),
       buildKeymap(),
       history(),
+      gapCursor(),
+      dropCursor({ color: "var(--color-ring)" }),
       createPlaceholderPlugin(props.placeholder || ""),
       createLowlightPlugin("code_block", lowlight),
       createAutoLinkPlugin(),
@@ -210,8 +219,13 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       createBlockFocusPlugin(),
       createBlockCollapsePlugin(),
       createClipboardPlugin(schema),
+      createImageSelectionPlugin(),
       createSearchHighlightPlugin()
     )
+
+    if (props.getDbPath) {
+      plugins.push(createImagePlugin({ getDbPath: props.getDbPath }))
+    }
 
     if (props.backlinkTargetCardId) {
       plugins.push(
@@ -223,12 +237,17 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
 
     const state = EditorState.create({ doc, plugins })
 
+    const imageViewOptions = props.getDbPath ? { getDbPath: props.getDbPath } : null
+
     view = new EditorView(containerRef, {
       state,
       nodeViews: {
         block: (node) => createBlockNodeView(node),
         code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos),
-        cardRef: (node, view, getPos) => new CardRefView(node, view, getPos, cardRefOptions)
+        cardRef: (node, view, getPos) => new CardRefView(node, view, getPos, cardRefOptions),
+        ...(imageViewOptions && {
+          image: (node, view, getPos) => new ImageView(node, view, getPos, imageViewOptions)
+        })
       },
       dispatchTransaction(transaction) {
         if (!view) return
@@ -304,6 +323,10 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
     <div
       ref={containerRef}
       class={`prosemirror-editor ${props.class || ""}`}
+      onFocusIn={() => props.onFocus?.()}
+      onFocusOut={(e) => {
+        if (!containerRef?.contains(e.relatedTarget as Node)) props.onBlur?.()
+      }}
     />
   )
 }

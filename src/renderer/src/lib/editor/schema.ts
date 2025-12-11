@@ -57,7 +57,7 @@ const codeBlockSpec: NodeSpec = {
 }
 
 const blockSpec: NodeSpec = {
-  content: "(paragraph | code_block | block)+",
+  content: "(paragraph | code_block | image | block)+",
   group: `${flatBlockGroup} block`,
   definingForContent: true,
   definingAsContext: false,
@@ -147,6 +147,39 @@ const cardRefSpec: NodeSpec = {
   }
 }
 
+const imageSpec: NodeSpec = {
+  group: "block",
+  atom: true,
+  draggable: true,
+  attrs: {
+    fileId: { default: null },
+    alt: { default: "" },
+    width: { default: null }
+  },
+  parseDOM: [
+    {
+      tag: 'img[data-file-id]',
+      getAttrs(dom) {
+        const el = dom as HTMLElement
+        return {
+          fileId: el.getAttribute("data-file-id"),
+          alt: el.getAttribute("alt") || "",
+          width: el.getAttribute("width") ? parseInt(el.getAttribute("width")!, 10) : null
+        }
+      }
+    }
+  ],
+  toDOM(node): DOMOutputSpec {
+    const attrs: Record<string, string> = {
+      "data-file-id": node.attrs.fileId,
+      class: "editor-image"
+    }
+    if (node.attrs.alt) attrs.alt = node.attrs.alt
+    if (node.attrs.width) attrs.width = String(node.attrs.width)
+    return ["img", attrs]
+  }
+}
+
 const boldSpec: MarkSpec = {
   parseDOM: [
     { tag: "strong" },
@@ -205,6 +238,7 @@ export const schema = new Schema({
     block: blockSpec,
     paragraph: paragraphSpec,
     code_block: codeBlockSpec,
+    image: imageSpec,
     cardRef: cardRefSpec,
     text: textSpec
   },

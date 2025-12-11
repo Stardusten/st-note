@@ -10,6 +10,8 @@ export type ContentAreaProps = {
   editorId?: string
   highlightQuery: string
   onUpdate: (content: object) => void
+  onFocus?: () => void
+  onBlur?: () => void
   getLastUpdateSource: () => string | undefined
 }
 
@@ -22,6 +24,8 @@ const ContentArea: Component<ContentAreaProps> = (props) => (
           cardId={props.focusedCard!.id}
           content={props.focusedCard!.data?.content}
           onUpdate={props.onUpdate}
+          onFocus={props.onFocus}
+          onBlur={props.onBlur}
           editorId={props.editorId}
           getLastUpdateSource={props.getLastUpdateSource}
           getCardSuggestions={(q) => appStore.searchCards(q)}
@@ -31,6 +35,7 @@ const ContentArea: Component<ContentAreaProps> = (props) => (
           }}
           onCardClick={(cardId) => appStore.selectCard(cardId)}
           getCardTitle={(cardId) => appStore.getCardTitle(cardId)()}
+          getDbPath={() => appStore.getDbPath()!}
           searchQuery={props.highlightQuery}
           class="w-full h-full p-4"
         />

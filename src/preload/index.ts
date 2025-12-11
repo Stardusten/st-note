@@ -90,6 +90,39 @@ export type MenuAPI = {
   onSettings: (callback: () => void) => void
 }
 
+export type FileRecord = {
+  id: string
+  filename: string | null
+  mimeType: string
+  data: Uint8Array
+  createdAt: number
+}
+
+export type FileAPI = {
+  insert: (path: string, id: string, filename: string | null, mimeType: string, data: Uint8Array) => Promise<FileRecord>
+  fetch: (path: string, id: string) => Promise<FileRecord | null>
+  delete: (path: string, id: string) => Promise<void>
+}
+
+export type ImageViewerParams = {
+  dbPath: string
+  imageIds: string[]
+  currentIndex: number
+}
+
+export type SaveFileResult = {
+  success: boolean
+  canceled: boolean
+  path?: string
+  error?: string
+}
+
+export type ImageAPI = {
+  openViewer: (params: ImageViewerParams) => Promise<void>
+  resizeAndShow: (width: number, height: number) => Promise<void>
+  saveFile: (data: Uint8Array, mimeType: string) => Promise<SaveFileResult>
+}
+
 const api = {
   storage: {
     init: (path) => ipcRenderer.invoke("storage:init", path),
@@ -130,7 +163,24 @@ const api = {
     onNewDatabase: (callback) => ipcRenderer.on("menu:newDatabase", () => callback()),
     onOpenDatabase: (callback) => ipcRenderer.on("menu:openDatabase", () => callback()),
     onSettings: (callback) => ipcRenderer.on("menu:settings", () => callback())
-  } satisfies MenuAPI
+  } satisfies MenuAPI,
+  file: {
+    insert: async (path, id, filename, mimeType, data) => {
+      const result = await ipcRenderer.invoke("file:insert", path, id, filename, mimeType, Buffer.from(data))
+      return { id: result.id, filename: result.filename, mimeType: result.mime_type, data: result.data, createdAt: result.created_at }
+    },
+    fetch: async (path, id) => {
+      const result = await ipcRenderer.invoke("file:fetch", path, id)
+      if (!result) return null
+      return { id: result.id, filename: result.filename, mimeType: result.mime_type, data: result.data, createdAt: result.created_at }
+    },
+    delete: (path, id) => ipcRenderer.invoke("file:delete", path, id)
+  } satisfies FileAPI,
+  image: {
+    openViewer: (params) => ipcRenderer.invoke("image:openViewer", params),
+    resizeAndShow: (width, height) => ipcRenderer.invoke("image:resizeAndShow", width, height),
+    saveFile: (data, mimeType) => ipcRenderer.invoke("image:saveFile", data, mimeType)
+  } satisfies ImageAPI
 }
 
 if (process.contextIsolated) {

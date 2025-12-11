@@ -99,6 +99,8 @@ const MainWindow: Component = () => {
         editorId={editorId()}
         highlightQuery={search.highlightQuery()}
         onUpdate={handleEditorUpdate}
+        onFocus={search.pause}
+        onBlur={search.resume}
         getLastUpdateSource={getLastUpdateSource}
       />
     </div>
