@@ -13,7 +13,9 @@ import { useKeyboard } from "./hooks/useKeyboard"
 
 const MainWindow: Component = () => {
   let searchInputRef: HTMLInputElement | undefined
-  let editorRef: { focus: () => void; focusFirstMatch: () => void; selectTitle: () => void } | undefined
+  let editorRef:
+    | { focus: () => void; focusFirstMatch: () => void; selectTitle: () => void }
+    | undefined
 
   const search = useSearch()
   const nav = useNavigation(search.filteredCards)
@@ -92,10 +94,13 @@ const MainWindow: Component = () => {
         onFocusIndex={nav.setFocusedIndex}
         onCreateNote={handleCreateNote}
       />
+      <div class="h-1.5 border-b bg-background"></div>
       <ContentArea
         focusedCard={nav.focusedCard()}
         isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
-        editorRef={(r) => { editorRef = r }}
+        editorRef={(r) => {
+          editorRef = r
+        }}
         editorId={editorId()}
         highlightQuery={search.highlightQuery()}
         onUpdate={handleEditorUpdate}

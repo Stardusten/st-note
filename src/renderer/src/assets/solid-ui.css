@@ -72,8 +72,8 @@
   --error-foreground: oklch(0.2 0.02 20);
   --info: oklch(0.78 0.1 220);
   --info-foreground: oklch(0.2 0.02 220);
-  --border: #3d3d3f;
-  --titlebar: oklch(0.96 0 0);
+  --border: oklch(0.7 0 0);
+  --titlebar: oklch(0.88 0 0);
   --surface: oklch(0.98 0 0);
   --input: oklch(0.94 0 0);
   --ring: oklch(0.5399 0.1906 257.48);
@@ -90,9 +90,7 @@
 
 html.dark,
 html[data-kb-theme="dark"] {
-  font-weight: 300 !important;
-
-  --background: oklch(0.141 0.005 285.823);
+  --background: rgb(26, 27, 31);
   --foreground: #d9d9d9;
   --primary: oklch(0.7153 0.1518 253.31);
   --primary-foreground: oklch(0.379 0.146 265.522);

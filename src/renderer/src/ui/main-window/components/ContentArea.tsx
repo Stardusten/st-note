@@ -18,7 +18,7 @@ export type ContentAreaProps = {
 const ContentArea: Component<ContentAreaProps> = (props) => (
   <>
     <Show when={props.focusedCard}>
-      <div class="flex-1 min-h-0 border-t overflow-auto bg-surface" style={{ zoom: "0.8" }}>
+      <div class="flex-1 min-h-0 overflow-auto bg-surface" style={{ zoom: "0.8" }}>
         <NoteEditor
           ref={props.editorRef}
           cardId={props.focusedCard!.id}

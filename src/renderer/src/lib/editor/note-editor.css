@@ -38,7 +38,7 @@
 
 .prosemirror-editor .editor-title {
   font-size: inherit;
-  font-weight: 300;
+  font-weight: inherit;
   padding: 0.25em 0;
 }
 
@@ -227,7 +227,6 @@
   position: absolute;
   pointer-events: none;
   font-size: calc(var(--editor-font-size) * 1.5);
-  font-weight: 300;
 }
 
 .prosemirror-editor .ProseMirror[data-placeholder=""]:not(:focus)::before {

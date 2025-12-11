@@ -18,12 +18,14 @@ const SettingsWindow: Component = () => {
   const [isRecording, setIsRecording] = createSignal(false)
   const [error, setError] = createSignal("")
   const [dbPath, setDbPath] = createSignal("")
+  const [theme, setTheme] = createSignal<"light" | "dark" | "system">("dark")
 
   onMount(async () => {
     await settingsStore.init()
     const settings = await window.api.globalSettings.get()
     setShortcut(settings.bringToFrontShortcut)
     setDbPath(settings.lastDatabase || "")
+    setTheme(settingsStore.getTheme())
   })
 
   createEffect(() => {
@@ -123,6 +125,11 @@ const SettingsWindow: Component = () => {
 
   const getFileName = (path: string) => path.split("/").pop() || path
 
+  const handleThemeChange = async (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme)
+    await settingsStore.setTheme(newTheme)
+  }
+
   return (
     <div class="h-screen w-full flex flex-col overflow-hidden bg-surface text-foreground">
       <div
@@ -171,6 +178,39 @@ const SettingsWindow: Component = () => {
             <Show when={error()}>
               <p class="text-[10px] text-destructive">{error()}</p>
             </Show>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Theme</label>
+            <div class="flex gap-2">
+              <button
+                class={`h-[26px] px-3 rounded border text-xs ${
+                  theme() === "light"
+                    ? "border-ring bg-accent text-foreground"
+                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                onClick={() => handleThemeChange("light")}>
+                Light
+              </button>
+              <button
+                class={`h-[26px] px-3 rounded border text-xs ${
+                  theme() === "dark"
+                    ? "border-ring bg-accent text-foreground"
+                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                onClick={() => handleThemeChange("dark")}>
+                Dark
+              </button>
+              <button
+                class={`h-[26px] px-3 rounded border text-xs ${
+                  theme() === "system"
+                    ? "border-ring bg-accent text-foreground"
+                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                onClick={() => handleThemeChange("system")}>
+                System
+              </button>
+            </div>
           </div>
 
           <div class="space-y-1">
