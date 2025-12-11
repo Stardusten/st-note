@@ -42,10 +42,26 @@
   padding: 0.25em 0;
 }
 
+
 /* indent for * under paragraphs */
 .prosemirror-editor .block {
   position: relative;
   margin-left: 24px;
+}
+
+/* first level paragraph block */
+.prosemirror-editor > .ProseMirror > .block[data-kind="paragraph"] {
+  margin-left: 0;
+}
+
+/* first level bullet block */
+.prosemirror-editor > .ProseMirror > .block[data-kind="bullet"] {
+  margin-left: 15px;
+}
+
+/* first level ordered block */
+.prosemirror-editor > .ProseMirror > .block[data-kind="ordered"] {
+  margin-left: 15px;
 }
 
 /* indent for paragraphs under ordered lists */
@@ -78,6 +94,7 @@
   margin-left: 28px;
 }
 
+
 /* block collapse toggle - absolute positioned, not taking space */
 .prosemirror-editor .block-collapse-toggle {
   position: absolute;
@@ -91,6 +108,10 @@
   user-select: none;
   opacity: 0;
   transition: opacity 0.15s ease;
+}
+
+.prosemirror-editor > .ProseMirror > .block > .block-collapse-toggle {
+  left: -20px;
 }
 
 .prosemirror-editor .block[data-collapsable] > .block-collapse-toggle {
@@ -138,15 +159,6 @@
   user-select: none;
 }
 
-/* first level block overrides */
-.prosemirror-editor > .ProseMirror > .block {
-  margin-left: 0;
-}
-
-.prosemirror-editor > .ProseMirror > .block > .block-collapse-toggle {
-  left: -20px;
-}
-
 /* basic paragraphs */
 .prosemirror-editor .block p {
   margin: 0;
@@ -160,7 +172,6 @@
   display: list-item;
   list-style: disc;
   list-style-position: outside;
-  margin-left: 2.5em;
 }
 
 .prosemirror-editor .block[data-kind="bullet"]:not([data-marker-hidden]) > .block-collapse-toggle {
