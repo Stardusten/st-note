@@ -23,6 +23,7 @@ import { createBlockFocusPlugin } from "./plugins/block-focus-plugin"
 import { createClipboardPlugin } from "./plugins/clipboard-plugin"
 import { createImagePlugin, createImageSelectionPlugin } from "./plugins/image-plugin"
 import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
+import { createTimestampHighlightPlugin } from "./plugins/timestamp-highlight-plugin"
 import { findHighlightRanges } from "@renderer/lib/common/utils/highlight"
 import "./note-editor.css"
 
@@ -220,7 +221,8 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       createBlockCollapsePlugin(),
       createClipboardPlugin(schema),
       createImageSelectionPlugin(),
-      createSearchHighlightPlugin()
+      createSearchHighlightPlugin(),
+      createTimestampHighlightPlugin()
     )
 
     if (props.getDbPath) {

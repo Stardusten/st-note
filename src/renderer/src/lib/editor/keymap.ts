@@ -13,6 +13,7 @@ import {
 } from "prosemirror-commands"
 import { undo, redo } from "prosemirror-history"
 import { inputRules } from "prosemirror-inputrules"
+import { format } from "date-fns"
 import { splitBlock, joinBlockUp } from "./commands/split"
 import { indent } from "./commands/indent"
 import { dedent } from "./commands/dedent"
@@ -22,8 +23,16 @@ import { bulletListRule, orderedListRule } from "./input-rules/wrapping-block"
 import { codeBlockRule } from "./input-rules/code-block"
 import { inlineCodeRule } from "./input-rules/inline-code"
 import { schema, isBlockNode, type BlockKind } from "./schema"
+import { settingsStore } from "../settings/SettingsStore"
 
 export const CODE_INDENT = "  "
+
+const insertTimestamp: Command = (state, dispatch) => {
+  const fmt = settingsStore.getTimestampFormat()
+  const timestamp = format(new Date(), fmt) + " - "
+  if (dispatch) dispatch(state.tr.insertText(timestamp))
+  return true
+}
 
 const insertCodeIndent: Command = (state, dispatch) => {
   const { $head } = state.selection
@@ -274,6 +283,7 @@ export function buildKeymap(): Plugin {
     "Mod-`": toggleMark(schema.marks.code),
     "Mod-a": selectAllInBlock,
     "Mod-.": toggleCollapse,
+    "Mod-t": insertTimestamp,
     ArrowDown: chainCommands(imageArrowDown, exitCodeBlockDown),
     ArrowUp: imageArrowUp,
     "Mod-Enter": exitCode

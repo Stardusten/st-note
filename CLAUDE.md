@@ -14,7 +14,7 @@
 
 ## 其他要求
 
-- 每次修改代码后，都运行 typecheck 确保没有类型错误
+- 每次修改代码后，都运行 typecheck 确保没有类型错误（命令：pnpm typecheck）
 - 始终使用 pnpm 作为包管理器
 
 ## 关于 Electron main 和 renderer 进程间通信
@@ -85,7 +85,7 @@
 
 ```typescript
 new BrowserWindow({
-  type: "panel", // 关键：告诉 macOS 这是一个辅助面板
+  type: "panel" // 关键：告诉 macOS 这是一个辅助面板
   // ...
 })
 ```
@@ -128,7 +128,7 @@ new BrowserWindow({
 - Build: 在 electron.vite.config.ts 的 rollupOptions.input 中注册新 html
 - Main: 在 src/main/index.ts 中添加 createXxxWindow 函数
   - 开发环境 loadURL: process.env["ELECTRON_RENDERER_URL"]/xxx.html
-  - 生产环境 loadFile: join(__dirname, "../renderer/xxx.html")
+  - 生产环境 loadFile: join(\_\_dirname, "../renderer/xxx.html")
 - IPC: 注册相关 IPC 通信
 
 ## 编辑器架构 (ProseMirror Flat Block)
@@ -150,6 +150,7 @@ doc
 ```
 
 关键点：
+
 - `block` 的 content 是 `(blockContent | block)+`，可以包含段落或嵌套的 block
 - `paragraph` 属于 `blockContent` group，是叶子节点
 - `block` 属于 `flatBlock` group，用于识别 block 类型
@@ -196,23 +197,25 @@ src/renderer/src/lib/editor/
 
 ```typescript
 new ReplaceAroundStep(
-  from,      // 外部范围起点
-  to,        // 外部范围终点
-  gapFrom,   // 保留内容起点
-  gapTo,     // 保留内容终点
-  slice,     // 替换的 Slice
-  insert,    // 在 gap 中插入的位置
-  structure  // 是否为结构性修改
+  from, // 外部范围起点
+  to, // 外部范围终点
+  gapFrom, // 保留内容起点
+  gapTo, // 保留内容终点
+  slice, // 替换的 Slice
+  insert, // 在 gap 中插入的位置
+  structure // 是否为结构性修改
 )
 ```
 
 常见用法：
+
 - 移入前一个 block: `ReplaceAroundStep(start-1, end, start, end, Slice(..., 1, 0), 0, true)`
 - 包裹新 block: `ReplaceAroundStep(start, end, start, end, Slice(..., 0, 0), 1, true)`
 
 ### 参考实现
 
 所有命令和工具函数都参考了 prosemirror-flat-list 库，主要文件对应关系：
+
 - `indent.ts` ← `indent-list.ts`
 - `dedent.ts` ← `dedent-list.ts`
 - `split.ts` ← `split-list.ts` + `enter-without-lift.ts` + `join-list-up.ts`
@@ -228,4 +231,3 @@ new ReplaceAroundStep(
 3. **ProseMirrorEditor**: 接收 `editorId` 和 `getLastUpdateSource` props，在 createEffect 中检查 lastSource === editorId 时跳过状态重置
 
 这样，当编辑器 A 保存内容触发 Signal 更新时，编辑器 A 的 createEffect 会检测到 source 匹配而跳过重置，而其他编辑器（如 backlink editor）则会正常同步更新。
-

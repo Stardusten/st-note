@@ -9,7 +9,8 @@ const defaultSettings: Settings = {
   quickCaptureShortcut: "CommandOrControl+Shift+C",
   searchShortcut: "CommandOrControl+Shift+P",
   language: "zh-CN",
-  autoSave: true
+  autoSave: true,
+  timestampFormat: "MM-dd HH:mm"
 }
 
 class SettingsStore {
@@ -44,6 +45,7 @@ class SettingsStore {
   getSearchShortcut = () => this.settings().searchShortcut
   getLanguage = () => this.settings().language
   getAutoSave = () => this.settings().autoSave
+  getTimestampFormat = () => this.settings().timestampFormat
 
   async setTheme(theme: Settings["theme"]) {
     const updated = await window.api.settings.set({ theme })

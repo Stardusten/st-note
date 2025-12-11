@@ -14,6 +14,7 @@ export type VaultSettings = {
   searchShortcut: string
   language: "zh-CN" | "en-US"
   autoSave: boolean
+  timestampFormat: string
 }
 
 export const defaultVaultSettings: VaultSettings = {
@@ -24,7 +25,8 @@ export const defaultVaultSettings: VaultSettings = {
   quickCaptureShortcut: "CommandOrControl+Shift+C",
   searchShortcut: "CommandOrControl+Shift+P",
   language: "zh-CN",
-  autoSave: true
+  autoSave: true,
+  timestampFormat: "MM-dd HH:mm"
 }
 
 export function loadVaultSettings(dbPath: string): VaultSettings {

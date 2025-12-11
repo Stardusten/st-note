@@ -432,3 +432,11 @@
 .prosemirror-editor .editor-image-wrapper.ProseMirror-selectednode .editor-image-resize-handle {
   opacity: 1;
 }
+
+/* timestamp highlight */
+.prosemirror-editor .timestamp-highlight {
+  font-style: italic;
+  color: var(--color-muted-foreground);
+  background-color: var(--color-muted);
+  border-radius: 2px;
+}
