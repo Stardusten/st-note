@@ -7,7 +7,7 @@ import {
   NodeType
 } from "prosemirror-model"
 
-export type BlockKind = "paragraph" | "bullet" | "ordered"
+export type BlockKind = "paragraph" | "bullet" | "ordered" | "quote"
 
 export type BlockAttrs = {
   kind: BlockKind
@@ -105,6 +105,10 @@ const blockSpec: NodeSpec = {
     {
       tag: ":is(ul, ol) > :is(ul, ol)",
       getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null, collapsed: false })
+    },
+    {
+      tag: "blockquote",
+      getAttrs: (): BlockAttrs => ({ kind: "quote", order: null, collapsed: false })
     }
   ],
   toDOM(node): DOMOutputSpec {

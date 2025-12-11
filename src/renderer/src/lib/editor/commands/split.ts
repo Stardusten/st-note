@@ -122,7 +122,7 @@ export const splitBlock: Command = (state, dispatch): boolean => {
   }
 
   // 3 & 4. 空段落在 block 开头
-  // 3. 空 bullet/ordered：转为普通块
+  // 3. 空 bullet/ordered/quote：转为普通块
   if (blockAttrs.kind !== "paragraph") {
     if (dispatch) {
       const tr = state.tr
@@ -238,7 +238,7 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
       return true
     }
 
-    // 非空 bullet/ordered 转普通块
+    // 非空 bullet/ordered/quote 转普通块
     if (blockAttrs.kind !== "paragraph") {
       if (dispatch) {
         const tr = state.tr

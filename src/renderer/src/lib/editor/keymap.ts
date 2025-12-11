@@ -19,7 +19,7 @@ import { indent } from "./commands/indent"
 import { dedent } from "./commands/dedent"
 import { toggleCollapse } from "./commands/collapse"
 import { atTextblockStart } from "./commands/utils"
-import { bulletListRule, orderedListRule } from "./input-rules/wrapping-block"
+import { bulletListRule, orderedListRule, quoteRule } from "./input-rules/wrapping-block"
 import { codeBlockRule } from "./input-rules/code-block"
 import { inlineCodeRule } from "./input-rules/inline-code"
 import { schema, isBlockNode, type BlockKind } from "./schema"
@@ -118,7 +118,7 @@ const deleteSelectionPreserveTitle: Command = (state, dispatch) => {
   return deleteSelection(state, dispatch)
 }
 
-const convertListToParagraph: Command = (state, dispatch) => {
+const convertBlockToParagraph: Command = (state, dispatch) => {
   const $cursor = atTextblockStart(state)
   if (!$cursor) return false
 
@@ -131,7 +131,7 @@ const convertListToParagraph: Command = (state, dispatch) => {
   if (!isBlockNode(block)) return false
 
   const kind = block.attrs.kind as BlockKind
-  if (kind !== "bullet" && kind !== "ordered") return false
+  if (kind === "paragraph") return false
 
   if ($cursor.index(blockDepth) !== 0) return false
 
@@ -228,7 +228,7 @@ const enterCommand = chainCommands(exitImageNode, codeBlockEnter, splitBlock)
 
 const backspaceCommand = chainCommands(
   deleteSelectionPreserveTitle,
-  convertListToParagraph,
+  convertBlockToParagraph,
   joinBlockUp,
   joinTextblockBackward,
   selectNodeBackward
@@ -291,5 +291,5 @@ export function buildKeymap(): Plugin {
 }
 
 export function buildInputRules(): Plugin {
-  return inputRules({ rules: [bulletListRule, orderedListRule, codeBlockRule, inlineCodeRule] })
+  return inputRules({ rules: [bulletListRule, orderedListRule, quoteRule, codeBlockRule, inlineCodeRule] })
 }

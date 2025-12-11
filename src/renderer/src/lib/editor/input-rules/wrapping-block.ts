@@ -65,3 +65,5 @@ export const orderedListRule = wrappingBlockInputRule(/^\s?(\d+)\.\s$/, ({ match
   const order = parseInteger(match[1])
   return { kind: "ordered", order: order != null && order >= 2 ? order : null, collapsed: false }
 })
+
+export const quoteRule = wrappingBlockInputRule(/^[>》]\s$/, { kind: "quote", order: null, collapsed: false })

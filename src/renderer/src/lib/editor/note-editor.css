@@ -94,6 +94,24 @@
   margin-left: 28px;
 }
 
+/* quote block */
+.prosemirror-editor .block[data-kind="quote"] {
+  margin-left: 0;
+}
+
+.prosemirror-editor .block[data-kind="quote"]:not([data-marker-hidden]) {
+  border-left: 3px solid var(--color-border);
+  padding-left: 12px;
+}
+
+.prosemirror-editor .block[data-kind="quote"]:not([data-marker-hidden]) > .block-collapse-toggle {
+  left: -18px;
+}
+
+.prosemirror-editor .block[data-kind="quote"] p {
+  color: var(--color-muted-foreground);
+}
+
 
 /* block collapse toggle - absolute positioned, not taking space */
 .prosemirror-editor .block-collapse-toggle {
