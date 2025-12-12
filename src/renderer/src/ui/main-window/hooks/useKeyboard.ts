@@ -72,6 +72,16 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
     if (e.key === "Enter" && nav.focusedIndex() >= 0) {
       e.preventDefault()
 
+      const isSearchFocused = document.activeElement === searchInputRef()
+
+      // Cmd-Enter in search input: create new note with query as title
+      if (e.metaKey && isSearchFocused) {
+        onCreateNote(search.query() || "Untitled").then(() => {
+          requestAnimationFrame(() => editorRef()?.selectTitle())
+        })
+        return
+      }
+
       if (nav.isNewNoteIndex(nav.focusedIndex())) {
         onCreateNote(search.query() || "Untitled").then(() => {
           requestAnimationFrame(() => editorRef()?.selectTitle())
@@ -87,6 +97,7 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
         return
       }
 
+      // Cmd-Enter in note list: open in horizontal layout
       if (e.metaKey) {
         window.api.layout.set("horizontal")
         appStore.selectCard(card.id)

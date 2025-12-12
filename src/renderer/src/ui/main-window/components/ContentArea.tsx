@@ -8,20 +8,23 @@ export type ContentAreaProps = {
   focusedCard: Card | null
   isNewNote: boolean
   editorRef?: (ref: any) => void
-  highlightQuery: string
+  highlightQuery: () => string
   onFocus?: () => void
   onBlur?: () => void
 }
 
 const ContentArea: Component<ContentAreaProps> = (props) => {
-  const context = createMemo<EditorContext | null>(() => {
-    const card = props.focusedCard
-    if (!card) return null
+  const cardId = createMemo(() => props.focusedCard?.id)
+
+  const context = createMemo<EditorContext | null>((prev) => {
+    const id = cardId()
+    if (!id) return null
+    if (prev && prev.cardId === id) return prev
     return {
-      ...appStore.getEditorContext(card.id),
+      ...appStore.getEditorContext(id),
       onFocus: props.onFocus,
       onBlur: props.onBlur,
-      searchQuery: props.highlightQuery,
+      get searchQuery() { return props.highlightQuery() },
       class: "w-full h-full p-4"
     }
   })

@@ -151,7 +151,7 @@ const MainWindow: Component = () => {
             focusedCard={nav.focusedCard()}
             isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
             editorRef={(r) => { editorRef = r }}
-            highlightQuery={search.highlightQuery()}
+            highlightQuery={search.highlightQuery}
             onFocus={search.pause}
             onBlur={search.resume}
           />
@@ -178,7 +178,7 @@ const MainWindow: Component = () => {
             focusedCard={nav.focusedCard()}
             isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
             editorRef={(r) => { editorRef = r }}
-            highlightQuery={search.highlightQuery()}
+            highlightQuery={search.highlightQuery}
             onFocus={search.pause}
             onBlur={search.resume}
           />
