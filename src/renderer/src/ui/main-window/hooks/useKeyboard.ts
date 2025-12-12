@@ -1,5 +1,6 @@
 import { onCleanup, onMount } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
+import type { NoteEditorHandle } from "@renderer/lib/editor/NoteEditor"
 import type { SearchState } from "./useSearch"
 import type { NavigationState } from "./useNavigation"
 
@@ -7,17 +8,22 @@ export type KeyboardHandlerDeps = {
   search: SearchState
   nav: NavigationState
   searchInputRef: () => HTMLInputElement | undefined
-  editorRef: () => { focus: () => void; focusFirstMatch: () => void; selectTitle: () => void } | undefined
+  editorRef: () => NoteEditorHandle | undefined
   onCreateNote: (title: string) => Promise<void>
+  onOpenInNewWindow: (card: { id: string }) => void
 }
 
 export function useKeyboard(deps: KeyboardHandlerDeps) {
-  const { search, nav, searchInputRef, editorRef, onCreateNote } = deps
+  const { search, nav, searchInputRef, editorRef, onCreateNote, onOpenInNewWindow } = deps
 
   const isEditorFocused = () => document.activeElement?.closest(".prosemirror-editor") !== null
 
+  const focusEditor = () => {
+    nav.blurList()
+    editorRef()?.focusEndOfTitle()
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
-    // Escape: focus search or clear query
     if (e.key === "Escape") {
       e.preventDefault()
       if (document.activeElement === searchInputRef()) {
@@ -30,18 +36,8 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
       return
     }
 
-    // Cmd+Enter: create note
-    if (e.key === "Enter" && e.metaKey) {
-      e.preventDefault()
-      onCreateNote(search.query() || "Untitled").then(() => {
-        requestAnimationFrame(() => editorRef()?.selectTitle())
-      })
-      return
-    }
-
     if (isEditorFocused()) return
 
-    // Backspace: delete focused card (only when list has focus)
     if (e.key === "Backspace" && nav.listHasFocus() && nav.focusedCard()) {
       e.preventDefault()
       const card = nav.focusedCard()
@@ -51,7 +47,6 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
       return
     }
 
-    // Arrow navigation - also focuses list
     if (e.key === "ArrowDown") {
       e.preventDefault()
       nav.moveDown()
@@ -59,6 +54,7 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
       searchInputRef()?.blur()
       return
     }
+
     if (e.key === "ArrowUp") {
       e.preventDefault()
       nav.moveUp()
@@ -67,26 +63,39 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
       return
     }
 
-    // Tab: focus editor
     if (e.key === "Tab" && !e.shiftKey && nav.focusedIndex() >= 0 && !nav.isNewNoteIndex(nav.focusedIndex())) {
       e.preventDefault()
-      nav.blurList()
-      if (search.query().trim()) editorRef()?.focusFirstMatch()
-      else editorRef()?.focus()
+      focusEditor()
       return
     }
 
-    // Enter: select card or create note
     if (e.key === "Enter" && nav.focusedIndex() >= 0) {
       e.preventDefault()
+
       if (nav.isNewNoteIndex(nav.focusedIndex())) {
         onCreateNote(search.query() || "Untitled").then(() => {
           requestAnimationFrame(() => editorRef()?.selectTitle())
         })
-      } else {
-        const card = nav.focusedCard()
-        if (card) appStore.selectCard(card.id)
+        return
       }
+
+      const card = nav.focusedCard()
+      if (!card) return
+
+      if (e.shiftKey) {
+        onOpenInNewWindow(card)
+        return
+      }
+
+      if (e.metaKey) {
+        window.api.layout.set("horizontal")
+        appStore.selectCard(card.id)
+        requestAnimationFrame(() => focusEditor())
+        return
+      }
+
+      appStore.selectCard(card.id)
+      focusEditor()
     }
   }
 

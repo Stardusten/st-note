@@ -15,7 +15,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, "src/renderer/index.html"),
           settings: resolve(__dirname, "src/renderer/settings.html"),
-          "image-viewer": resolve(__dirname, "src/renderer/image-viewer.html")
+          "image-viewer": resolve(__dirname, "src/renderer/image-viewer.html"),
+          "editor-window": resolve(__dirname, "src/renderer/editor-window.html")
         }
       }
     },

@@ -1,6 +1,7 @@
 import { Component, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
+import type { NoteEditorHandle } from "@renderer/lib/editor/NoteEditor"
 import NoteList from "./NoteList"
 import TitleBar from "./components/TitleBar"
 import SearchInput from "./components/SearchInput"
@@ -15,9 +16,7 @@ const HORIZONTAL_BREAKPOINT = 600
 
 const MainWindow: Component = () => {
   let searchInputRef: HTMLInputElement | undefined
-  let editorRef:
-    | { focus: () => void; focusFirstMatch: () => void; selectTitle: () => void }
-    | undefined
+  let editorRef: NoteEditorHandle | undefined
 
   const [windowWidth, setWindowWidth] = createSignal(window.innerWidth)
 
@@ -42,6 +41,36 @@ const MainWindow: Component = () => {
     const handleResize = () => setWindowWidth(window.innerWidth)
     window.addEventListener("resize", handleResize)
     onCleanup(() => window.removeEventListener("resize", handleResize))
+
+    window.api.editorWindow.registerHandlers({
+      getCard: (_dbPath, cardId) => appStore.getCard(cardId),
+      updateCard: (_dbPath, cardId, content, source) => {
+        appStore.updateCard(cardId, content, source)
+      },
+      searchCards: (_dbPath, query) => appStore.searchCards(query),
+      createCard: async (_dbPath, title) => {
+        const card = await appStore.createCardWithoutSelect(title)
+        if (!card) return null
+        return { id: card.id, title: appStore.getCardTitle(card.id)() }
+      },
+      getCardTitle: (_dbPath, cardId) => appStore.getCardTitle(cardId)()
+    })
+
+    window.api.editorWindow.onNavigateRequest((cardId) => {
+      appStore.selectCard(cardId)
+    })
+
+    const unsubscribe = appStore.subscribeToUpdates((event) => {
+      if (event.type === "committed") {
+        for (const op of event.ops) {
+          if (op.op === "create" || op.op === "update") {
+            const card = appStore.getCard(op.id)
+            if (card) window.api.editorWindow.broadcastCardUpdate(card, event.source)
+          }
+        }
+      }
+    })
+    onCleanup(unsubscribe)
   })
 
   const effectiveLayout = createMemo(() => {
@@ -64,31 +93,32 @@ const MainWindow: Component = () => {
     }
   }
 
+  const handleOpenInNewWindow = async (card: { id: string }) => {
+    const dbPath = appStore.getDbPath()
+    if (dbPath) {
+      await window.api.editorWindow.open({ cardId: card.id, dbPath })
+    }
+  }
+
+  const handleDeleteCard = async (card: { id: string }) => {
+    const title = appStore.getCardTitle(card.id)() || "Untitled"
+    if (confirm(`Delete "${title}"?`)) {
+      await appStore.deleteCard(card.id)
+    }
+  }
+
+  const handleTogglePin = async (card: { id: string }) => {
+    await appStore.togglePinCard(card.id)
+  }
+
   useKeyboard({
     search,
     nav,
     searchInputRef: () => searchInputRef,
     editorRef: () => editorRef,
-    onCreateNote: handleCreateNote
+    onCreateNote: handleCreateNote,
+    onOpenInNewWindow: handleOpenInNewWindow
   })
-
-  const editorId = createMemo(() => {
-    const card = nav.focusedCard()
-    return card ? `editor-${card.id}` : undefined
-  })
-
-  const handleEditorUpdate = (content: object) => {
-    const card = nav.focusedCard()
-    if (card) {
-      appStore.updateCard(card.id, content, editorId())
-      search.hideHighlight()
-    }
-  }
-
-  const getLastUpdateSource = () => {
-    const card = nav.focusedCard()
-    return card ? appStore.getLastUpdateSource(card.id) : undefined
-  }
 
   return (
     <div class="h-screen w-full flex flex-col overflow-hidden">
@@ -112,20 +142,18 @@ const MainWindow: Component = () => {
             onFocusIndex={nav.setFocusedIndex}
             onFocusList={nav.focusList}
             onCreateNote={handleCreateNote}
+            onOpenInNewWindow={handleOpenInNewWindow}
+            onDeleteCard={handleDeleteCard}
+            onTogglePin={handleTogglePin}
           />
           <div class="h-1.5 border-b bg-background"></div>
           <ContentArea
             focusedCard={nav.focusedCard()}
             isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
-            editorRef={(r) => {
-              editorRef = r
-            }}
-            editorId={editorId()}
+            editorRef={(r) => { editorRef = r }}
             highlightQuery={search.highlightQuery()}
-            onUpdate={handleEditorUpdate}
             onFocus={search.pause}
             onBlur={search.resume}
-            getLastUpdateSource={getLastUpdateSource}
           />
         </>
       ) : (
@@ -141,20 +169,18 @@ const MainWindow: Component = () => {
               onFocusIndex={nav.setFocusedIndex}
               onFocusList={nav.focusList}
               onCreateNote={handleCreateNote}
+              onOpenInNewWindow={handleOpenInNewWindow}
+              onDeleteCard={handleDeleteCard}
+              onTogglePin={handleTogglePin}
             />
           </div>
           <ContentArea
             focusedCard={nav.focusedCard()}
             isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
-            editorRef={(r) => {
-              editorRef = r
-            }}
-            editorId={editorId()}
+            editorRef={(r) => { editorRef = r }}
             highlightQuery={search.highlightQuery()}
-            onUpdate={handleEditorUpdate}
             onFocus={search.pause}
             onBlur={search.resume}
-            getLastUpdateSource={getLastUpdateSource}
           />
         </div>
       )}

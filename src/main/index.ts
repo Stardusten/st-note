@@ -46,6 +46,7 @@ import {
 let mainWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
 let currentBringToFrontShortcut: string | null = null
+const editorWindows: Map<string, BrowserWindow> = new Map()
 
 function registerBringToFrontShortcut(shortcut: string | null): boolean {
   if (currentBringToFrontShortcut) {
@@ -132,6 +133,63 @@ function createImageViewerWindow(params: ImageViewerParams): void {
     imageViewerWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/image-viewer.html${search}`)
   } else {
     imageViewerWindow.loadFile(join(__dirname, "../renderer/image-viewer.html"), { search })
+  }
+}
+
+type EditorWindowParams = {
+  cardId: string
+  dbPath: string
+}
+
+function createEditorWindow(params: EditorWindowParams): void {
+  const existingWindow = editorWindows.get(params.cardId)
+  if (existingWindow) {
+    existingWindow.focus()
+    return
+  }
+
+  let x: number | undefined
+  let y: number | undefined
+  if (mainWindow) {
+    const [mainX, mainY] = mainWindow.getPosition()
+    const [mainWidth] = mainWindow.getSize()
+    x = mainX + mainWidth + 20
+    y = mainY
+  }
+
+  const editorWindow = new BrowserWindow({
+    width: 400,
+    height: 500,
+    minWidth: 300,
+    minHeight: 200,
+    x,
+    y,
+    show: false,
+    titleBarStyle: "hidden",
+    ...(process.platform === "darwin"
+      ? { trafficLightPosition: { x: 12, y: Math.round(34 / 2 - 8) } }
+      : { titleBarOverlay: { color: "#151619", symbolColor: "#999", height: 34 } }),
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: false
+    }
+  })
+
+  editorWindows.set(params.cardId, editorWindow)
+
+  editorWindow.on("ready-to-show", () => {
+    editorWindow.show()
+  })
+
+  editorWindow.on("closed", () => {
+    editorWindows.delete(params.cardId)
+  })
+
+  const search = `?cardId=${encodeURIComponent(params.cardId)}&dbPath=${encodeURIComponent(params.dbPath)}`
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    editorWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/editor-window.html${search}`)
+  } else {
+    editorWindow.loadFile(join(__dirname, "../renderer/editor-window.html"), { search })
   }
 }
 
@@ -252,6 +310,88 @@ app.whenReady().then(() => {
     }
   })
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
+
+  // Editor window operations
+  ipcMain.handle("editorWindow:open", (_e, params: EditorWindowParams) => createEditorWindow(params))
+
+  const pendingRequests = new Map<string, { resolve: (value: any) => void; reject: (error: any) => void }>()
+  let requestIdCounter = 0
+
+  const sendToMainWindow = <T>(method: string, ...args: any[]): Promise<T> => {
+    return new Promise((resolve, reject) => {
+      if (!mainWindow) {
+        reject(new Error("Main window not available"))
+        return
+      }
+      const requestId = `req-${++requestIdCounter}`
+      pendingRequests.set(requestId, { resolve, reject })
+      mainWindow.webContents.send("editorWindow:request", requestId, method, args)
+      setTimeout(() => {
+        if (pendingRequests.has(requestId)) {
+          pendingRequests.delete(requestId)
+          reject(new Error("Request timeout"))
+        }
+      }, 30000)
+    })
+  }
+
+  ipcMain.on("editorWindow:response", (_e, requestId: string, result: any) => {
+    const pending = pendingRequests.get(requestId)
+    if (pending) {
+      pendingRequests.delete(requestId)
+      pending.resolve(result)
+    }
+  })
+
+  ipcMain.handle("editorWindow:getCard", async (_e, dbPath: string, cardId: string) => {
+    return sendToMainWindow("getCard", dbPath, cardId)
+  })
+
+  ipcMain.handle("editorWindow:updateCard", async (_e, dbPath: string, cardId: string, content: object, source?: string) => {
+    return sendToMainWindow("updateCard", dbPath, cardId, content, source)
+  })
+
+  ipcMain.handle("editorWindow:searchCards", async (_e, dbPath: string, query: string) => {
+    return sendToMainWindow("searchCards", dbPath, query)
+  })
+
+  ipcMain.handle("editorWindow:createCard", async (_e, dbPath: string, title: string) => {
+    return sendToMainWindow("createCard", dbPath, title)
+  })
+
+  ipcMain.handle("editorWindow:getCardTitle", async (_e, dbPath: string, cardId: string) => {
+    return sendToMainWindow("getCardTitle", dbPath, cardId)
+  })
+
+  ipcMain.handle("editorWindow:navigateToCard", async (_e, cardId: string) => {
+    if (!mainWindow) return
+    mainWindow.webContents.send("editorWindow:navigateToCard", cardId)
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
+  type ContextMenuItem = { id: string; label: string; type?: "normal" | "separator"; destructive?: boolean }
+  ipcMain.handle("contextMenu:show", (e, items: ContextMenuItem[]) => {
+    return new Promise<string | null>((resolve) => {
+      const win = BrowserWindow.fromWebContents(e.sender)
+      if (!win) { resolve(null); return }
+      const menuItems: Electron.MenuItemConstructorOptions[] = items.map((item) => {
+        if (item.type === "separator") return { type: "separator" }
+        return {
+          label: item.label,
+          click: () => resolve(item.id)
+        }
+      })
+      const menu = Menu.buildFromTemplate(menuItems)
+      menu.popup({ window: win, callback: () => resolve(null) })
+    })
+  })
+
+  ipcMain.on("editorWindow:broadcastCardUpdate", (_e, card: any, source?: string) => {
+    for (const [, win] of editorWindows) {
+      win.webContents.send("editorWindow:cardUpdated", card, source)
+    }
+  })
 
   // Database operations
   ipcMain.handle("database:export", async (_e, currentDbPath: string) => {
@@ -383,6 +523,8 @@ app.whenReady().then(() => {
     })
     rebuildMenu(updated)
   }
+
+  ipcMain.handle("layout:set", (_e, layout: LayoutType) => setLayout(layout))
 
   const togglePinWindow = () => {
     const win = BrowserWindow.getFocusedWindow()

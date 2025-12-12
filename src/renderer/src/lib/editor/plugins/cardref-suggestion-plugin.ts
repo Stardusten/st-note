@@ -41,17 +41,12 @@ function checkCompletionStatus(view: EditorView): CompletionStatus | null {
   const { selection } = state
   const { $from } = selection
 
-  if (!selection.empty || !$from.parent.isTextblock) {
-    console.log("[cardref] checkCompletionStatus: selection not empty or not textblock")
-    return null
-  }
+  if (!selection.empty || !$from.parent.isTextblock) return null
 
   const textBefore = $from.parent.textBetween(0, $from.parentOffset)
-  console.log("[cardref] checkCompletionStatus: textBefore =", JSON.stringify(textBefore))
 
   const linkMatch = textBefore.match(/(\[\[|【【)([^\]】]*)$/)
   if (linkMatch) {
-    console.log("[cardref] checkCompletionStatus: link match found!", linkMatch)
     return {
       from: $from.pos - linkMatch[0].length,
       to: $from.pos,
@@ -63,7 +58,6 @@ function checkCompletionStatus(view: EditorView): CompletionStatus | null {
 
   const tagMatch = textBefore.match(/(^|[\s，。！？、；：""''（）【】])#([^\s#]*)$/)
   if (tagMatch) {
-    console.log("[cardref] checkCompletionStatus: tag match found!", tagMatch)
     const prefixLen = tagMatch[1].length
     return {
       from: $from.pos - tagMatch[0].length + prefixLen,
@@ -74,7 +68,6 @@ function checkCompletionStatus(view: EditorView): CompletionStatus | null {
     }
   }
 
-  console.log("[cardref] checkCompletionStatus: no match found")
   return null
 }
 
@@ -82,8 +75,6 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
   const pluginKey = new PluginKey("cardRefSuggestion")
   let renderer: SuggestionRenderer | null = null
   let isComposing = false
-
-  console.log("[cardref] createCardRefSuggestionPlugin called")
 
   const createProps = (view: EditorView, status: CompletionStatus): SuggestionProps => {
     const { from, query, variant } = status
@@ -131,21 +122,14 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
   return new Plugin({
     key: pluginKey,
     view(view) {
-      console.log("[cardref] plugin view() called, initializing renderer")
       renderer = options.render()
 
-      const handleCompositionStart = () => {
-        isComposing = true
-      }
-
+      const handleCompositionStart = () => { isComposing = true }
       const handleCompositionEnd = () => {
         isComposing = false
         const status = checkCompletionStatus(view)
-        if (status) {
-          renderer?.onUpdate(createProps(view, status))
-        } else {
-          renderer?.onExit()
-        }
+        if (status) renderer?.onUpdate(createProps(view, status))
+        else renderer?.onExit()
       }
 
       view.dom.addEventListener("compositionstart", handleCompositionStart)
@@ -153,16 +137,9 @@ export function createCardRefSuggestionPlugin(options: CardRefSuggestionOptions)
 
       return {
         update: async (view: EditorView) => {
-          console.log("[cardref] plugin update() called, renderer:", !!renderer, "isComposing:", isComposing)
           if (!renderer || isComposing) return
-
           const status = checkCompletionStatus(view)
-          if (!status) {
-            renderer.onExit()
-            return
-          }
-
-          console.log("[cardref] calling renderer.onUpdate with status:", status)
+          if (!status) { renderer.onExit(); return }
           renderer.onUpdate(createProps(view, status))
         },
         destroy() {

@@ -56,35 +56,23 @@ export function createTimestampHighlightPlugin(): Plugin {
   let cachedFormat = ""
   let cachedRegex: RegExp | null = null
 
-  console.log("[TimestampHighlight] Plugin created")
-
   return new Plugin({
     key: timestampHighlightPluginKey,
     props: {
       decorations(state) {
         const fmt = settingsStore.getTimestampFormat()
-        console.log("[TimestampHighlight] decorations called, format:", fmt)
-
-        if (!fmt.trim()) {
-          console.log("[TimestampHighlight] Empty format, returning empty")
-          return DecorationSet.empty
-        }
+        if (!fmt.trim()) return DecorationSet.empty
 
         if (fmt !== cachedFormat) {
           cachedFormat = fmt
           try {
             cachedRegex = formatToRegex(fmt)
-            console.log("[TimestampHighlight] Generated regex:", cachedRegex.source)
-          } catch (e) {
-            console.error("[TimestampHighlight] Failed to create regex:", e)
+          } catch {
             cachedRegex = null
           }
         }
 
-        if (!cachedRegex) {
-          console.log("[TimestampHighlight] No regex, returning empty")
-          return DecorationSet.empty
-        }
+        if (!cachedRegex) return DecorationSet.empty
 
         const decorations: Decoration[] = []
         const regex = new RegExp(cachedRegex.source, "g")
@@ -93,7 +81,6 @@ export function createTimestampHighlightPlugin(): Plugin {
           if (node.isText && node.text) {
             let match: RegExpExecArray | null
             while ((match = regex.exec(node.text)) !== null) {
-              console.log("[TimestampHighlight] Found match:", match[0], "at", pos + match.index)
               decorations.push(
                 Decoration.inline(pos + match.index, pos + match.index + match[0].length, {
                   class: "timestamp-highlight"
@@ -103,7 +90,6 @@ export function createTimestampHighlightPlugin(): Plugin {
           }
         })
 
-        console.log("[TimestampHighlight] Total decorations:", decorations.length)
         return DecorationSet.create(state.doc, decorations)
       }
     }

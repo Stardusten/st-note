@@ -42,10 +42,11 @@ export class CardRefView implements NodeView {
     const cardId = this.node.attrs.cardId
     const variant = this.node.attrs.variant as CardRefVariant
     if (this.options.getTitle && cardId) {
-      const title = this.options.getTitle(cardId)
+      const title = this.options.getTitle(cardId) || cardId.slice(0, 8)
       this.dom.textContent = variant === "tag" ? `#${title}` : title
     } else {
-      this.dom.textContent = variant === "tag" ? "#Untitled" : "Untitled"
+      const fallback = cardId ? cardId.slice(0, 8) : "Untitled"
+      this.dom.textContent = variant === "tag" ? `#${fallback}` : fallback
     }
   }
 

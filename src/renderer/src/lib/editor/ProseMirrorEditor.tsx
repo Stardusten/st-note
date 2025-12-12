@@ -14,7 +14,7 @@ import { ImageView } from "./nodeviews/ImageView"
 import { createBlockNodeView } from "./nodeviews/BlockView"
 import { createLowlightPlugin } from "./plugins/lowlight-plugin"
 import { createBlockCollapsePlugin } from "./plugins/block-collapse-plugin"
-import { createCardRefSuggestionPlugin, CardSuggestionItem } from "./plugins/cardref-suggestion-plugin"
+import { createCardRefSuggestionPlugin } from "./plugins/cardref-suggestion-plugin"
 import { createCardRefPopupRenderer } from "./plugins/CardRefPopup"
 import { createAutoLinkPlugin } from "./plugins/auto-link-plugin"
 import { createBacklinkViewPlugin } from "./plugins/backlink-view-plugin"
@@ -25,6 +25,7 @@ import { createImagePlugin, createImageSelectionPlugin } from "./plugins/image-p
 import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
 import { createTimestampHighlightPlugin } from "./plugins/timestamp-highlight-plugin"
 import { findHighlightRanges } from "@renderer/lib/common/utils/highlight"
+import type { EditorContext } from "./EditorContext"
 import "./note-editor.css"
 
 const lowlight = createLowlight(common)
@@ -32,27 +33,14 @@ const lowlight = createLowlight(common)
 export type ProseMirrorEditorHandle = {
   focus: () => void
   focusFirstMatch: () => void
+  focusEndOfTitle: () => void
   selectTitle: () => void
 }
 
 export type ProseMirrorEditorProps = {
   ref?: ProseMirrorEditorHandle | ((ref: ProseMirrorEditorHandle) => void)
-  cardId?: string
-  content?: object
-  onUpdate?: (json: object) => void
-  onFocus?: () => void
-  onBlur?: () => void
-  placeholder?: string
-  class?: string
-  editorId?: string
-  getLastUpdateSource?: () => string | undefined
-  getCardSuggestions?: (query: string) => CardSuggestionItem[] | Promise<CardSuggestionItem[]>
-  onCreateCard?: (title: string) => Promise<CardSuggestionItem | null>
-  onCardClick?: (cardId: string) => void
-  getCardTitle?: (cardId: string) => string
-  getDbPath?: () => string
+  context: EditorContext
   backlinkTargetCardId?: string
-  searchQuery?: string
 }
 
 const createPlaceholderPlugin = (placeholder: string) => {
@@ -133,9 +121,11 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   let view: EditorView | undefined
   let lastCardId: string | undefined
 
+  const ctx = props.context
+
   const findFirstMatchPos = (): number | null => {
     if (!view) return null
-    const query = props.searchQuery ?? ""
+    const query = ctx.searchQuery ?? ""
     if (!query.trim()) return null
 
     let firstPos: number | null = null
@@ -166,6 +156,16 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
         view.dispatch(tr.scrollIntoView())
       }
     },
+    focusEndOfTitle: () => {
+      if (!view) return
+      view.focus()
+      const title = view.state.doc.firstChild
+      if (title && title.type.name === "title") {
+        const end = 1 + title.content.size
+        const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, end))
+        view.dispatch(tr)
+      }
+    },
     selectTitle: () => {
       if (!view) return
       view.focus()
@@ -183,26 +183,24 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   else if (props.ref) Object.assign(props.ref, handle)
 
   const cardRefOptions: CardRefOptions = {
-    onCardClick: (cardId) => props.onCardClick?.(cardId),
-    getTitle: (cardId) => props.getCardTitle?.(cardId) ?? "Untitled"
+    onCardClick: (cardId) => ctx.onCardClick(cardId),
+    getTitle: (cardId) => ctx.getCardTitle(cardId) ?? "Untitled"
   }
 
   onMount(() => {
     if (!containerRef) return
 
-    lastCardId = props.cardId
-    const doc = createDocFromJSON(props.content)
+    lastCardId = ctx.cardId
+    const content = ctx.getCard()?.data?.content
+    const doc = createDocFromJSON(content)
 
     const plugins: Plugin[] = []
 
-    console.log("[ProseMirrorEditor] onMount, getCardSuggestions:", !!props.getCardSuggestions)
-
-    if (props.getCardSuggestions) {
-      console.log("[ProseMirrorEditor] Adding cardref suggestion plugin")
+    if (ctx.searchCards) {
       plugins.push(
         createCardRefSuggestionPlugin({
-          items: props.getCardSuggestions,
-          render: createCardRefPopupRenderer(props.getCardSuggestions, props.onCreateCard)
+          items: ctx.searchCards,
+          render: createCardRefPopupRenderer(ctx.searchCards, ctx.createCard)
         })
       )
     }
@@ -213,7 +211,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       history(),
       gapCursor(),
       dropCursor({ color: "var(--color-ring)" }),
-      createPlaceholderPlugin(props.placeholder || ""),
+      createPlaceholderPlugin(ctx.placeholder || ""),
       createLowlightPlugin("code_block", lowlight),
       createAutoLinkPlugin(),
       createCollapsedIndicatorPlugin(),
@@ -225,9 +223,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       createTimestampHighlightPlugin()
     )
 
-    if (props.getDbPath) {
-      plugins.push(createImagePlugin({ getDbPath: props.getDbPath }))
-    }
+    plugins.push(createImagePlugin({ getDbPath: () => ctx.dbPath }))
 
     if (props.backlinkTargetCardId) {
       plugins.push(
@@ -239,26 +235,22 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
 
     const state = EditorState.create({ doc, plugins })
 
-    const imageViewOptions = props.getDbPath ? { getDbPath: props.getDbPath } : null
-
     view = new EditorView(containerRef, {
       state,
       nodeViews: {
         block: (node) => createBlockNodeView(node),
         code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos),
         cardRef: (node, view, getPos) => new CardRefView(node, view, getPos, cardRefOptions),
-        ...(imageViewOptions && {
-          image: (node, view, getPos) => new ImageView(node, view, getPos, imageViewOptions)
-        })
+        image: (node, view, getPos) => new ImageView(node, view, getPos, { getDbPath: () => ctx.dbPath })
       },
       dispatchTransaction(transaction) {
         if (!view) return
         const newState = view.state.apply(transaction)
         view.updateState(newState)
 
-        if (transaction.docChanged && props.onUpdate) {
+        if (transaction.docChanged) {
           const json = newState.doc.toJSON()
-          props.onUpdate(json)
+          ctx.updateCard(json)
         }
       }
     })
@@ -267,16 +259,17 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   createEffect(() => {
     if (!view) return
 
-    const cardIdChanged = props.cardId !== lastCardId
-    lastCardId = props.cardId
+    const cardIdChanged = ctx.cardId !== lastCardId
+    lastCardId = ctx.cardId
 
     if (cardIdChanged) {
-      const doc = createDocFromJSON(props.content)
+      const content = ctx.getCard()?.data?.content
+      const doc = createDocFromJSON(content)
       let state = EditorState.create({
         doc,
         plugins: view.state.plugins
       })
-      const query = props.searchQuery ?? ""
+      const query = ctx.searchQuery ?? ""
       if (query) {
         state = state.apply(state.tr.setMeta(searchHighlightPluginKey, { query }))
       }
@@ -284,23 +277,21 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       return
     }
 
-    if (!props.content) return
+    const content = ctx.getCard()?.data?.content
+    if (!content) return
 
-    if (props.editorId && props.getLastUpdateSource) {
-      const lastSource = props.getLastUpdateSource()
-      if (lastSource === props.editorId) return
-    }
+    const lastSource = ctx.getLastUpdateSource()
+    if (lastSource === ctx.editorId) return
 
-    const newJSON = JSON.stringify(props.content)
+    const newJSON = JSON.stringify(content)
     const currentJSON = JSON.stringify(view.state.doc.toJSON())
     if (currentJSON !== newJSON) {
-      console.log("[ProseMirrorEditor] createEffect: content changed externally, resetting state")
-      const doc = createDocFromJSON(props.content)
+      const doc = createDocFromJSON(content)
       let state = EditorState.create({
         doc,
         plugins: view.state.plugins
       })
-      const query = props.searchQuery ?? ""
+      const query = ctx.searchQuery ?? ""
       if (query) {
         state = state.apply(state.tr.setMeta(searchHighlightPluginKey, { query }))
       }
@@ -310,7 +301,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
 
   createEffect(() => {
     if (!view) return
-    const query = props.searchQuery ?? ""
+    const query = ctx.searchQuery ?? ""
     const currentQuery = searchHighlightPluginKey.getState(view.state)?.query ?? ""
     if (query === currentQuery) return
     const tr = view.state.tr.setMeta(searchHighlightPluginKey, { query })
@@ -324,10 +315,10 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
   return (
     <div
       ref={containerRef}
-      class={`prosemirror-editor ${props.class || ""}`}
-      onFocusIn={() => props.onFocus?.()}
+      class={`prosemirror-editor ${ctx.class || ""}`}
+      onFocusIn={() => ctx.onFocus?.()}
       onFocusOut={(e) => {
-        if (!containerRef?.contains(e.relatedTarget as Node)) props.onBlur?.()
+        if (!containerRef?.contains(e.relatedTarget as Node)) ctx.onBlur?.()
       }}
     />
   )

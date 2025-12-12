@@ -20,6 +20,9 @@ type NoteListProps = {
   onFocusIndex: (index: number) => void
   onFocusList?: () => void
   onCreateNote: (title: string) => void
+  onOpenInNewWindow?: (card: Card) => void
+  onDeleteCard?: (card: Card) => void
+  onTogglePin?: (card: Card) => void
 }
 
 const NoteList: Component<NoteListProps> = (props) => {
@@ -47,6 +50,20 @@ const NoteList: Component<NoteListProps> = (props) => {
 
   const compact = () => props.compact ?? true
 
+  const handleContextMenu = async (e: MouseEvent, card: Card) => {
+    e.preventDefault()
+    const isPinned = appStore.isPinned(card.id)
+    const action = await window.api.contextMenu.show([
+      { id: "open", label: "Open in New Window" },
+      { id: "pin", label: isPinned ? "Unpin" : "Pin" },
+      { id: "sep", label: "", type: "separator" },
+      { id: "delete", label: "Delete", destructive: true }
+    ])
+    if (action === "open") props.onOpenInNewWindow?.(card)
+    else if (action === "pin") props.onTogglePin?.(card)
+    else if (action === "delete") props.onDeleteCard?.(card)
+  }
+
   return (
     <div
       class="flex flex-col w-full overflow-hidden text-xs bg-surface/95"
@@ -57,31 +74,31 @@ const NoteList: Component<NoteListProps> = (props) => {
         style={{ transform: "translate3d(0, 0, 0)", "will-change": "transform" }}>
         <For each={props.cards}>
           {(card, index) => (
-            <Show when={compact()} fallback={
-              <div
-                class={`group flex flex-col border-b border-border/40 cursor-pointer px-2 py-1.5 ${getItemClass(props.focusedIndex === index())}`}
-                onClick={() => handleItemClick(index())}>
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-foreground truncate">
-                    <HighlightedText
-                      text={appStore.getCardTitle(card.id)() || "Untitled"}
-                      query={props.highlightQuery}
-                    />
-                  </span>
-                  <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
-                    {formatRelativeTime(card.updatedAt)}
+            <div
+              class={`group flex border-b border-border/40 cursor-pointer px-2 ${compact() ? "items-center gap-2 py-0.5" : "flex-col py-1.5"} ${getItemClass(props.focusedIndex === index())}`}
+              onClick={() => handleItemClick(index())}
+              onContextMenu={(e) => handleContextMenu(e, card)}
+            >
+              <Show when={compact()} fallback={
+                <>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-foreground truncate">
+                      <HighlightedText
+                        text={appStore.getCardTitle(card.id)() || "Untitled"}
+                        query={props.highlightQuery}
+                      />
+                    </span>
+                    <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
+                      {formatRelativeTime(card.updatedAt)}
+                    </div>
                   </div>
-                </div>
-                <Show when={getCardBody(card.id)}>
-                  <div class="text-muted-foreground mt-0.5 line-clamp-2 text-[11px] leading-relaxed">
-                    <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
-                  </div>
-                </Show>
-              </div>
-            }>
-              <div
-                class={`group flex items-center gap-2 border-b border-border/40 cursor-pointer px-2 py-0.5 ${getItemClass(props.focusedIndex === index())}`}
-                onClick={() => handleItemClick(index())}>
+                  <Show when={getCardBody(card.id)}>
+                    <div class="text-muted-foreground mt-0.5 line-clamp-2 text-[11px] leading-relaxed">
+                      <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
+                    </div>
+                  </Show>
+                </>
+              }>
                 <div class="flex-1 min-w-0 flex items-center gap-2">
                   <div class="flex-1 min-w-0 flex items-center">
                     <span class="text-foreground shrink-0">
@@ -100,8 +117,8 @@ const NoteList: Component<NoteListProps> = (props) => {
                     {formatRelativeTime(card.updatedAt)}
                   </div>
                 </div>
-              </div>
-            </Show>
+              </Show>
+            </div>
           )}
         </For>
         <div

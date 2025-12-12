@@ -6,6 +6,7 @@ import type { StObjectId } from "../common/types"
 import { prepareSearch } from "../common/utils/search"
 import { BacklinkIndex } from "../backlink/BacklinkIndex"
 import { TextContentCache } from "../textcontent/TextContentCache"
+import type { EditorContext } from "../editor/EditorContext"
 
 type CardSuggestion = {
   id: string
@@ -293,18 +294,13 @@ class AppStore {
 
   async toggleCardTask(cardId: StObjectId) {
     const card = this.cards().find((c) => c.id === cardId)
-    if (!card) {
-      console.log("[toggleCardTask] Card not found:", cardId)
-      return
-    }
+    if (!card) return
 
     // 循环: undefined (不是任务) -> false (未完成) -> true (已完成) -> undefined
     let newChecked: boolean | undefined
     if (card.data.checked === undefined) newChecked = false
     else if (card.data.checked === false) newChecked = true
     else newChecked = undefined
-
-    console.log("[toggleCardTask] checked:", card.data.checked, "->", newChecked)
 
     await this.objCache.withTx((tx) => {
       tx.update(card.id, {
@@ -318,7 +314,6 @@ class AppStore {
     })
 
     await this.loadCards()
-    console.log("[toggleCardTask] Done")
   }
 
   async toggleCardTaskBulk(cardIds: StObjectId[]) {
@@ -491,6 +486,28 @@ class AppStore {
 
   subscribeToUpdates(listener: (event: ObjCacheEvent) => void): () => void {
     return this.objCache.subscribe(listener)
+  }
+
+  getEditorContext(cardId: StObjectId): EditorContext {
+    const editorId = `editor-${cardId}-${Date.now()}`
+    const dbPath = this.getDbPath()
+    if (!dbPath) throw new Error("Database not initialized")
+
+    return {
+      cardId,
+      editorId,
+      dbPath,
+      getCard: () => this.getCard(cardId),
+      getCardTitle: (id) => this.textContentCache.getTitle(id)(),
+      getLastUpdateSource: () => this.getLastUpdateSource(cardId),
+      updateCard: (content) => this.updateCard(cardId, content, editorId),
+      searchCards: (query) => this.searchCards(query),
+      createCard: async (title) => {
+        const card = await this.createCard(title)
+        return card ? { id: card.id, title: this.textContentCache.getTitle(card.id)() } : null
+      },
+      onCardClick: (id) => this.selectCard(id)
+    }
   }
 }
 
