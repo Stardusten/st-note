@@ -11,6 +11,7 @@ export type ContentAreaProps = {
   highlightQuery: () => string
   onFocus?: () => void
   onBlur?: () => void
+  onDocChange?: () => void
 }
 
 const ContentArea: Component<ContentAreaProps> = (props) => {
@@ -24,6 +25,7 @@ const ContentArea: Component<ContentAreaProps> = (props) => {
       ...appStore.getEditorContext(id),
       onFocus: props.onFocus,
       onBlur: props.onBlur,
+      onDocChange: props.onDocChange,
       get searchQuery() { return props.highlightQuery() },
       class: "w-full h-full p-4"
     }

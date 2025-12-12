@@ -154,6 +154,7 @@ const MainWindow: Component = () => {
             highlightQuery={search.highlightQuery}
             onFocus={search.pause}
             onBlur={search.resume}
+            onDocChange={search.hideHighlight}
           />
         </>
       ) : (
@@ -181,6 +182,7 @@ const MainWindow: Component = () => {
             highlightQuery={search.highlightQuery}
             onFocus={search.pause}
             onBlur={search.resume}
+            onDocChange={search.hideHighlight}
           />
         </div>
       )}

@@ -18,6 +18,7 @@ export type EditorContext = {
 
   onFocus?: () => void
   onBlur?: () => void
+  onDocChange?: () => void
   placeholder?: string
   class?: string
   searchQuery?: string

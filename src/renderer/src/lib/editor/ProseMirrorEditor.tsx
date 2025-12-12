@@ -251,6 +251,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
         if (transaction.docChanged) {
           const json = newState.doc.toJSON()
           ctx.updateCard(json)
+          ctx.onDocChange?.()
         }
       }
     })
