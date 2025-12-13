@@ -1,12 +1,13 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
 import { ObjCache, type ObjCacheEvent } from "../objcache/objcache"
 import { SQLiteStorage } from "../storage/sqlite"
-import type { Card } from "../common/types/card"
+import { type Card, nextCycleStatus, prevCycleStatus } from "../common/types/card"
 import type { StObjectId } from "../common/types"
 import { prepareSearch } from "../common/utils/search"
 import { BacklinkIndex } from "../backlink/BacklinkIndex"
 import { TextContentCache } from "../textcontent/TextContentCache"
 import type { EditorContext } from "../editor/EditorContext"
+import { settingsStore } from "../settings/SettingsStore"
 
 type CardSuggestion = {
   id: string
@@ -202,16 +203,16 @@ class AppStore {
   async createCardWithoutSelect(
     initialText?: string,
     initialContent?: any,
-    checked?: boolean
+    status?: string
   ): Promise<Card> {
-    return this.createCardInternal(initialText, initialContent, false, checked)
+    return this.createCardInternal(initialText, initialContent, false, status)
   }
 
   private async createCardInternal(
     initialText?: string,
     initialContent?: any,
     selectAfterCreate = true,
-    checked?: boolean
+    status?: string
   ): Promise<Card> {
     const newId = crypto.randomUUID()
     const content = initialContent || {
@@ -230,7 +231,7 @@ class AppStore {
       type: "card" as const,
       data: {
         content,
-        checked
+        status
       }
     }
 
@@ -274,7 +275,7 @@ class AppStore {
     return this.lastUpdateSources.get(id)
   }
 
-  async updateCardChecked(id: StObjectId, checked: boolean) {
+  async updateCardStatus(id: StObjectId, status: string | undefined) {
     await this.objCache.withTx((tx) => {
       const card = this.cards().find((c) => c.id === id)
       if (!card) return
@@ -284,7 +285,7 @@ class AppStore {
         type: "card",
         data: {
           ...card.data,
-          checked
+          status
         }
       })
     })
@@ -292,15 +293,12 @@ class AppStore {
     await this.loadCards()
   }
 
-  async toggleCardTask(cardId: StObjectId) {
+  async cycleTaskStatusForward(cardId: StObjectId) {
     const card = this.cards().find((c) => c.id === cardId)
     if (!card) return
 
-    // 循环: undefined (不是任务) -> false (未完成) -> true (已完成) -> undefined
-    let newChecked: boolean | undefined
-    if (card.data.checked === undefined) newChecked = false
-    else if (card.data.checked === false) newChecked = true
-    else newChecked = undefined
+    const statuses = settingsStore.getTaskStatuses()
+    const newStatus = nextCycleStatus(card.data.status, statuses)
 
     await this.objCache.withTx((tx) => {
       tx.update(card.id, {
@@ -308,7 +306,7 @@ class AppStore {
         type: "card",
         data: {
           ...card.data,
-          checked: newChecked
+          status: newStatus
         }
       })
     })
@@ -316,47 +314,30 @@ class AppStore {
     await this.loadCards()
   }
 
-  async toggleCardTaskBulk(cardIds: StObjectId[]) {
-    const allCards = this.cards()
-    const targets = cardIds
-      .map((id) => allCards.find((c) => c.id === id))
-      .filter((c): c is Card => !!c)
+  async cycleTaskStatusBackward(cardId: StObjectId) {
+    const card = this.cards().find((c) => c.id === cardId)
+    if (!card) return
 
-    if (targets.length === 0) return
-
-    // Determine target state to sync all cards
-    const states = targets.map((c) => c.data.checked)
-    const hasUndefined = states.some((s) => s === undefined)
-    const hasFalse = states.some((s) => s === false)
-    // const hasTrue = states.some(s => s === true)
-
-    let nextState: boolean | undefined
-
-    if (hasUndefined) {
-      // If any is not a task, make them all incomplete tasks
-      nextState = false
-    } else if (hasFalse) {
-      // If any is incomplete (and none are undefined), make them all completed
-      nextState = true
-    } else {
-      // If all are completed (or empty), make them all not tasks
-      nextState = undefined
-    }
+    const statuses = settingsStore.getTaskStatuses()
+    const newStatus = prevCycleStatus(card.data.status, statuses)
 
     await this.objCache.withTx((tx) => {
-      for (const card of targets) {
-        tx.update(card.id, {
-          id: card.id,
-          type: "card",
-          data: {
-            ...card.data,
-            checked: nextState
-          }
-        })
-      }
+      tx.update(card.id, {
+        id: card.id,
+        type: "card",
+        data: {
+          ...card.data,
+          status: newStatus
+        }
+      })
     })
 
     await this.loadCards()
+  }
+
+  getCardStatus(cardId: StObjectId): string | undefined {
+    const card = this.cards().find((c) => c.id === cardId)
+    return card?.data.status
   }
 
   async deleteCard(id: StObjectId) {

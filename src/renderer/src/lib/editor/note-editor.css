@@ -80,7 +80,7 @@
 
 /* first level ordered block */
 .prosemirror-editor > .ProseMirror > .block[data-kind="ordered"] {
-  margin-left: 15px;
+  margin-left: 18px;
 }
 
 /* ordered > paragraph */

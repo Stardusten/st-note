@@ -1,5 +1,6 @@
 import { createMemo, createSignal } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
+import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 import { prepareSearch } from "@renderer/lib/common/utils/search"
 import type { Card } from "@renderer/lib/common/types/card"
 
@@ -15,9 +16,10 @@ export function useSearch() {
 
   const computeFilteredCards = () => {
     const q = searchQuery()
+    const threshold = settingsStore.getSearchMatchThreshold()
     let cards = appStore.getCards()
     if (q.trim()) {
-      const scorer = prepareSearch(q)
+      const scorer = prepareSearch(q, threshold)
       const results = cards
         .map((card) => {
           const text = appStore.getCardText(card.id)() || ""
@@ -31,13 +33,6 @@ export function useSearch() {
           const timeB = b.card.updatedAt ? new Date(b.card.updatedAt).getTime() : 0
           return timeB - timeA
         })
-
-      console.log("[Search] query:", q)
-      console.log("[Search] results:", results.map(r => ({
-        title: appStore.getCardTitle(r.card.id)(),
-        score: r.score.toFixed(3),
-        textPreview: r.text.slice(0, 50)
-      })))
 
       return results.map(({ card }) => card)
     }

@@ -1,6 +1,8 @@
 import { formatRelativeTime } from "@renderer/lib/common/utils/relative-time"
 import { appStore } from "@renderer/lib/state/AppStore"
 import type { Card } from "@renderer/lib/common/types/card"
+import { getStatusConfig } from "@renderer/lib/common/types/card"
+import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 import { Plus } from "lucide-solid"
 import { Component, createEffect, For, Show } from "solid-js"
 import HighlightedText from "./components/HighlightedText"
@@ -10,11 +12,23 @@ const getCardBody = (cardId: string) => {
   return text.split("\n").slice(1).join(" ").trim()
 }
 
+const TaskStatusIcon: Component<{ status?: string }> = (props) => {
+  const config = () => getStatusConfig(props.status, settingsStore.getTaskStatuses())
+  return (
+    <Show when={config()}>
+      <span class="text-xs font-bold font-mono shrink-0" style={{ color: config()!.color }}>
+        {config()!.name}
+      </span>
+    </Show>
+  )
+}
+
 type NoteListProps = {
   query: string
   highlightQuery: string
   cards: Card[]
   focusedIndex: number
+
   listHasFocus: boolean
   compact?: boolean
   onFocusIndex: (index: number) => void
@@ -53,15 +67,34 @@ const NoteList: Component<NoteListProps> = (props) => {
   const handleContextMenu = async (e: MouseEvent, card: Card) => {
     e.preventDefault()
     const isPinned = appStore.isPinned(card.id)
+    const statuses = settingsStore.getTaskStatuses()
+    const statusSubmenu = [
+      { id: "status:", label: "(Not a task)", checked: card.data.status === undefined },
+      ...statuses.map((s) => ({
+        id: `status:${s.id}`,
+        label: s.name,
+        checked: card.data.status === s.id
+      }))
+    ]
     const action = await window.api.contextMenu.show([
       { id: "open", label: "Open in New Window" },
       { id: "pin", label: isPinned ? "Unpin" : "Pin" },
+      {
+        id: "status",
+        label: "Switch status to...",
+        type: "submenu" as const,
+        submenu: statusSubmenu
+      },
       { id: "sep", label: "", type: "separator" },
       { id: "delete", label: "Delete", destructive: true }
     ])
     if (action === "open") props.onOpenInNewWindow?.(card)
     else if (action === "pin") props.onTogglePin?.(card)
     else if (action === "delete") props.onDeleteCard?.(card)
+    else if (action?.startsWith("status:")) {
+      const statusId = action.slice(7)
+      await appStore.updateCardStatus(card.id, statusId || undefined)
+    }
   }
 
   return (
@@ -77,39 +110,49 @@ const NoteList: Component<NoteListProps> = (props) => {
             <div
               class={`group flex border-b border-border/40 cursor-pointer px-2 ${compact() ? "items-center gap-2 py-0.5" : "flex-col py-1.5"} ${getItemClass(props.focusedIndex === index())}`}
               onClick={() => handleItemClick(index())}
-              onContextMenu={(e) => handleContextMenu(e, card)}
-            >
-              <Show when={compact()} fallback={
-                <>
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="text-foreground truncate">
-                      <HighlightedText
-                        text={appStore.getCardTitle(card.id)() || "Untitled"}
-                        query={props.highlightQuery}
-                      />
-                    </span>
-                    <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
-                      {formatRelativeTime(card.updatedAt)}
+              onContextMenu={(e) => handleContextMenu(e, card)}>
+              <Show
+                when={compact()}
+                fallback={
+                  <>
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <TaskStatusIcon status={card.data.status} />
+                        <span
+                          class={`truncate ${card.data.status === "done" ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                          <HighlightedText
+                            text={appStore.getCardTitle(card.id)() || "Untitled"}
+                            query={props.highlightQuery}
+                          />
+                        </span>
+                      </div>
+                      <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
+                        {formatRelativeTime(card.updatedAt)}
+                      </div>
                     </div>
-                  </div>
-                  <Show when={getCardBody(card.id)}>
-                    <div class="text-muted-foreground mt-0.5 line-clamp-2 text-[11px] leading-relaxed">
-                      <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
-                    </div>
-                  </Show>
-                </>
-              }>
-                <div class="flex-1 min-w-0 flex items-center gap-2">
+                    <Show when={getCardBody(card.id)}>
+                      <div
+                        class={`mt-0.5 line-clamp-2 text-[11px] leading-relaxed ${card.data.status === "done" ? "text-muted-foreground/60" : "text-muted-foreground"}`}>
+                        <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
+                      </div>
+                    </Show>
+                  </>
+                }>
+                <div class="flex-1 min-w-0 flex items-center gap-1.5">
+                  <TaskStatusIcon status={card.data.status} />
                   <div class="flex-1 min-w-0 flex items-center">
-                    <span class="text-foreground shrink-0">
+                    <span
+                      class={`shrink-0 ${card.data.status === "done" ? "text-muted-foreground line-through" : "text-foreground"}`}>
                       <HighlightedText
                         text={appStore.getCardTitle(card.id)() || "Untitled"}
                         query={props.highlightQuery}
                       />
                     </span>
                     <Show when={getCardBody(card.id)}>
-                      <span class="text-muted-foreground truncate ml-2">
-                        - <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
+                      <span
+                        class={`truncate ml-2 ${card.data.status === "done" ? "text-muted-foreground/60" : "text-muted-foreground"}`}>
+                        -{" "}
+                        <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
                       </span>
                     </Show>
                   </div>

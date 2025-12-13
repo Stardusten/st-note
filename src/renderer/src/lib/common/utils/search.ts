@@ -101,20 +101,29 @@ export const hybridTokenize = (str: string, options: TokenizeOptions = {}) => {
   return tokens
 }
 
-export const calcMatchScore = (queryTokens: string[], target: string): number => {
-  if (target.length === 0) return 0
-  let matchedLength = 0
+export const calcMatchScore = (queryTokens: string[], target: string, threshold = 1): number => {
+  if (target.length === 0 || queryTokens.length === 0) return 0
   const targetLower = target.toLowerCase()
+
+  let matchedLength = 0
+  let matchedCount = 0
   for (const token of queryTokens) {
     if (targetLower.includes(token)) {
       matchedLength += token.length
+      matchedCount++
     }
   }
-  return matchedLength / target.length
+
+  if (matchedCount === 0) return 0
+
+  const coverage = matchedCount / queryTokens.length
+  if (coverage < threshold) return 0
+
+  const density = matchedLength / target.length
+  return coverage * 0.7 + density * 0.3
 }
 
-export const prepareSearch = (query: string) => {
+export const prepareSearch = (query: string, threshold = 1) => {
   const tokens = hybridTokenize(query, { includePrefix: false, cjkNGram: 2 })
-  console.log("[prepareSearch] query:", query, "tokens:", tokens)
-  return (text: string) => calcMatchScore(tokens, text)
+  return (text: string) => calcMatchScore(tokens, text, threshold)
 }

@@ -38,6 +38,16 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
       return
     }
 
+    // Cmd+Shift+Enter: cycle task status (works everywhere)
+    if (e.key === "Enter" && e.metaKey && e.shiftKey) {
+      e.preventDefault()
+      const currentCard = appStore.getCurrentCard()
+      if (currentCard) {
+        appStore.cycleTaskStatusForward(currentCard.id)
+      }
+      return
+    }
+
     if (isEditorFocused()) return
 
     if (e.key === "Backspace" && nav.listHasFocus() && nav.focusedCard()) {
@@ -65,9 +75,16 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
       return
     }
 
-    if (e.key === "Tab" && !e.shiftKey && nav.focusedIndex() >= 0 && !nav.isNewNoteIndex(nav.focusedIndex())) {
+    if (e.key === "Tab" && nav.listHasFocus() && !nav.isNewNoteIndex(nav.focusedIndex())) {
       e.preventDefault()
-      focusEditor()
+      const card = nav.focusedCard()
+      if (card) {
+        if (e.shiftKey) {
+          appStore.cycleTaskStatusBackward(card.id)
+        } else {
+          appStore.cycleTaskStatusForward(card.id)
+        }
+      }
       return
     }
 
@@ -76,13 +93,16 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
 
       const isSearchFocused = document.activeElement === searchInputRef()
 
-      // Cmd-Enter in search input: create new note with query as title
+      // Cmd-Enter in search input only: create new note with query as title
       if (e.metaKey && isSearchFocused) {
         onCreateNote(search.query() || "Untitled").then(() => {
           requestAnimationFrame(() => editorRef()?.selectTitle())
         })
         return
       }
+
+      // Cmd-Enter elsewhere: do nothing (reserved for future use)
+      if (e.metaKey) return
 
       if (nav.isNewNoteIndex(nav.focusedIndex())) {
         onCreateNote(search.query() || "Untitled").then(() => {
@@ -99,14 +119,7 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
         return
       }
 
-      // Cmd-Enter in note list: open in horizontal layout
-      if (e.metaKey) {
-        window.api.layout.set("horizontal")
-        appStore.selectCard(card.id)
-        requestAnimationFrame(() => focusEditor())
-        return
-      }
-
+      // Enter: open note and focus end of title
       appStore.selectCard(card.id)
       focusEditor()
     }

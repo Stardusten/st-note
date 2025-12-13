@@ -77,7 +77,7 @@ function createSettingsWindow(): void {
 
   settingsWindow = new BrowserWindow({
     width: 300,
-    height: 260,
+    height: 500,
     show: false,
     resizable: false,
     titleBarStyle: "hidden",
@@ -196,7 +196,10 @@ function createEditorWindow(params: EditorWindowParams): void {
 function createWindow(): void {
   const globalSettings = loadGlobalSettings()
   const layout = globalSettings.lastLayout
-  const size = layout === "horizontal" ? globalSettings.windowSizeHorizontal : globalSettings.windowSizeVertical
+  const size =
+    layout === "horizontal"
+      ? globalSettings.windowSizeHorizontal
+      : globalSettings.windowSizeVertical
   const position = globalSettings.windowPosition
 
   mainWindow = new BrowserWindow({
@@ -316,9 +319,14 @@ app.whenReady().then(() => {
   ipcMain.handle("fetchPageTitle", restFunc(fetchPageTitle))
 
   // Editor window operations
-  ipcMain.handle("editorWindow:open", (_e, params: EditorWindowParams) => createEditorWindow(params))
+  ipcMain.handle("editorWindow:open", (_e, params: EditorWindowParams) =>
+    createEditorWindow(params)
+  )
 
-  const pendingRequests = new Map<string, { resolve: (value: any) => void; reject: (error: any) => void }>()
+  const pendingRequests = new Map<
+    string,
+    { resolve: (value: any) => void; reject: (error: any) => void }
+  >()
   let requestIdCounter = 0
 
   const sendToMainWindow = <T>(method: string, ...args: any[]): Promise<T> => {
@@ -351,9 +359,12 @@ app.whenReady().then(() => {
     return sendToMainWindow("getCard", dbPath, cardId)
   })
 
-  ipcMain.handle("editorWindow:updateCard", async (_e, dbPath: string, cardId: string, content: object, source?: string) => {
-    return sendToMainWindow("updateCard", dbPath, cardId, content, source)
-  })
+  ipcMain.handle(
+    "editorWindow:updateCard",
+    async (_e, dbPath: string, cardId: string, content: object, source?: string) => {
+      return sendToMainWindow("updateCard", dbPath, cardId, content, source)
+    }
+  )
 
   ipcMain.handle("editorWindow:searchCards", async (_e, dbPath: string, query: string) => {
     return sendToMainWindow("searchCards", dbPath, query)
@@ -374,18 +385,41 @@ app.whenReady().then(() => {
     mainWindow.focus()
   })
 
-  type ContextMenuItem = { id: string; label: string; type?: "normal" | "separator"; destructive?: boolean }
+  type ContextMenuItem = {
+    id: string
+    label: string
+    type?: "normal" | "separator" | "submenu"
+    destructive?: boolean
+    checked?: boolean
+    submenu?: ContextMenuItem[]
+  }
+
+  const buildMenuItems = (items: ContextMenuItem[], resolve: (id: string | null) => void): Electron.MenuItemConstructorOptions[] => {
+    return items.map((item) => {
+      if (item.type === "separator") return { type: "separator" as const }
+      if (item.type === "submenu" && item.submenu) {
+        return {
+          label: item.label,
+          submenu: buildMenuItems(item.submenu, resolve)
+        }
+      }
+      return {
+        label: item.label,
+        type: item.checked !== undefined ? "checkbox" as const : "normal" as const,
+        checked: item.checked,
+        click: () => resolve(item.id)
+      }
+    })
+  }
+
   ipcMain.handle("contextMenu:show", (e, items: ContextMenuItem[]) => {
     return new Promise<string | null>((resolve) => {
       const win = BrowserWindow.fromWebContents(e.sender)
-      if (!win) { resolve(null); return }
-      const menuItems: Electron.MenuItemConstructorOptions[] = items.map((item) => {
-        if (item.type === "separator") return { type: "separator" }
-        return {
-          label: item.label,
-          click: () => resolve(item.id)
-        }
-      })
+      if (!win) {
+        resolve(null)
+        return
+      }
+      const menuItems = buildMenuItems(items, resolve)
       const menu = Menu.buildFromTemplate(menuItems)
       menu.popup({ window: win, callback: () => resolve(null) })
     })

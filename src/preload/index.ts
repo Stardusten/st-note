@@ -36,6 +36,13 @@ export type StorageAPI = {
   deleteSetting: (path: string, key: string) => Promise<void>
 }
 
+export type TaskStatusConfig = {
+  id: string
+  name: string
+  color: string
+  inCycle: boolean
+}
+
 export type Settings = {
   theme: "light" | "dark" | "system"
   fontSize: "small" | "medium" | "large"
@@ -48,6 +55,9 @@ export type Settings = {
   timestampFormat: string
   autoLayout: boolean
   preferredLayout: "vertical" | "horizontal"
+  searchMatchThreshold: number
+  taskStatuses: TaskStatusConfig[]
+  defaultTaskStatus: string
 }
 
 export type SettingsAPI = {
@@ -134,7 +144,14 @@ export type WindowAPI = {
   onPinChanged: (callback: (isPinned: boolean) => void) => void
 }
 
-export type ContextMenuItem = { id: string; label: string; type?: "normal" | "separator"; destructive?: boolean }
+export type ContextMenuItem = {
+  id: string
+  label: string
+  type?: "normal" | "separator" | "submenu"
+  destructive?: boolean
+  checked?: boolean
+  submenu?: ContextMenuItem[]
+}
 
 export type ContextMenuAPI = {
   show: (items: ContextMenuItem[]) => Promise<string | null>

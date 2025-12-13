@@ -5,6 +5,13 @@ import { getAllSettings, setSetting } from "./storage"
 
 // ============ 知识库设置（存储在 SQLite） ============
 
+export type TaskStatusConfig = {
+  id: string
+  name: string
+  color: string
+  inCycle: boolean
+}
+
 export type VaultSettings = {
   theme: "light" | "dark" | "system"
   fontSize: "small" | "medium" | "large"
@@ -17,7 +24,19 @@ export type VaultSettings = {
   timestampFormat: string
   autoLayout: boolean
   preferredLayout: "vertical" | "horizontal"
+  searchMatchThreshold: number
+  taskStatuses: TaskStatusConfig[]
+  defaultTaskStatus: string
 }
+
+const defaultTaskStatuses: TaskStatusConfig[] = [
+  { id: "todo", name: "TODO", color: "#ef4444", inCycle: true },
+  { id: "doing", name: "DOING", color: "#3b82f6", inCycle: true },
+  { id: "waiting", name: "WAITING", color: "#eab308", inCycle: false },
+  { id: "someday", name: "SOMEDAY", color: "#8b5cf6", inCycle: false },
+  { id: "done", name: "DONE", color: "#22c55e", inCycle: true },
+  { id: "cancelled", name: "CANCELLED", color: "#6b7280", inCycle: false }
+]
 
 export const defaultVaultSettings: VaultSettings = {
   theme: "dark",
@@ -30,7 +49,10 @@ export const defaultVaultSettings: VaultSettings = {
   autoSave: true,
   timestampFormat: "MM-dd HH:mm",
   autoLayout: true,
-  preferredLayout: "horizontal"
+  preferredLayout: "horizontal",
+  searchMatchThreshold: 1,
+  taskStatuses: defaultTaskStatuses,
+  defaultTaskStatus: "todo"
 }
 
 export function loadVaultSettings(dbPath: string): VaultSettings {
@@ -39,8 +61,17 @@ export function loadVaultSettings(dbPath: string): VaultSettings {
   for (const key of Object.keys(defaultVaultSettings) as (keyof VaultSettings)[]) {
     if (raw[key] !== undefined) {
       const value = raw[key]
-      if (typeof defaultVaultSettings[key] === "boolean") {
+      const defaultValue = defaultVaultSettings[key]
+      if (typeof defaultValue === "boolean") {
         ;(result as any)[key] = value === "true"
+      } else if (typeof defaultValue === "number") {
+        ;(result as any)[key] = parseFloat(value)
+      } else if (Array.isArray(defaultValue)) {
+        try {
+          ;(result as any)[key] = JSON.parse(value)
+        } catch {
+          ;(result as any)[key] = defaultValue
+        }
       } else {
         ;(result as any)[key] = value
       }
@@ -51,7 +82,9 @@ export function loadVaultSettings(dbPath: string): VaultSettings {
 
 export function saveVaultSettings(dbPath: string, settings: VaultSettings): void {
   for (const key of Object.keys(settings) as (keyof VaultSettings)[]) {
-    setSetting(dbPath, key, String(settings[key]))
+    const value = settings[key]
+    const serialized = Array.isArray(value) ? JSON.stringify(value) : String(value)
+    setSetting(dbPath, key, serialized)
   }
 }
 

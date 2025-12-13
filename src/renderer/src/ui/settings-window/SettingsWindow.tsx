@@ -1,6 +1,12 @@
-import { Component, createEffect, createSignal, onMount, Show } from "solid-js"
+import { Component, createEffect, createSignal, For, onMount, Show } from "solid-js"
+import { GripVertical, Plus, RotateCcw, X } from "lucide-solid"
 import Kbd from "@renderer/ui/solidui/kbd"
-import { settingsStore } from "@renderer/lib/settings/SettingsStore"
+import {
+  settingsStore,
+  defaultTaskStatuses,
+  defaultTaskStatus as defaultTaskStatusValue
+} from "@renderer/lib/settings/SettingsStore"
+import type { TaskStatusConfig } from "src/preload"
 
 const formatShortcut = (shortcut: string) => {
   return shortcut
@@ -13,12 +19,23 @@ const formatShortcut = (shortcut: string) => {
     .split("+")
 }
 
+const thresholdOptions = [
+  { value: 0, label: "OR", desc: "Any token matches" },
+  { value: 0.5, label: "50%", desc: "At least half tokens match" },
+  { value: 1, label: "AND", desc: "All tokens must match" }
+]
+
 const SettingsWindow: Component = () => {
   const [shortcut, setShortcut] = createSignal("")
   const [isRecording, setIsRecording] = createSignal(false)
   const [error, setError] = createSignal("")
   const [dbPath, setDbPath] = createSignal("")
   const [theme, setTheme] = createSignal<"light" | "dark" | "system">("dark")
+  const [searchThreshold, setSearchThreshold] = createSignal(1)
+  const [taskStatuses, setTaskStatuses] = createSignal<TaskStatusConfig[]>([])
+  const [defaultTaskStatus, setDefaultTaskStatus] = createSignal("")
+  const [statusError, setStatusError] = createSignal("")
+  const [dragIndex, setDragIndex] = createSignal<number | null>(null)
 
   onMount(async () => {
     await settingsStore.init()
@@ -26,6 +43,9 @@ const SettingsWindow: Component = () => {
     setShortcut(settings.bringToFrontShortcut)
     setDbPath(settings.lastDatabase || "")
     setTheme(settingsStore.getTheme())
+    setSearchThreshold(settingsStore.getSearchMatchThreshold())
+    setTaskStatuses(settingsStore.getTaskStatuses())
+    setDefaultTaskStatus(settingsStore.getDefaultTaskStatus())
   })
 
   createEffect(() => {
@@ -130,6 +150,89 @@ const SettingsWindow: Component = () => {
     await settingsStore.setTheme(newTheme)
   }
 
+  const handleThresholdChange = async (value: number) => {
+    setSearchThreshold(value)
+    await settingsStore.setSearchMatchThreshold(value)
+  }
+
+  const validateStatuses = (statuses: TaskStatusConfig[]): string | null => {
+    const names = statuses.map((s) => s.name.trim())
+    if (names.some((n) => !n)) return "Status name cannot be empty"
+    if (new Set(names).size !== names.length) return "Status names must be unique"
+    return null
+  }
+
+  const saveStatuses = async (statuses: TaskStatusConfig[]) => {
+    const err = validateStatuses(statuses)
+    setStatusError(err || "")
+    if (!err) await settingsStore.setTaskStatuses(statuses)
+  }
+
+  const handleStatusNameChange = (index: number, name: string) => {
+    const updated = [...taskStatuses()]
+    updated[index] = { ...updated[index], name }
+    setTaskStatuses(updated)
+    saveStatuses(updated)
+  }
+
+  const handleStatusColorChange = (index: number, color: string) => {
+    const updated = [...taskStatuses()]
+    updated[index] = { ...updated[index], color }
+    setTaskStatuses(updated)
+    saveStatuses(updated)
+  }
+
+  const handleStatusCycleChange = (index: number, inCycle: boolean) => {
+    const updated = [...taskStatuses()]
+    updated[index] = { ...updated[index], inCycle }
+    setTaskStatuses(updated)
+    saveStatuses(updated)
+  }
+
+  const handleDeleteStatus = (index: number) => {
+    const updated = taskStatuses().filter((_, i) => i !== index)
+    setTaskStatuses(updated)
+    saveStatuses(updated)
+    if (defaultTaskStatus() === taskStatuses()[index].id && updated.length > 0)
+      handleDefaultStatusChange(updated[0].id)
+  }
+
+  const handleAddStatus = () => {
+    const id = `status-${Date.now()}`
+    const updated = [...taskStatuses(), { id, name: "", color: "#6b7280", inCycle: false }]
+    setTaskStatuses(updated)
+  }
+
+  const handleDefaultStatusChange = async (id: string) => {
+    setDefaultTaskStatus(id)
+    await settingsStore.setDefaultTaskStatus(id)
+  }
+
+  const handleDragStart = (index: number) => setDragIndex(index)
+  const handleDragEnd = () => setDragIndex(null)
+
+  const handleDragOver = (e: DragEvent, index: number) => {
+    e.preventDefault()
+    const from = dragIndex()
+    if (from === null || from === index) return
+    const updated = [...taskStatuses()]
+    const [moved] = updated.splice(from, 1)
+    updated.splice(index, 0, moved)
+    setTaskStatuses(updated)
+    setDragIndex(index)
+    saveStatuses(updated)
+  }
+
+  const handleResetStatuses = async () => {
+    if (!confirm("Reset task statuses to default? This cannot be undone.")) return
+    const statuses = [...defaultTaskStatuses]
+    setTaskStatuses(statuses)
+    setDefaultTaskStatus(defaultTaskStatusValue)
+    setStatusError("")
+    await settingsStore.setTaskStatuses(statuses)
+    await settingsStore.setDefaultTaskStatus(defaultTaskStatusValue)
+  }
+
   return (
     <div class="h-screen w-full flex flex-col overflow-hidden bg-surface text-foreground">
       <div
@@ -214,6 +317,28 @@ const SettingsWindow: Component = () => {
           </div>
 
           <div class="space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Search Match Mode</label>
+            <p class="text-[10px] text-muted-foreground">
+              Controls how multiple search terms are matched. OR: any term matches. AND: all terms
+              must match. 50%: at least half of the terms must match.
+            </p>
+            <div class="flex gap-2">
+              {thresholdOptions.map((opt) => (
+                <button
+                  class={`h-[26px] px-3 rounded border text-xs ${
+                    searchThreshold() === opt.value
+                      ? "border-ring bg-accent text-foreground"
+                      : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  }`}
+                  onClick={() => handleThresholdChange(opt.value)}
+                  title={opt.desc}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div class="space-y-1">
             <label class="text-xs font-medium text-muted-foreground">Database</label>
             <p class="text-xs text-muted-foreground truncate py-1" title={dbPath()}>
               Current DB:{" "}
@@ -242,6 +367,85 @@ const SettingsWindow: Component = () => {
                 onClick={handleImport}>
                 Import Database
               </button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Task Statuses</label>
+            <p class="text-[10px] text-muted-foreground">
+              Configure task statuses. Check "Cycle" to include in Tab cycling.
+            </p>
+            <div class="space-y-1">
+              <For each={taskStatuses()}>
+                {(status, index) => (
+                  <div
+                    class="flex items-center gap-1 h-[30px] rounded border border-border/50 bg-input px-1 transition-opacity"
+                    classList={{ "opacity-40": dragIndex() === index() }}
+                    draggable={true}
+                    onDragStart={() => handleDragStart(index())}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, index())}>
+                    <button class="cursor-grab p-0.5 text-muted-foreground hover:text-foreground">
+                      <GripVertical size={14} />
+                    </button>
+                    <input
+                      type="text"
+                      value={status.name}
+                      onInput={(e) => handleStatusNameChange(index(), e.currentTarget.value)}
+                      class="flex-1 min-w-0 h-[22px] px-1 text-xs bg-transparent border-none outline-none"
+                      placeholder="Status name"
+                    />
+                    <input
+                      type="color"
+                      value={status.color}
+                      onInput={(e) => handleStatusColorChange(index(), e.currentTarget.value)}
+                      class="w-6 h-5 p-0 border-none cursor-pointer rounded"
+                    />
+                    <label class="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={status.inCycle}
+                        onChange={(e) => handleStatusCycleChange(index(), e.currentTarget.checked)}
+                        class="w-3 h-3"
+                      />
+                      Cycle
+                    </label>
+                    <button
+                      class="p-0.5 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteStatus(index())}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </For>
+              <div class="flex gap-2">
+                <button
+                  class="flex items-center gap-1 h-[26px] px-2 rounded border border-border/50 bg-input text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  onClick={handleAddStatus}>
+                  <Plus size={14} />
+                  Add Status
+                </button>
+                <button
+                  class="flex items-center gap-1 h-[26px] px-2 rounded border border-border/50 bg-input text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  onClick={handleResetStatuses}>
+                  <RotateCcw size={14} />
+                  Reset
+                </button>
+              </div>
+              <Show when={statusError()}>
+                <p class="text-[10px] text-destructive">{statusError()}</p>
+              </Show>
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <label class="text-xs text-muted-foreground">First Status:</label>
+              <select
+                value={defaultTaskStatus()}
+                onChange={(e) => handleDefaultStatusChange(e.currentTarget.value)}
+                class="h-[22px] px-1 text-xs bg-input border border-border/50 rounded outline-none">
+                <For each={taskStatuses()}>
+                  {(status) => <option value={status.id}>{status.name || "(unnamed)"}</option>}
+                </For>
+              </select>
             </div>
           </div>
         </div>

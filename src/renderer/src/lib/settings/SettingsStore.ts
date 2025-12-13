@@ -1,5 +1,16 @@
 import { createSignal, type Accessor } from "solid-js"
-import type { Settings } from "src/preload"
+import type { Settings, TaskStatusConfig } from "src/preload"
+
+export const defaultTaskStatuses: TaskStatusConfig[] = [
+  { id: "todo", name: "TODO", color: "#ef4444", inCycle: true },
+  { id: "doing", name: "DOING", color: "#3b82f6", inCycle: true },
+  { id: "waiting", name: "WAITING", color: "#eab308", inCycle: false },
+  { id: "someday", name: "SOMEDAY", color: "#8b5cf6", inCycle: false },
+  { id: "done", name: "DONE", color: "#22c55e", inCycle: true },
+  { id: "cancelled", name: "CANCELLED", color: "#6b7280", inCycle: false }
+]
+
+export const defaultTaskStatus = "todo"
 
 const defaultSettings: Settings = {
   theme: "dark",
@@ -12,7 +23,10 @@ const defaultSettings: Settings = {
   autoSave: true,
   timestampFormat: "MM-dd HH:mm",
   autoLayout: true,
-  preferredLayout: "horizontal"
+  preferredLayout: "horizontal",
+  searchMatchThreshold: 1,
+  taskStatuses: defaultTaskStatuses,
+  defaultTaskStatus: "todo"
 }
 
 class SettingsStore {
@@ -55,6 +69,9 @@ class SettingsStore {
   getTimestampFormat = () => this._settings().timestampFormat
   getAutoLayout = () => this._settings().autoLayout
   getPreferredLayout = () => this._settings().preferredLayout
+  getSearchMatchThreshold = () => this._settings().searchMatchThreshold
+  getTaskStatuses = () => this._settings().taskStatuses
+  getDefaultTaskStatus = () => this._settings().defaultTaskStatus
 
   async setTheme(theme: Settings["theme"]) {
     const updated = await window.api.settings.set({ theme })
@@ -103,6 +120,21 @@ class SettingsStore {
 
   async setPreferredLayout(preferredLayout: Settings["preferredLayout"]) {
     const updated = await window.api.settings.set({ preferredLayout })
+    this.setSettings(updated)
+  }
+
+  async setSearchMatchThreshold(searchMatchThreshold: number) {
+    const updated = await window.api.settings.set({ searchMatchThreshold })
+    this.setSettings(updated)
+  }
+
+  async setTaskStatuses(taskStatuses: TaskStatusConfig[]) {
+    const updated = await window.api.settings.set({ taskStatuses })
+    this.setSettings(updated)
+  }
+
+  async setDefaultTaskStatus(defaultTaskStatus: string) {
+    const updated = await window.api.settings.set({ defaultTaskStatus })
     this.setSettings(updated)
   }
 
