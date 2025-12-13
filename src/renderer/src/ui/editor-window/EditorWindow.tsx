@@ -1,6 +1,8 @@
 import { Component, createSignal, onMount, Show, onCleanup } from "solid-js"
 import { Pin } from "lucide-solid"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
+import { settingsStore } from "@renderer/lib/settings/SettingsStore"
+import { useTheme } from "@renderer/ui/main-window/hooks/useTheme"
 import type { EditorContext } from "@renderer/lib/editor/EditorContext"
 import type { Card } from "@renderer/lib/common/types/card"
 
@@ -12,7 +14,11 @@ const EditorWindow: Component = () => {
   const titleCache = new Map<string, string>()
   let lastUpdateSource: string | undefined
 
+  useTheme()
+
   onMount(async () => {
+    await settingsStore.init()
+
     const params = new URLSearchParams(window.location.search)
     const cardId = params.get("cardId") || ""
     const dbPath = params.get("dbPath") || ""
@@ -68,19 +74,19 @@ const EditorWindow: Component = () => {
   })
 
   return (
-    <div class="h-screen w-full flex flex-col bg-[#1a1b1e] select-none overflow-hidden">
+    <div class="h-screen w-full flex flex-col bg-background select-none overflow-hidden">
       <div
-        class="shrink-0 h-[34px] flex items-center justify-center bg-[#151619] relative"
+        class="shrink-0 h-[34px] flex items-center justify-center bg-surface relative"
         style={{ "-webkit-app-region": "drag" }}
       >
-        <span class="text-[13px] font-medium text-white/70 truncate px-16 max-w-full">{title()}</span>
+        <span class="text-[13px] font-medium text-foreground/70 truncate px-16 max-w-full">{title()}</span>
         <Show when={isPinned()}>
-          <Pin class="absolute right-2 w-3.5 h-3.5 text-white/70" />
+          <Pin class="absolute right-2 w-3.5 h-3.5 text-foreground/70" />
         </Show>
       </div>
 
       <div class="flex-1 overflow-auto" style={{ zoom: "0.8" }}>
-        <Show when={editorContext()} fallback={<div class="p-4 text-white/50">Loading...</div>}>
+        <Show when={editorContext()} fallback={<div class="p-4 text-muted-foreground">Loading...</div>}>
           <NoteEditor context={editorContext()!} />
         </Show>
       </div>

@@ -85,11 +85,9 @@ const CardRefPopupUI: Component<CardRefPopupProps> = (props) => {
   return (
     <Show when={showPopup()}>
       <div
-        class="fixed z-[9999] flex flex-col rounded border border-border/50 overflow-hidden text-xs"
+        class="fixed z-[9999] flex flex-col rounded border border-border/50 overflow-hidden text-xs bg-popover shadow-lg"
         style={{
           width: `${POPUP_WIDTH}px`,
-          background: "rgba(26, 27, 31, 0.98)",
-          "box-shadow": "0 4px 12px rgba(0, 0, 0, 0.3)",
           ...popupStyle()
         }}>
         <div ref={listRef} class="overflow-y-auto">

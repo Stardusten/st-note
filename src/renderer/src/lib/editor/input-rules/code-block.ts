@@ -1,5 +1,5 @@
 import { InputRule } from "prosemirror-inputrules"
-import { Transaction } from "prosemirror-state"
+import { TextSelection, Transaction } from "prosemirror-state"
 import { isBlockNode, schema } from "../schema"
 
 const LANGUAGE_ALIASES: Record<string, string> = {
@@ -37,7 +37,9 @@ export const codeBlockRule = new InputRule(
     const codeBlock = schema.nodes.code_block.create({ language })
     const newBlock = schema.nodes.block.create({ kind: "paragraph" }, codeBlock)
 
-    const tr = state.tr.replaceWith(blockPos, blockPos + blockNode.nodeSize, newBlock)
+    let tr = state.tr.replaceWith(blockPos, blockPos + blockNode.nodeSize, newBlock)
+    const codeBlockInsidePos = blockPos + 2
+    tr = tr.setSelection(TextSelection.create(tr.doc, codeBlockInsidePos))
 
     return tr
   }

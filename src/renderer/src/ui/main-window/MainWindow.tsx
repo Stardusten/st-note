@@ -32,10 +32,10 @@ const MainWindow: Component = () => {
   useMenuHandlers(focusSearchInput)
 
   onMount(async () => {
-    await settingsStore.init()
     const lastDbPath = await window.api.database.getPath()
     const dbPath = lastDbPath || (await window.api.database.getDefaultPath())
     await appStore.initWithPath(dbPath)
+    await settingsStore.init()
     focusSearchInput()
 
     const handleResize = () => setWindowWidth(window.innerWidth)

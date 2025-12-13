@@ -9,6 +9,15 @@
 .prosemirror-editor {
   font-family: var(--editor-font-family);
   font-size: var(--editor-font-size);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.prosemirror-editor .ProseMirror {
+  flex: 1;
+  padding-bottom: 40vh;
+  cursor: text;
 }
 
 /* editor selection bg */
@@ -40,19 +49,27 @@
   font-size: inherit;
   font-weight: inherit;
   margin: 0 0 1em 0;
-  padding: 0 0 .2em 0;
+  padding: 0 0 0.2em 0;
   border-bottom: 1px solid var(--color-border);
 }
 
-
-/* indent for * under paragraphs */
-.prosemirror-editor .block {
+/* 
+ * Indentations
+ */
+.prosemirror-editor .block[data-kind="paragraph"],
+.prosemirror-editor .block[data-kind="quote"] {
   position: relative;
   margin-left: 24px;
 }
 
-/* first level paragraph block */
-.prosemirror-editor > .ProseMirror > .block[data-kind="paragraph"] {
+.prosemirror-editor .block[data-kind="bullet"] {
+  position: relative;
+  margin-left: 40px;
+}
+
+/* first level paragraph & quote block */
+.prosemirror-editor > .ProseMirror > .block[data-kind="paragraph"],
+.prosemirror-editor > .ProseMirror > .block[data-kind="quote"] {
   margin-left: 0;
 }
 
@@ -66,41 +83,37 @@
   margin-left: 15px;
 }
 
-/* indent for paragraphs under ordered lists */
+/* ordered > paragraph */
 .prosemirror-editor .block[data-kind="ordered"] > .block-content > .block[data-kind="paragraph"] {
   margin-left: 3px;
 }
 
-/* indent for bullet lists under ordered lists */
+/* ordered > bullet */
 .prosemirror-editor .block[data-kind="ordered"] > .block-content > .block[data-kind="bullet"] {
   margin-left: 19px;
 }
 
-/* indent for ordered lists under ordered lists */
+/* ordered > ordered */
 .prosemirror-editor .block[data-kind="ordered"] > .block-content > .block[data-kind="ordered"] {
   margin-left: 24px;
 }
 
-/* indent for paragraphs under bullet lists */
+/* bullet > paragraph */
 .prosemirror-editor .block[data-kind="bullet"] > .block-content > .block[data-kind="paragraph"] {
   margin-left: 8px;
 }
 
-/* indent for bullet under bullet lists */
+/* bullet > bullet */
 .prosemirror-editor .block[data-kind="bullet"] > .block-content > .block[data-kind="bullet"] {
   margin-left: 24px;
 }
 
-/* indent for ordered under bullet lists */
+/* bullet > ordered */
 .prosemirror-editor .block[data-kind="bullet"] > .block-content > .block[data-kind="ordered"] {
   margin-left: 28px;
 }
 
 /* quote block */
-.prosemirror-editor .block[data-kind="quote"] {
-  margin-left: 0;
-}
-
 .prosemirror-editor .block[data-kind="quote"]:not([data-marker-hidden]) {
   border-left: 3px solid var(--color-border);
   padding-left: 12px;
@@ -113,7 +126,6 @@
 .prosemirror-editor .block[data-kind="quote"] p {
   color: var(--color-muted-foreground);
 }
-
 
 /* block collapse toggle - absolute positioned, not taking space */
 .prosemirror-editor .block-collapse-toggle {
@@ -180,11 +192,24 @@
 }
 
 /* basic paragraphs */
-.prosemirror-editor .block p {
+.prosemirror-editor .block[data-kind="paragraph"] p {
   margin: 0;
   min-height: 1.5em;
   line-height: 1.5;
-  /* padding: 0.25em 0; */
+  /* 行间距 */
+  padding: 0.2em 0;
+}
+
+/* quote 行间距 */
+.prosemirror-editor .block[data-kind="quote"] {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+/* bullet & ordered 行间距 */
+.prosemirror-editor .block[data-kind="bullet"] p,
+.prosemirror-editor .block[data-kind="ordered"] p {
+  padding: 0.1em 0;
 }
 
 /* bullet list - use native list-style */
@@ -204,6 +229,7 @@
 }
 
 .prosemirror-editor .block[data-kind="ordered"] {
+  position: relative;
   counter-increment: ol;
   margin-left: 2.8em;
 }
@@ -221,7 +247,7 @@
 .prosemirror-editor .block[data-kind="ordered"]:not([data-marker-hidden])::before {
   position: absolute;
   right: 100%;
-  top: 0.25em;
+  top: 0.15em;
   margin-right: 0.3em;
   font-variant-numeric: tabular-nums;
   content: counter(ol) ".";

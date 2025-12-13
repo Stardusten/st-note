@@ -18,11 +18,28 @@ export function useSearch() {
     let cards = appStore.getCards()
     if (q.trim()) {
       const scorer = prepareSearch(q)
-      return cards
-        .map((card) => ({ card, score: scorer(appStore.getCardText(card.id)() || "") }))
+      const results = cards
+        .map((card) => {
+          const text = appStore.getCardText(card.id)() || ""
+          const score = scorer(text)
+          return { card, text, score }
+        })
         .filter(({ score }) => score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map(({ card }) => card)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score
+          const timeA = a.card.updatedAt ? new Date(a.card.updatedAt).getTime() : 0
+          const timeB = b.card.updatedAt ? new Date(b.card.updatedAt).getTime() : 0
+          return timeB - timeA
+        })
+
+      console.log("[Search] query:", q)
+      console.log("[Search] results:", results.map(r => ({
+        title: appStore.getCardTitle(r.card.id)(),
+        score: r.score.toFixed(3),
+        textPreview: r.text.slice(0, 50)
+      })))
+
+      return results.map(({ card }) => card)
     }
     return [...cards].sort((a, b) => {
       const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0

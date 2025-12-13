@@ -3,7 +3,7 @@ import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 
 export function useTheme() {
   createEffect(() => {
-    const theme = settingsStore.getTheme()
+    const theme = settingsStore.settings().theme
     const resolved =
       theme === "system"
         ? window.matchMedia("(prefers-color-scheme: dark)").matches

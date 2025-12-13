@@ -65,6 +65,7 @@ export function updateVaultSettings(dbPath: string, partial: Partial<VaultSettin
 // ============ 全局设置（存储在 userData JSON） ============
 
 export type WindowSize = { width: number; height: number }
+export type WindowPosition = { x: number; y: number }
 
 export type GlobalSettings = {
   lastDatabase: string | null
@@ -72,6 +73,8 @@ export type GlobalSettings = {
   bringToFrontShortcut: string
   windowSizeVertical: WindowSize
   windowSizeHorizontal: WindowSize
+  windowPosition: WindowPosition | null
+  lastLayout: "vertical" | "horizontal"
 }
 
 const defaultGlobalSettings: GlobalSettings = {
@@ -79,7 +82,9 @@ const defaultGlobalSettings: GlobalSettings = {
   recentDatabases: [],
   bringToFrontShortcut: "CommandOrControl+Shift+Space",
   windowSizeVertical: { width: 400, height: 500 },
-  windowSizeHorizontal: { width: 700, height: 500 }
+  windowSizeHorizontal: { width: 700, height: 500 },
+  windowPosition: null,
+  lastLayout: "vertical"
 }
 
 function getGlobalSettingsPath(): string {

@@ -24,6 +24,8 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.isComposing || e.keyCode === 229) return
+
     if (e.key === "Escape") {
       e.preventDefault()
       if (document.activeElement === searchInputRef()) {

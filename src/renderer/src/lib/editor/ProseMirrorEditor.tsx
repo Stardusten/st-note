@@ -24,6 +24,7 @@ import { createClipboardPlugin } from "./plugins/clipboard-plugin"
 import { createImagePlugin, createImageSelectionPlugin } from "./plugins/image-plugin"
 import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
 import { createTimestampHighlightPlugin } from "./plugins/timestamp-highlight-plugin"
+import { createClickBelowPlugin } from "./plugins/click-below-plugin"
 import { findHighlightRanges } from "@renderer/lib/common/utils/highlight"
 import type { EditorContext } from "./EditorContext"
 import "./note-editor.css"
@@ -32,6 +33,7 @@ const lowlight = createLowlight(common)
 
 export type ProseMirrorEditorHandle = {
   focus: () => void
+  focusEnd: () => void
   focusFirstMatch: () => void
   focusEndOfTitle: () => void
   selectTitle: () => void
@@ -145,6 +147,13 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
 
   const handle: ProseMirrorEditorHandle = {
     focus: () => view?.focus(),
+    focusEnd: () => {
+      if (!view) return
+      view.focus()
+      const end = view.state.doc.content.size
+      const tr = view.state.tr.setSelection(Selection.near(view.state.doc.resolve(end), -1))
+      view.dispatch(tr.scrollIntoView())
+    },
     focusFirstMatch: () => {
       if (!view) return
       view.focus()
@@ -220,7 +229,8 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       createClipboardPlugin(schema),
       createImageSelectionPlugin(),
       createSearchHighlightPlugin(),
-      createTimestampHighlightPlugin()
+      createTimestampHighlightPlugin(),
+      createClickBelowPlugin()
     )
 
     plugins.push(createImagePlugin({ getDbPath: () => ctx.dbPath }))

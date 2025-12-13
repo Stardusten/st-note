@@ -115,5 +115,6 @@ export const calcMatchScore = (queryTokens: string[], target: string): number =>
 
 export const prepareSearch = (query: string) => {
   const tokens = hybridTokenize(query, { includePrefix: false, cjkNGram: 2 })
+  console.log("[prepareSearch] query:", query, "tokens:", tokens)
   return (text: string) => calcMatchScore(tokens, text)
 }

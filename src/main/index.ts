@@ -194,12 +194,16 @@ function createEditorWindow(params: EditorWindowParams): void {
 }
 
 function createWindow(): void {
+  const globalSettings = loadGlobalSettings()
+  const layout = globalSettings.lastLayout
+  const size = layout === "horizontal" ? globalSettings.windowSizeHorizontal : globalSettings.windowSizeVertical
+  const position = globalSettings.windowPosition
+
   mainWindow = new BrowserWindow({
-    // type: "panel",
-    width: 400,
-    height: 500,
+    width: size.width,
+    height: size.height,
+    ...(position ? { x: position.x, y: position.y } : {}),
     show: false,
-    // autoHideMenuBar: false,
     titleBarStyle: "hidden",
     ...(process.platform === "darwin"
       ? { trafficLightPosition: { x: 12, y: Math.round(34 / 2 - 8) } }
@@ -504,7 +508,13 @@ app.whenReady().then(() => {
     const layout = getCurrentEffectiveLayout()
     const [width, height] = mainWindow.getSize()
     const key = layout === "horizontal" ? "windowSizeHorizontal" : "windowSizeVertical"
-    updateGlobalSettings({ [key]: { width, height } })
+    updateGlobalSettings({ [key]: { width, height }, lastLayout: layout })
+  }
+
+  const saveCurrentWindowPosition = () => {
+    if (!mainWindow) return
+    const [x, y] = mainWindow.getPosition()
+    updateGlobalSettings({ windowPosition: { x, y } })
   }
 
   const setLayout = (layout: LayoutType) => {
@@ -658,6 +668,11 @@ app.whenReady().then(() => {
   // Track window resize to save size per layout
   mainWindow?.on("resize", () => {
     saveCurrentWindowSize()
+  })
+
+  // Track window move to save position
+  mainWindow?.on("move", () => {
+    saveCurrentWindowPosition()
   })
 
   app.on("activate", function () {

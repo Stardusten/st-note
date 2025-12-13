@@ -16,13 +16,13 @@ const defaultSettings: Settings = {
 }
 
 class SettingsStore {
-  private settings: Accessor<Settings>
+  private _settings: Accessor<Settings>
   private setSettings: (s: Settings) => void
   private initialized = false
 
   constructor() {
     const [settings, setSettings] = createSignal<Settings>(defaultSettings)
-    this.settings = settings
+    this._settings = settings
     this.setSettings = setSettings
   }
 
@@ -38,18 +38,23 @@ class SettingsStore {
     })
   }
 
-  getSettings = () => this.settings()
-  getTheme = () => this.settings().theme
-  getFontSize = () => this.settings().fontSize
-  getShowLineNumbers = () => this.settings().showLineNumbers
-  getSpellCheck = () => this.settings().spellCheck
-  getQuickCaptureShortcut = () => this.settings().quickCaptureShortcut
-  getSearchShortcut = () => this.settings().searchShortcut
-  getLanguage = () => this.settings().language
-  getAutoSave = () => this.settings().autoSave
-  getTimestampFormat = () => this.settings().timestampFormat
-  getAutoLayout = () => this.settings().autoLayout
-  getPreferredLayout = () => this.settings().preferredLayout
+  // Expose the accessor directly for reactive use in effects
+  get settings(): Accessor<Settings> {
+    return this._settings
+  }
+
+  getSettings = (): Settings => this._settings()
+  getTheme = (): Settings["theme"] => this._settings().theme
+  getFontSize = () => this._settings().fontSize
+  getShowLineNumbers = () => this._settings().showLineNumbers
+  getSpellCheck = () => this._settings().spellCheck
+  getQuickCaptureShortcut = () => this._settings().quickCaptureShortcut
+  getSearchShortcut = () => this._settings().searchShortcut
+  getLanguage = () => this._settings().language
+  getAutoSave = () => this._settings().autoSave
+  getTimestampFormat = () => this._settings().timestampFormat
+  getAutoLayout = () => this._settings().autoLayout
+  getPreferredLayout = () => this._settings().preferredLayout
 
   async setTheme(theme: Settings["theme"]) {
     const updated = await window.api.settings.set({ theme })

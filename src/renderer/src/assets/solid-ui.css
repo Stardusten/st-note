@@ -75,11 +75,12 @@
   --border: oklch(0.7 0 0);
   --titlebar: oklch(0.88 0 0);
   --surface: oklch(0.98 0 0);
-  --input: oklch(0.94 0 0);
+  --input: oklch(0.96 0 0);
   --ring: oklch(0.5399 0.1906 257.48);
   --highlight: oklch(0.85 0.15 85 / 40%);
   --list-active: oklch(0.5399 0.1906 257.48 / 30%);
   --list-active-muted: oklch(0.5 0 0 / 15%);
+  --scrollbar: oklch(0.75 0 0);
 
   --editor-font-family: Inter, sans-serif;
   --code-font-family: Menlo, -apple-system;
@@ -119,6 +120,7 @@ html[data-kb-theme="dark"] {
   --highlight: oklch(0.85 0.15 85 / 40%);
   --list-active: oklch(0.6 0.18 255 / 30%);
   --list-active-muted: oklch(0.5 0 0 / 20%);
+  --scrollbar: oklch(0.35 0 0);
 }
 
 @layer base {
@@ -149,7 +151,7 @@ html[data-kb-theme="dark"] {
 
 ::-webkit-scrollbar-thumb {
   border-radius: 6px;
-  background-color: var(--color-muted);
+  background-color: var(--scrollbar);
 }
 
 ::-webkit-scrollbar-corner {

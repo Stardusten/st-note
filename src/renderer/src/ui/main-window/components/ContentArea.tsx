@@ -26,8 +26,10 @@ const ContentArea: Component<ContentAreaProps> = (props) => {
       onFocus: props.onFocus,
       onBlur: props.onBlur,
       onDocChange: props.onDocChange,
-      get searchQuery() { return props.highlightQuery() },
-      class: "w-full h-full px-4 pt-2"
+      get searchQuery() {
+        return props.highlightQuery()
+      },
+      class: "w-full h-full p-4"
     }
   })
 
