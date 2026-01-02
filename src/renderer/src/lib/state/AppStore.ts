@@ -293,6 +293,42 @@ class AppStore {
     await this.loadCards()
   }
 
+  async updateCardSchedule(id: StObjectId, schedule: string | undefined) {
+    await this.objCache.withTx((tx) => {
+      const card = this.cards().find((c) => c.id === id)
+      if (!card) return
+
+      tx.update(id, {
+        id,
+        type: "card",
+        data: {
+          ...card.data,
+          schedule
+        }
+      })
+    })
+
+    await this.loadCards()
+  }
+
+  async updateCardDeadline(id: StObjectId, deadline: string | undefined) {
+    await this.objCache.withTx((tx) => {
+      const card = this.cards().find((c) => c.id === id)
+      if (!card) return
+
+      tx.update(id, {
+        id,
+        type: "card",
+        data: {
+          ...card.data,
+          deadline
+        }
+      })
+    })
+
+    await this.loadCards()
+  }
+
   async cycleTaskStatusForward(cardId: StObjectId) {
     const card = this.cards().find((c) => c.id === cardId)
     if (!card) return

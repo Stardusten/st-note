@@ -8,8 +8,8 @@ export type Card = StObject & {
 
     // Task related (optional)
     status?: string
-    schedule?: Date
-    deadline?: Date
+    schedule?: string  // ISO date string
+    deadline?: string  // ISO date string
 
     // Display properties (placeholder for now)
     coverImage?: string

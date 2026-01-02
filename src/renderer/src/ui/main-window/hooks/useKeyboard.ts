@@ -3,10 +3,12 @@ import { appStore } from "@renderer/lib/state/AppStore"
 import type { NoteEditorHandle } from "@renderer/lib/editor/NoteEditor"
 import type { SearchState } from "./useSearch"
 import type { NavigationState } from "./useNavigation"
+import type { AgendaState } from "./useAgenda"
 
 export type KeyboardHandlerDeps = {
   search: SearchState
   nav: NavigationState
+  agenda: AgendaState
   searchInputRef: () => HTMLInputElement | undefined
   editorRef: () => NoteEditorHandle | undefined
   onCreateNote: (title: string) => Promise<void>
@@ -14,7 +16,7 @@ export type KeyboardHandlerDeps = {
 }
 
 export function useKeyboard(deps: KeyboardHandlerDeps) {
-  const { search, nav, searchInputRef, editorRef, onCreateNote, onOpenInNewWindow } = deps
+  const { search, nav, agenda, searchInputRef, editorRef, onCreateNote, onOpenInNewWindow } = deps
 
   const isEditorFocused = () => document.activeElement?.closest(".prosemirror-editor") !== null
 
@@ -35,6 +37,13 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
         searchInputRef()?.select()
         nav.blurList()
       }
+      return
+    }
+
+    // Cmd+Shift+A: toggle agenda mode
+    if (e.key === "a" && e.metaKey && e.shiftKey) {
+      e.preventDefault()
+      agenda.toggleAgendaMode()
       return
     }
 
