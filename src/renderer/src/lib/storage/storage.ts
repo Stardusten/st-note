@@ -5,7 +5,7 @@ import {
   StObjectRaw,
   UpdateParamsRaw
 } from "src/preload"
-import { CreateParams, QueryOptions, StObject, UpdateParams } from "../common/types"
+import { CreateParams, QueryOptions, StObject, UpdateParams } from "../common/storage-types"
 
 export type Storage = {
   init: (path: string) => Promise<void>

@@ -1,6 +1,6 @@
 import { StObjectId } from "src/preload"
 import type { Storage } from "./storage"
-import { CreateParams, QueryOptions, StObject, UpdateParams } from "../common/types"
+import { CreateParams, QueryOptions, StObject, UpdateParams } from "../common/storage-types"
 
 export class MockStorage implements Storage {
   private items: Map<StObjectId, StObject> = new Map()

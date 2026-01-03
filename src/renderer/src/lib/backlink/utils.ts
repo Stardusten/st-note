@@ -1,4 +1,4 @@
-import type { StObjectId } from "@renderer/lib/common/types"
+import type { StObjectId } from "@renderer/lib/common/storage-types"
 import type { BlockContext } from "./types"
 
 export function extractCardRefs(content: any): StObjectId[] {

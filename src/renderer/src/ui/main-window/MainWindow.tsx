@@ -11,7 +11,6 @@ import { useNavigation } from "./hooks/useNavigation"
 import { useTheme } from "./hooks/useTheme"
 import { useMenuHandlers } from "./hooks/useMenuHandlers"
 import { useKeyboard } from "./hooks/useKeyboard"
-import { useAgenda } from "./hooks/useAgenda"
 
 const HORIZONTAL_BREAKPOINT = 600
 
@@ -22,9 +21,7 @@ const MainWindow: Component = () => {
   const [windowWidth, setWindowWidth] = createSignal(window.innerWidth)
 
   const search = useSearch()
-  const agenda = useAgenda(search.filteredCards)
-  const displayCards = createMemo(() => agenda.isAgendaMode() ? agenda.agendaCards() : search.filteredCards())
-  const nav = useNavigation(displayCards)
+  const nav = useNavigation(search.filteredCards)
 
   const focusSearchInput = () => {
     searchInputRef?.focus()
@@ -117,7 +114,6 @@ const MainWindow: Component = () => {
   useKeyboard({
     search,
     nav,
-    agenda,
     searchInputRef: () => searchInputRef,
     editorRef: () => editorRef,
     onCreateNote: handleCreateNote,
@@ -130,22 +126,19 @@ const MainWindow: Component = () => {
       <SearchInput
         ref={searchInputRef}
         value={search.query()}
-        isAgendaMode={agenda.isAgendaMode()}
         onInput={search.updateQuery}
         onCompositionEnd={search.commitComposition}
         onFocus={nav.blurList}
-        onToggleAgenda={agenda.toggleAgendaMode}
       />
       {effectiveLayout() === "vertical" ? (
         <>
           <NoteList
             query={search.query()}
             highlightQuery={search.highlightQuery()}
-            cards={displayCards()}
+            cards={search.filteredCards()}
             focusedIndex={nav.focusedIndex()}
             listHasFocus={nav.listHasFocus()}
             compact={true}
-            agendaGroups={agenda.isAgendaMode() ? agenda.agendaGroups() : undefined}
             onFocusIndex={nav.setFocusedIndex}
             onFocusList={nav.focusList}
             onCreateNote={handleCreateNote}
@@ -159,8 +152,6 @@ const MainWindow: Component = () => {
             isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
             editorRef={(r) => { editorRef = r }}
             highlightQuery={search.highlightQuery}
-            onFocus={search.pause}
-            onBlur={search.resume}
             onDocChange={search.hideHighlight}
           />
         </>
@@ -170,11 +161,10 @@ const MainWindow: Component = () => {
             <NoteList
               query={search.query()}
               highlightQuery={search.highlightQuery()}
-              cards={displayCards()}
+              cards={search.filteredCards()}
               focusedIndex={nav.focusedIndex()}
               listHasFocus={nav.listHasFocus()}
               compact={false}
-              agendaGroups={agenda.isAgendaMode() ? agenda.agendaGroups() : undefined}
               onFocusIndex={nav.setFocusedIndex}
               onFocusList={nav.focusList}
               onCreateNote={handleCreateNote}
@@ -188,8 +178,6 @@ const MainWindow: Component = () => {
             isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
             editorRef={(r) => { editorRef = r }}
             highlightQuery={search.highlightQuery}
-            onFocus={search.pause}
-            onBlur={search.resume}
             onDocChange={search.hideHighlight}
           />
         </div>

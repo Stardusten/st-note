@@ -1,5 +1,5 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
-import type { StObjectId } from "@renderer/lib/common/types"
+import type { StObjectId } from "@renderer/lib/common/storage-types"
 import type { ObjCache, ObjCacheEvent } from "../objcache/objcache"
 import type { Card } from "../common/types/card"
 import { extractCardRefs } from "../backlink/utils"

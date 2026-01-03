@@ -1,5 +1,5 @@
 import { createParamsToRaw, stObjectFromRaw, updateParamsToRaw, type Storage } from "./storage"
-import { CreateParams, StObject, UpdateParams } from "../common/types"
+import { CreateParams, StObject, UpdateParams } from "../common/storage-types"
 import { StObjectId } from "src/preload"
 
 export class SQLiteStorage implements Storage {

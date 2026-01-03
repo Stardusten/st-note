@@ -2,41 +2,10 @@ import { app } from "electron"
 import { join } from "path"
 import { readFileSync, writeFileSync, existsSync } from "fs"
 import { getAllSettings, setSetting } from "./storage"
+import type { Settings, GlobalSettings, WindowSize, WindowPosition } from "../preload"
 
-// ============ 知识库设置（存储在 SQLite） ============
-
-export type TaskStatusConfig = {
-  id: string
-  name: string
-  color: string
-  inCycle: boolean
-}
-
-export type VaultSettings = {
-  theme: "light" | "dark" | "system"
-  fontSize: "small" | "medium" | "large"
-  showLineNumbers: boolean
-  spellCheck: boolean
-  quickCaptureShortcut: string
-  searchShortcut: string
-  language: "zh-CN" | "en-US"
-  autoSave: boolean
-  timestampFormat: string
-  autoLayout: boolean
-  preferredLayout: "vertical" | "horizontal"
-  searchMatchThreshold: number
-  taskStatuses: TaskStatusConfig[]
-  defaultTaskStatus: string
-}
-
-const defaultTaskStatuses: TaskStatusConfig[] = [
-  { id: "todo", name: "TODO", color: "#ef4444", inCycle: true },
-  { id: "doing", name: "DOING", color: "#3b82f6", inCycle: true },
-  { id: "waiting", name: "WAITING", color: "#eab308", inCycle: false },
-  { id: "someday", name: "SOMEDAY", color: "#8b5cf6", inCycle: false },
-  { id: "done", name: "DONE", color: "#22c55e", inCycle: true },
-  { id: "cancelled", name: "CANCELLED", color: "#6b7280", inCycle: false }
-]
+export type { Settings, GlobalSettings, WindowSize, WindowPosition }
+export type VaultSettings = Settings
 
 export const defaultVaultSettings: VaultSettings = {
   theme: "dark",
@@ -50,9 +19,7 @@ export const defaultVaultSettings: VaultSettings = {
   timestampFormat: "MM-dd HH:mm",
   autoLayout: true,
   preferredLayout: "horizontal",
-  searchMatchThreshold: 1,
-  taskStatuses: defaultTaskStatuses,
-  defaultTaskStatus: "todo"
+  searchMatchThreshold: 1
 }
 
 export function loadVaultSettings(dbPath: string): VaultSettings {
@@ -93,21 +60,6 @@ export function updateVaultSettings(dbPath: string, partial: Partial<VaultSettin
   const updated = { ...current, ...partial }
   saveVaultSettings(dbPath, updated)
   return updated
-}
-
-// ============ 全局设置（存储在 userData JSON） ============
-
-export type WindowSize = { width: number; height: number }
-export type WindowPosition = { x: number; y: number }
-
-export type GlobalSettings = {
-  lastDatabase: string | null
-  recentDatabases: string[]
-  bringToFrontShortcut: string
-  windowSizeVertical: WindowSize
-  windowSizeHorizontal: WindowSize
-  windowPosition: WindowPosition | null
-  lastLayout: "vertical" | "horizontal"
 }
 
 const defaultGlobalSettings: GlobalSettings = {
@@ -159,9 +111,7 @@ export function addRecentDatabase(dbPath: string): GlobalSettings {
   return updated
 }
 
-// ============ 兼容旧版：迁移旧设置 ============
-
-export type Settings = VaultSettings
+// ============ Migration from old settings ============
 
 export const defaultSettings = defaultVaultSettings
 

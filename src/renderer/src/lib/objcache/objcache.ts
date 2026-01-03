@@ -1,6 +1,6 @@
 import { AsyncTaskQueue } from "@renderer/lib/common/taskQueue"
 import { Accessor, createRoot, createSignal, Signal } from "solid-js"
-import { CreateParams, StObject, UpdateParams } from "../common/types"
+import { CreateParams, StObject, UpdateParams } from "../common/storage-types"
 import { StObjectId } from "src/preload"
 import type { Storage } from "../storage/storage"
 

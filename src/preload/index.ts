@@ -36,13 +36,6 @@ export type StorageAPI = {
   deleteSetting: (path: string, key: string) => Promise<void>
 }
 
-export type TaskStatusConfig = {
-  id: string
-  name: string
-  color: string
-  inCycle: boolean
-}
-
 export type Settings = {
   theme: "light" | "dark" | "system"
   fontSize: "small" | "medium" | "large"
@@ -56,8 +49,6 @@ export type Settings = {
   autoLayout: boolean
   preferredLayout: "vertical" | "horizontal"
   searchMatchThreshold: number
-  taskStatuses: TaskStatusConfig[]
-  defaultTaskStatus: string
 }
 
 export type SettingsAPI = {
@@ -69,6 +60,7 @@ export type SettingsAPI = {
 }
 
 export type WindowSize = { width: number; height: number }
+export type WindowPosition = { x: number; y: number }
 
 export type GlobalSettings = {
   lastDatabase: string | null
@@ -76,6 +68,8 @@ export type GlobalSettings = {
   bringToFrontShortcut: string
   windowSizeVertical: WindowSize
   windowSizeHorizontal: WindowSize
+  windowPosition: WindowPosition | null
+  lastLayout: "vertical" | "horizontal"
 }
 
 export type GlobalSettingsAPI = {
@@ -155,12 +149,6 @@ export type ContextMenuItem = {
 
 export type ContextMenuAPI = {
   show: (items: ContextMenuItem[]) => Promise<string | null>
-}
-
-export type LayoutType = "vertical" | "horizontal"
-
-export type LayoutAPI = {
-  set: (layout: LayoutType) => Promise<void>
 }
 
 export type CardSuggestionItem = {
@@ -252,9 +240,6 @@ const api = {
   contextMenu: {
     show: (items) => ipcRenderer.invoke("contextMenu:show", items)
   } satisfies ContextMenuAPI,
-  layout: {
-    set: (layout) => ipcRenderer.invoke("layout:set", layout)
-  } satisfies LayoutAPI,
   editorWindow: (() => {
     let handlers: {
       getCard?: (dbPath: string, cardId: string) => any | null

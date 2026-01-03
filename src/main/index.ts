@@ -267,7 +267,6 @@ app.whenReady().then(() => {
   })
 
   // IPC methods
-  ipcMain.on("ping", () => console.log("pong"))
   ipcMain.handle("storage:init", (_e, path: string) => {
     initStorage(path)
     migrateOldSettingsToVault(path)
@@ -567,8 +566,6 @@ app.whenReady().then(() => {
     })
     rebuildMenu(updated)
   }
-
-  ipcMain.handle("layout:set", (_e, layout: LayoutType) => setLayout(layout))
 
   const togglePinWindow = () => {
     const win = BrowserWindow.getFocusedWindow()

@@ -1,13 +1,13 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
 import { ObjCache, type ObjCacheEvent } from "../objcache/objcache"
 import { SQLiteStorage } from "../storage/sqlite"
-import { type Card, nextCycleStatus, prevCycleStatus } from "../common/types/card"
-import type { StObjectId } from "../common/types"
+import type { Card } from "../common/types/card"
+import type { StObjectId } from "../common/storage-types"
 import { prepareSearch } from "../common/utils/search"
 import { BacklinkIndex } from "../backlink/BacklinkIndex"
 import { TextContentCache } from "../textcontent/TextContentCache"
+import { TaskIndex } from "../task/TaskIndex"
 import type { EditorContext } from "../editor/EditorContext"
-import { settingsStore } from "../settings/SettingsStore"
 
 type CardSuggestion = {
   id: string
@@ -19,8 +19,8 @@ class AppStore {
   private storage: SQLiteStorage
   private backlinkIndex: BacklinkIndex
   private textContentCache: TextContentCache
+  private taskIndex: TaskIndex
 
-  // Signals for reactive state
   private currentCardId: Accessor<StObjectId | null>
   private setCurrentCardId: Setter<StObjectId | null>
 
@@ -36,7 +36,6 @@ class AppStore {
   private recentCardIds: Accessor<string[]>
   private setRecentCardIds: Setter<string[]>
 
-  // Navigation history
   private navHistory: Accessor<(StObjectId | null)[]>
   private setNavHistory: Setter<(StObjectId | null)[]>
   private navIndex: Accessor<number>
@@ -46,11 +45,9 @@ class AppStore {
   private pinnedCardIds: Accessor<string[]>
   private setPinnedCardIds: Setter<string[]>
 
-  // Track last update source for each card (non-reactive, only for checking)
   private lastUpdateSources: Map<StObjectId, string | undefined> = new Map()
 
   constructor() {
-    // Initialize signals
     const [currentCardId, setCurrentCardId] = createSignal<StObjectId | null>(null)
     this.currentCardId = currentCardId
     this.setCurrentCardId = setCurrentCardId
@@ -63,9 +60,7 @@ class AppStore {
     this.searchQuery = searchQuery
     this.setSearchQuery = setSearchQuery
 
-    const [searchResults, setSearchResults] = createSignal<Array<Card & { searchScore?: number }>>(
-      []
-    )
+    const [searchResults, setSearchResults] = createSignal<Array<Card & { searchScore?: number }>>([])
     this.searchResults = searchResults
     this.setSearchResults = setSearchResults
 
@@ -77,7 +72,6 @@ class AppStore {
     this.pinnedCardIds = pinnedCardIds
     this.setPinnedCardIds = setPinnedCardIds
 
-    // Initialize navigation history
     const [navHistory, setNavHistory] = createSignal<(StObjectId | null)[]>([null])
     this.navHistory = navHistory
     this.setNavHistory = setNavHistory
@@ -86,11 +80,11 @@ class AppStore {
     this.navIndex = navIndex
     this.setNavIndex = setNavIndex
 
-    // Initialize storage and cache
     this.storage = new SQLiteStorage()
     this.objCache = new ObjCache()
     this.backlinkIndex = new BacklinkIndex()
     this.textContentCache = new TextContentCache()
+    this.taskIndex = new TaskIndex()
   }
 
   async init(dbPath: string = "notes.db") {
@@ -98,6 +92,7 @@ class AppStore {
     await this.objCache.init(this.storage)
     await this.backlinkIndex.init(this.objCache)
     await this.textContentCache.init(this.objCache)
+    await this.taskIndex.init(this.objCache)
     await this.loadCards()
     await this.loadPinnedCards()
     await this.loadLastOpenedCard()
@@ -112,6 +107,7 @@ class AppStore {
   }
 
   async close() {
+    this.taskIndex.dispose()
     this.backlinkIndex.dispose()
     this.textContentCache.dispose()
     this.objCache.dispose()
@@ -132,9 +128,7 @@ class AppStore {
       const pinnedStr = await this.storage.getSetting("pinned_cards")
       if (pinnedStr) {
         const pinned = JSON.parse(pinnedStr)
-        if (Array.isArray(pinned)) {
-          this.setPinnedCardIds(pinned)
-        }
+        if (Array.isArray(pinned)) this.setPinnedCardIds(pinned)
       }
     } catch (error) {
       console.error("Failed to load pinned cards", error)
@@ -154,7 +148,6 @@ class AppStore {
     }
   }
 
-  // Getters for components
   getCurrentCardId = () => this.currentCardId()
   getCurrentCard = (): Card | null => {
     const id = this.currentCardId()
@@ -195,24 +188,18 @@ class AppStore {
 
   isPinned = (id: string) => this.pinnedCardIds().includes(id)
 
-  // Card operations
   async createCard(initialText?: string): Promise<Card> {
     return this.createCardInternal(initialText, undefined, true)
   }
 
-  async createCardWithoutSelect(
-    initialText?: string,
-    initialContent?: any,
-    status?: string
-  ): Promise<Card> {
-    return this.createCardInternal(initialText, initialContent, false, status)
+  async createCardWithoutSelect(initialText?: string, initialContent?: any): Promise<Card> {
+    return this.createCardInternal(initialText, initialContent, false)
   }
 
   private async createCardInternal(
     initialText?: string,
     initialContent?: any,
-    selectAfterCreate = true,
-    status?: string
+    selectAfterCreate = true
   ): Promise<Card> {
     const newId = crypto.randomUUID()
     const content = initialContent || {
@@ -229,10 +216,7 @@ class AppStore {
     const card = {
       id: newId,
       type: "card" as const,
-      data: {
-        content,
-        status
-      }
+      data: { content }
     }
 
     await this.objCache.withTx((tx) => {
@@ -240,14 +224,10 @@ class AppStore {
     })
 
     await this.loadCards()
-    if (selectAfterCreate) {
-      this.setCurrentCardId(newId)
-    }
+    if (selectAfterCreate) this.setCurrentCardId(newId)
 
     const createdCard = this.cards().find((c) => c.id === newId)
-    if (createdCard) {
-      return createdCard
-    }
+    if (createdCard) return createdCard
     throw new Error("Failed to create card")
   }
 
@@ -261,13 +241,9 @@ class AppStore {
       tx.update(id, {
         id,
         type: "card",
-        data: {
-          ...card.data,
-          content
-        }
+        data: { ...card.data, content }
       })
     })
-
     await this.loadCards()
   }
 
@@ -275,120 +251,15 @@ class AppStore {
     return this.lastUpdateSources.get(id)
   }
 
-  async updateCardStatus(id: StObjectId, status: string | undefined) {
-    await this.objCache.withTx((tx) => {
-      const card = this.cards().find((c) => c.id === id)
-      if (!card) return
-
-      tx.update(id, {
-        id,
-        type: "card",
-        data: {
-          ...card.data,
-          status
-        }
-      })
-    })
-
-    await this.loadCards()
-  }
-
-  async updateCardSchedule(id: StObjectId, schedule: string | undefined) {
-    await this.objCache.withTx((tx) => {
-      const card = this.cards().find((c) => c.id === id)
-      if (!card) return
-
-      tx.update(id, {
-        id,
-        type: "card",
-        data: {
-          ...card.data,
-          schedule
-        }
-      })
-    })
-
-    await this.loadCards()
-  }
-
-  async updateCardDeadline(id: StObjectId, deadline: string | undefined) {
-    await this.objCache.withTx((tx) => {
-      const card = this.cards().find((c) => c.id === id)
-      if (!card) return
-
-      tx.update(id, {
-        id,
-        type: "card",
-        data: {
-          ...card.data,
-          deadline
-        }
-      })
-    })
-
-    await this.loadCards()
-  }
-
-  async cycleTaskStatusForward(cardId: StObjectId) {
-    const card = this.cards().find((c) => c.id === cardId)
-    if (!card) return
-
-    const statuses = settingsStore.getTaskStatuses()
-    const newStatus = nextCycleStatus(card.data.status, statuses)
-
-    await this.objCache.withTx((tx) => {
-      tx.update(card.id, {
-        id: card.id,
-        type: "card",
-        data: {
-          ...card.data,
-          status: newStatus
-        }
-      })
-    })
-
-    await this.loadCards()
-  }
-
-  async cycleTaskStatusBackward(cardId: StObjectId) {
-    const card = this.cards().find((c) => c.id === cardId)
-    if (!card) return
-
-    const statuses = settingsStore.getTaskStatuses()
-    const newStatus = prevCycleStatus(card.data.status, statuses)
-
-    await this.objCache.withTx((tx) => {
-      tx.update(card.id, {
-        id: card.id,
-        type: "card",
-        data: {
-          ...card.data,
-          status: newStatus
-        }
-      })
-    })
-
-    await this.loadCards()
-  }
-
-  getCardStatus(cardId: StObjectId): string | undefined {
-    const card = this.cards().find((c) => c.id === cardId)
-    return card?.data.status
-  }
-
   async deleteCard(id: StObjectId) {
     await this.objCache.withTx((tx) => {
       tx.delete(id)
     })
 
-    if (this.currentCardId() === id) {
-      this.setCurrentCardId(null)
-    }
-
+    if (this.currentCardId() === id) this.setCurrentCardId(null)
     await this.loadCards()
   }
 
-  // Navigation
   selectCard(id: StObjectId | null) {
     const currentId = this.currentCardId()
     if (id === currentId) return
@@ -433,7 +304,6 @@ class AppStore {
     this.isNavigating = false
   }
 
-  // Search
   performSearch(query: string) {
     this.setSearchQuery(query)
 
@@ -460,7 +330,6 @@ class AppStore {
     this.setSearchResults([])
   }
 
-  // Text content
   getCardTitle = (cardId: StObjectId) => this.textContentCache.getTitle(cardId)
   getCardText = (cardId: StObjectId) => this.textContentCache.getText(cardId)
 
@@ -491,7 +360,6 @@ class AppStore {
     }))
   }
 
-  // Backlinks
   getBacklinks(cardId: StObjectId) {
     return this.backlinkIndex.getBacklinks(cardId)
   }
@@ -526,7 +394,22 @@ class AppStore {
       onCardClick: (id) => this.selectCard(id)
     }
   }
+
+  getTasksForCard(cardId: StObjectId) {
+    return this.taskIndex.getTasksForCard(cardId)
+  }
+
+  getTasksInRange(start: Date, end: Date) {
+    return this.taskIndex.getTasksInRange(start, end)
+  }
+
+  getAllTasks() {
+    return this.taskIndex.getAllTasks()
+  }
+
+  getGroupedTasks() {
+    return this.taskIndex.getGroupedTasks()
+  }
 }
 
-// Global singleton instance
 export const appStore = new AppStore()

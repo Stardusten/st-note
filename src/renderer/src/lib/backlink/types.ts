@@ -1,4 +1,4 @@
-import type { StObjectId } from "@renderer/lib/common/types"
+import type { StObjectId } from "@renderer/lib/common/storage-types"
 
 export type BlockContext = {
   nodeIndex: number

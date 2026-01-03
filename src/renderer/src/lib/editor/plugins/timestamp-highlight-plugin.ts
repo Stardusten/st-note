@@ -1,60 +1,27 @@
 import { Plugin, PluginKey } from "prosemirror-state"
 import { Decoration, DecorationSet } from "prosemirror-view"
 import { settingsStore } from "../../settings/SettingsStore"
+import { createTaskRegex, createTimestampOnlyRegex } from "../../task/parser"
 
 export const timestampHighlightPluginKey = new PluginKey("timestampHighlight")
 
-function formatToRegex(fmt: string): RegExp {
-  const tokens: [string, string][] = [
-    ["yyyy", "\\d{4}"],
-    ["yy", "\\d{2}"],
-    ["MMMM", "[A-Za-z]+"],
-    ["MMM", "[A-Za-z]{3}"],
-    ["MM", "\\d{2}"],
-    ["M", "\\d{1,2}"],
-    ["dddd", "[A-Za-z]+"],
-    ["ddd", "[A-Za-z]{3}"],
-    ["dd", "\\d{2}"],
-    ["d", "\\d{1,2}"],
-    ["HH", "\\d{2}"],
-    ["H", "\\d{1,2}"],
-    ["hh", "\\d{2}"],
-    ["h", "\\d{1,2}"],
-    ["mm", "\\d{2}"],
-    ["m", "\\d{1,2}"],
-    ["ss", "\\d{2}"],
-    ["s", "\\d{1,2}"],
-    ["SSS", "\\d{3}"],
-    ["SS", "\\d{2}"],
-    ["S", "\\d{1}"],
-    ["a", "[AaPp][Mm]"],
-    ["EEEE", "[A-Za-z]+"],
-    ["EEE", "[A-Za-z]{3}"],
-    ["EE", "[A-Za-z]{2}"]
-  ]
+const TASK_TYPE_CLASSES: Record<string, string> = {
+  "+": "task-reminder",
+  "!": "task-deadline",
+  "@": "task-scheduled",
+  "-": "task-done",
+  ".": "task-memo"
+}
 
-  const placeholders: Map<string, string> = new Map()
-  let pattern = fmt
-
-  for (let i = 0; i < tokens.length; i++) {
-    const [token, replacement] = tokens[i]
-    const placeholder = `\x00${i}\x00`
-    placeholders.set(placeholder, replacement)
-    pattern = pattern.split(token).join(placeholder)
-  }
-
-  pattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
-  for (const [placeholder, replacement] of placeholders) {
-    pattern = pattern.split(placeholder).join(replacement)
-  }
-
-  return new RegExp(pattern, "g")
+function getTaskClass(suffix: string): string {
+  if (suffix.startsWith("+")) return TASK_TYPE_CLASSES["+"]
+  return TASK_TYPE_CLASSES[suffix] || "task-memo"
 }
 
 export function createTimestampHighlightPlugin(): Plugin {
   let cachedFormat = ""
-  let cachedRegex: RegExp | null = null
+  let cachedTaskRegex: RegExp | null = null
+  let cachedTimestampRegex: RegExp | null = null
 
   return new Plugin({
     key: timestampHighlightPluginKey,
@@ -66,23 +33,56 @@ export function createTimestampHighlightPlugin(): Plugin {
         if (fmt !== cachedFormat) {
           cachedFormat = fmt
           try {
-            cachedRegex = formatToRegex(fmt)
+            cachedTaskRegex = createTaskRegex(fmt)
+            cachedTimestampRegex = createTimestampOnlyRegex(fmt)
           } catch {
-            cachedRegex = null
+            cachedTaskRegex = null
+            cachedTimestampRegex = null
           }
         }
 
-        if (!cachedRegex) return DecorationSet.empty
+        if (!cachedTaskRegex || !cachedTimestampRegex) return DecorationSet.empty
 
         const decorations: Decoration[] = []
-        const regex = new RegExp(cachedRegex.source, "g")
+        const taskRegex = new RegExp(cachedTaskRegex.source, "g")
+        const timestampRegex = new RegExp(cachedTimestampRegex.source, "g")
+
+        const taskPositions = new Set<string>()
 
         state.doc.descendants((node, pos) => {
-          if (node.isText && node.text) {
-            let match: RegExpExecArray | null
-            while ((match = regex.exec(node.text)) !== null) {
+          if (!node.isText || !node.text) return
+
+          let match: RegExpExecArray | null
+          while ((match = taskRegex.exec(node.text)) !== null) {
+            const start = pos + match.index
+            const end = start + match[0].length
+            const suffix = match[2]
+
+            taskPositions.add(`${start}-${end}`)
+            decorations.push(
+              Decoration.inline(start, end, {
+                class: `task-highlight ${getTaskClass(suffix)}`
+              })
+            )
+          }
+        })
+
+        state.doc.descendants((node, pos) => {
+          if (!node.isText || !node.text) return
+
+          let match: RegExpExecArray | null
+          while ((match = timestampRegex.exec(node.text)) !== null) {
+            const start = pos + match.index
+            const end = start + match[0].length
+
+            const isPartOfTask = Array.from(taskPositions).some((range) => {
+              const [tStart, tEnd] = range.split("-").map(Number)
+              return start >= tStart && end <= tEnd
+            })
+
+            if (!isPartOfTask) {
               decorations.push(
-                Decoration.inline(pos + match.index, pos + match.index + match[0].length, {
+                Decoration.inline(start, end, {
                   class: "timestamp-highlight"
                 })
               )

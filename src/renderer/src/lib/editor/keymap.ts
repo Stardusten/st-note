@@ -29,7 +29,7 @@ export const CODE_INDENT = "  "
 
 const insertTimestamp: Command = (state, dispatch) => {
   const fmt = settingsStore.getTimestampFormat()
-  const timestamp = format(new Date(), fmt) + " - "
+  const timestamp = `[${format(new Date(), fmt)}]`
   if (dispatch) dispatch(state.tr.insertText(timestamp))
   return true
 }

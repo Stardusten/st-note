@@ -9,8 +9,6 @@ export type ContentAreaProps = {
   isNewNote: boolean
   editorRef?: (ref: any) => void
   highlightQuery: () => string
-  onFocus?: () => void
-  onBlur?: () => void
   onDocChange?: () => void
 }
 
@@ -23,8 +21,6 @@ const ContentArea: Component<ContentAreaProps> = (props) => {
     if (prev && prev.cardId === id) return prev
     return {
       ...appStore.getEditorContext(id),
-      onFocus: props.onFocus,
-      onBlur: props.onBlur,
       onDocChange: props.onDocChange,
       get searchQuery() {
         return props.highlightQuery()

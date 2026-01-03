@@ -1,28 +1,29 @@
-import { createMemo, createSignal } from "solid-js"
+import { createMemo, createSignal, untrack } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 import { prepareSearch } from "@renderer/lib/common/utils/search"
-import type { Card } from "@renderer/lib/common/types/card"
 
 export function useSearch() {
   const [query, setQuery] = createSignal("")
   const [isComposing, setIsComposing] = createSignal(false)
   const [showHighlight, setShowHighlight] = createSignal(true)
   const [lastCommittedQuery, setLastCommittedQuery] = createSignal("")
-  const [isPaused, setIsPaused] = createSignal(false)
-  const [frozenCards, setFrozenCards] = createSignal<Card[] | null>(null)
 
   const searchQuery = createMemo(() => (isComposing() ? lastCommittedQuery() : query()))
 
-  const computeFilteredCards = () => {
+  // Track card IDs only (not content) to trigger recalc on add/delete
+  const cardIds = createMemo(() => appStore.getCards().map((c) => c.id).join(","))
+
+  const filteredCards = createMemo(() => {
     const q = searchQuery()
-    const threshold = settingsStore.getSearchMatchThreshold()
-    let cards = appStore.getCards()
+    cardIds() // subscribe to card list changes
+    const threshold = untrack(() => settingsStore.getSearchMatchThreshold())
+    const cards = untrack(() => appStore.getCards())
     if (q.trim()) {
       const scorer = prepareSearch(q, threshold)
       const results = cards
         .map((card) => {
-          const text = appStore.getCardText(card.id)() || ""
+          const text = untrack(() => appStore.getCardText(card.id)()) || ""
           const score = scorer(text)
           return { card, text, score }
         })
@@ -33,7 +34,6 @@ export function useSearch() {
           const timeB = b.card.updatedAt ? new Date(b.card.updatedAt).getTime() : 0
           return timeB - timeA
         })
-
       return results.map(({ card }) => card)
     }
     return [...cards].sort((a, b) => {
@@ -41,11 +41,6 @@ export function useSearch() {
       const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
       return timeB - timeA
     })
-  }
-
-  const filteredCards = createMemo(() => {
-    if (isPaused()) return frozenCards() || computeFilteredCards()
-    return computeFilteredCards()
   })
 
   const highlightQuery = createMemo(() => (showHighlight() ? searchQuery() : ""))
@@ -69,18 +64,6 @@ export function useSearch() {
     setIsComposing(false)
   }
 
-  const pause = () => {
-    if (!isPaused()) {
-      setFrozenCards(filteredCards())
-      setIsPaused(true)
-    }
-  }
-
-  const resume = () => {
-    setIsPaused(false)
-    setFrozenCards(null)
-  }
-
   return {
     query,
     filteredCards,
@@ -88,10 +71,7 @@ export function useSearch() {
     updateQuery,
     commitComposition,
     clearQuery,
-    hideHighlight: () => setShowHighlight(false),
-    pause,
-    resume,
-    isPaused
+    hideHighlight: () => setShowHighlight(false)
   }
 }
 
