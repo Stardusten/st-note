@@ -7,7 +7,13 @@ import { dedentNodeRange } from "./dedent"
 import { fixBlocks } from "./auto-fix"
 
 function deriveBlockAttrs(blockNode: PMNode): BlockAttrs {
-  return { kind: (blockNode.attrs as BlockAttrs).kind, order: null, collapsed: false, checked: null }
+  const attrs = blockNode.attrs as BlockAttrs
+  return {
+    kind: attrs.kind,
+    order: null,
+    collapsed: false,
+    checked: attrs.checked !== null ? false : null
+  }
 }
 
 export const splitBlock: Command = (state, dispatch): boolean => {
@@ -53,7 +59,7 @@ export const splitBlock: Command = (state, dispatch): boolean => {
       const paragraph = contentAfter.content.size > 0
         ? schema.nodes.paragraph.create(null, contentAfter.content)
         : schema.nodes.paragraph.create()
-      const newBlock = schema.nodes.block.create({ kind: "paragraph", order: null, collapsed: false }, paragraph)
+      const newBlock = schema.nodes.block.create({ kind: "paragraph", order: null, collapsed: false, checked: null }, paragraph)
 
       tr.insert(afterTitle, newBlock)
 
@@ -127,7 +133,7 @@ export const splitBlock: Command = (state, dispatch): boolean => {
     if (dispatch) {
       const tr = state.tr
       const blockPos = $from.before(blockDepth)
-      tr.setNodeMarkup(blockPos, undefined, { kind: "paragraph", order: null, collapsed: false })
+      tr.setNodeMarkup(blockPos, undefined, { kind: "paragraph", order: null, collapsed: false, checked: blockAttrs.checked })
       dispatch(tr.scrollIntoView())
     }
     return true
@@ -156,8 +162,9 @@ export const splitBlock: Command = (state, dispatch): boolean => {
     const tr = state.tr
     const blockType = getBlockType(state.schema)
     const blockPos = $from.after(blockDepth)
+    const newAttrs = deriveBlockAttrs(blockNode)
     const newBlock = blockType.create(
-      { kind: "paragraph", order: null, collapsed: false },
+      newAttrs,
       schema.nodes.paragraph.create()
     )
     tr.insert(blockPos, newBlock)
@@ -243,7 +250,7 @@ export const joinBlockUp: Command = (state, dispatch, view) => {
       if (dispatch) {
         const tr = state.tr
         const blockPos = $cursor.before(blockDepth)
-        tr.setNodeMarkup(blockPos, undefined, { kind: "paragraph", order: null, collapsed: false })
+        tr.setNodeMarkup(blockPos, undefined, { kind: "paragraph", order: null, collapsed: false, checked: blockAttrs.checked })
         dispatch(tr)
       }
       return true
