@@ -39,6 +39,7 @@ export type StorageAPI = {
 export type Settings = {
   theme: "light" | "dark" | "system"
   fontSize: "small" | "medium" | "large"
+  fontFamily: string
   showLineNumbers: boolean
   spellCheck: boolean
   quickCaptureShortcut: string

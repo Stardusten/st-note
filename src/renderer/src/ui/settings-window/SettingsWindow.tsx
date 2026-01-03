@@ -25,6 +25,8 @@ const SettingsWindow: Component = () => {
   const [error, setError] = createSignal("")
   const [dbPath, setDbPath] = createSignal("")
   const [theme, setTheme] = createSignal<"light" | "dark" | "system">("dark")
+  const [fontSize, setFontSize] = createSignal<"small" | "medium" | "large">("medium")
+  const [fontFamily, setFontFamily] = createSignal("")
   const [searchThreshold, setSearchThreshold] = createSignal(1)
 
   onMount(async () => {
@@ -33,6 +35,8 @@ const SettingsWindow: Component = () => {
     setShortcut(settings.bringToFrontShortcut)
     setDbPath(settings.lastDatabase || "")
     setTheme(settingsStore.getTheme())
+    setFontSize(settingsStore.getFontSize())
+    setFontFamily(settingsStore.getFontFamily())
     setSearchThreshold(settingsStore.getSearchMatchThreshold())
   })
 
@@ -138,6 +142,16 @@ const SettingsWindow: Component = () => {
     await settingsStore.setTheme(newTheme)
   }
 
+  const handleFontSizeChange = async (newSize: "small" | "medium" | "large") => {
+    setFontSize(newSize)
+    await settingsStore.setFontSize(newSize)
+  }
+
+  const handleFontFamilyChange = async (value: string) => {
+    setFontFamily(value)
+    await settingsStore.setFontFamily(value)
+  }
+
   const handleThresholdChange = async (value: number) => {
     setSearchThreshold(value)
     await settingsStore.setSearchMatchThreshold(value)
@@ -224,6 +238,53 @@ const SettingsWindow: Component = () => {
                 System
               </button>
             </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Font Size</label>
+            <div class="flex gap-2">
+              <button
+                class={`h-[26px] px-3 rounded border text-xs ${
+                  fontSize() === "small"
+                    ? "border-ring bg-accent text-foreground"
+                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                onClick={() => handleFontSizeChange("small")}>
+                Small
+              </button>
+              <button
+                class={`h-[26px] px-3 rounded border text-xs ${
+                  fontSize() === "medium"
+                    ? "border-ring bg-accent text-foreground"
+                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                onClick={() => handleFontSizeChange("medium")}>
+                Medium
+              </button>
+              <button
+                class={`h-[26px] px-3 rounded border text-xs ${
+                  fontSize() === "large"
+                    ? "border-ring bg-accent text-foreground"
+                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                onClick={() => handleFontSizeChange("large")}>
+                Large
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Font Family</label>
+            <p class="text-[10px] text-muted-foreground">
+              CSS font-family value. Leave empty for default.
+            </p>
+            <input
+              type="text"
+              value={fontFamily()}
+              onInput={(e) => handleFontFamilyChange(e.currentTarget.value)}
+              placeholder="e.g. Georgia, serif"
+              class="w-full h-[26px] px-2 text-xs bg-input border border-border/50 rounded outline-none focus:border-ring"
+            />
           </div>
 
           <div class="space-y-1">

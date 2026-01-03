@@ -6,6 +6,7 @@ export type { Settings }
 const defaultSettings: Settings = {
   theme: "dark",
   fontSize: "medium",
+  fontFamily: "",
   showLineNumbers: false,
   spellCheck: false,
   quickCaptureShortcut: "CommandOrControl+Shift+C",
@@ -47,6 +48,7 @@ class SettingsStore {
   getSettings = (): Settings => this._settings()
   getTheme = (): Settings["theme"] => this._settings().theme
   getFontSize = () => this._settings().fontSize
+  getFontFamily = () => this._settings().fontFamily
   getShowLineNumbers = () => this._settings().showLineNumbers
   getSpellCheck = () => this._settings().spellCheck
   getQuickCaptureShortcut = () => this._settings().quickCaptureShortcut
@@ -64,6 +66,11 @@ class SettingsStore {
 
   async setFontSize(fontSize: Settings["fontSize"]) {
     const updated = await window.api.settings.set({ fontSize })
+    this.setSettings(updated)
+  }
+
+  async setFontFamily(fontFamily: string) {
+    const updated = await window.api.settings.set({ fontFamily })
     this.setSettings(updated)
   }
 

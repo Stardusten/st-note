@@ -10,6 +10,7 @@ export type VaultSettings = Settings
 export const defaultVaultSettings: VaultSettings = {
   theme: "dark",
   fontSize: "medium",
+  fontFamily: "",
   showLineNumbers: false,
   spellCheck: false,
   quickCaptureShortcut: "CommandOrControl+Shift+C",
