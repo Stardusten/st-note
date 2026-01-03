@@ -2,65 +2,25 @@ import { parse } from "date-fns"
 import type { TaskEntry, TaskType } from "./types"
 import type { StObjectId } from "@renderer/lib/common/storage-types"
 
-const FORMAT_TOKENS: [string, string][] = [
-  ["yyyy", "\\d{4}"],
-  ["yy", "\\d{2}"],
-  ["MMMM", "[A-Za-z]+"],
-  ["MMM", "[A-Za-z]{3}"],
-  ["MM", "\\d{2}"],
-  ["M", "\\d{1,2}"],
-  ["dddd", "[A-Za-z]+"],
-  ["ddd", "[A-Za-z]{3}"],
-  ["dd", "\\d{2}"],
-  ["d", "\\d{1,2}"],
-  ["HH", "\\d{2}"],
-  ["H", "\\d{1,2}"],
-  ["hh", "\\d{2}"],
-  ["h", "\\d{1,2}"],
-  ["mm", "\\d{2}"],
-  ["m", "\\d{1,2}"],
-  ["ss", "\\d{2}"],
-  ["s", "\\d{1,2}"],
-  ["SSS", "\\d{3}"],
-  ["SS", "\\d{2}"],
-  ["S", "\\d{1}"],
-  ["a", "[AaPp][Mm]"],
-  ["EEEE", "[A-Za-z]+"],
-  ["EEE", "[A-Za-z]{3}"],
-  ["EE", "[A-Za-z]{2}"]
-]
+const TIMESTAMP_DATETIME = "yyyy-MM-dd HH:mm"
+const TIMESTAMP_DATE = "yyyy-MM-dd"
+
+const DATETIME_PATTERN = "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}"
+const DATE_PATTERN = "\\d{4}-\\d{2}-\\d{2}"
+const TIMESTAMP_PATTERN = `(?:${DATETIME_PATTERN}|${DATE_PATTERN})`
 
 const TASK_SUFFIX_PATTERN = /^(\+\d+|!|@|-|\.)$/
 const TASK_SUFFIX_CAPTURE = "(\\+\\d+|!|@|-|\\.)"
 
-function formatToTimestampRegex(fmt: string): string {
-  const placeholders: Map<string, string> = new Map()
-  let pattern = fmt
+const TASK_REGEX = new RegExp(`\\[(${TIMESTAMP_PATTERN})\\]${TASK_SUFFIX_CAPTURE}`, "g")
+const TIMESTAMP_ONLY_REGEX = new RegExp(`\\[${TIMESTAMP_PATTERN}\\]`, "g")
 
-  for (let i = 0; i < FORMAT_TOKENS.length; i++) {
-    const [token, replacement] = FORMAT_TOKENS[i]
-    const placeholder = `\x00${i}\x00`
-    placeholders.set(placeholder, replacement)
-    pattern = pattern.split(token).join(placeholder)
-  }
-
-  pattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
-  for (const [placeholder, replacement] of placeholders) {
-    pattern = pattern.split(placeholder).join(replacement)
-  }
-
-  return pattern
+export function createTaskRegex(): RegExp {
+  return new RegExp(TASK_REGEX.source, "g")
 }
 
-export function createTaskRegex(timestampFormat: string): RegExp {
-  const tsPattern = formatToTimestampRegex(timestampFormat)
-  return new RegExp(`\\[(${tsPattern})\\]${TASK_SUFFIX_CAPTURE}`, "g")
-}
-
-export function createTimestampOnlyRegex(timestampFormat: string): RegExp {
-  const tsPattern = formatToTimestampRegex(timestampFormat)
-  return new RegExp(`\\[${tsPattern}\\]`, "g")
+export function createTimestampOnlyRegex(): RegExp {
+  return new RegExp(TIMESTAMP_ONLY_REGEX.source, "g")
 }
 
 function parseTaskSuffix(suffix: string): { type: TaskType; reminderDays?: number } {
@@ -77,23 +37,22 @@ function parseTaskSuffix(suffix: string): { type: TaskType; reminderDays?: numbe
   }
 }
 
-export function parseTimestamp(text: string, format: string): Date | null {
-  try {
-    const now = new Date()
-    let effectiveFormat = format
-    let effectiveText = text
+export function parseTimestamp(text: string): Date | null {
+  const now = new Date()
 
-    if (!format.includes("yyyy") && !format.includes("yy")) {
-      effectiveFormat = `yyyy-${format}`
-      effectiveText = `${now.getFullYear()}-${text}`
-    }
-
-    const parsed = parse(effectiveText, effectiveFormat, now)
-    if (isNaN(parsed.getTime())) return null
-    return parsed
-  } catch {
-    return null
+  if (text.includes(" ")) {
+    try {
+      const parsed = parse(text, TIMESTAMP_DATETIME, now)
+      if (!isNaN(parsed.getTime())) return parsed
+    } catch {}
   }
+
+  try {
+    const parsed = parse(text, TIMESTAMP_DATE, now)
+    if (!isNaN(parsed.getTime())) return parsed
+  } catch {}
+
+  return null
 }
 
 export type ParsedTask = {
@@ -105,18 +64,14 @@ export type ParsedTask = {
   rawText: string
 }
 
-export function extractTasksFromText(
-  text: string,
-  basePos: number,
-  timestampFormat: string
-): ParsedTask[] {
-  const regex = createTaskRegex(timestampFormat)
+export function extractTasksFromText(text: string, basePos: number): ParsedTask[] {
+  const regex = createTaskRegex()
   const tasks: ParsedTask[] = []
   let match: RegExpExecArray | null
 
   while ((match = regex.exec(text)) !== null) {
     const [fullMatch, timestampText, suffix] = match
-    const timestamp = parseTimestamp(timestampText, timestampFormat)
+    const timestamp = parseTimestamp(timestampText)
     if (!timestamp) continue
 
     const { type, reminderDays } = parseTaskSuffix(suffix)
@@ -133,11 +88,7 @@ export function extractTasksFromText(
   return tasks
 }
 
-export function extractTasksFromContent(
-  content: any,
-  cardId: StObjectId,
-  timestampFormat: string
-): TaskEntry[] {
+export function extractTasksFromContent(content: any, cardId: StObjectId): TaskEntry[] {
   if (!content) return []
 
   const tasks: TaskEntry[] = []
@@ -146,7 +97,7 @@ export function extractTasksFromContent(
     if (!node) return
 
     if (node.type === "text" && node.text) {
-      const parsed = extractTasksFromText(node.text, pos, timestampFormat)
+      const parsed = extractTasksFromText(node.text, pos)
       for (const p of parsed) {
         tasks.push({
           cardId,

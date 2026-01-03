@@ -23,13 +23,11 @@ import { bulletListRule, orderedListRule, quoteRule } from "./input-rules/wrappi
 import { codeBlockRule } from "./input-rules/code-block"
 import { inlineCodeRule } from "./input-rules/inline-code"
 import { schema, isBlockNode, type BlockKind } from "./schema"
-import { settingsStore } from "../settings/SettingsStore"
 
 export const CODE_INDENT = "  "
 
 const insertTimestamp: Command = (state, dispatch) => {
-  const fmt = settingsStore.getTimestampFormat()
-  const timestamp = `[${format(new Date(), fmt)}]`
+  const timestamp = `[${format(new Date(), "yyyy-MM-dd HH:mm")}]`
   if (dispatch) dispatch(state.tr.insertText(timestamp))
   return true
 }

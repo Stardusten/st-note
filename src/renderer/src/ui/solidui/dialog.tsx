@@ -55,27 +55,21 @@ const DialogContent = <T extends ValidComponent = "div">(
   ])
   return (
     <DialogPortal>
-      <DialogOverlay class={cn(props.transparentOverlay ? "bg-transparent" : "bg-[#000]/40")} />
+      <DialogOverlay class={cn(props.transparentOverlay ? "bg-transparent" : "bg-black/50")} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         class={cn(
-          "bg-background data-[expanded]:animate-in data-[closed]:animate-out",
+          "bg-surface border border-border/50 shadow-xl",
+          "data-[expanded]:animate-in data-[closed]:animate-out",
           "data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95",
           "data-[expanded]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full",
           "max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4",
-          "rounded-sm p-6 duration-200 sm:max-w-lg",
+          "rounded-lg p-5 duration-200 sm:max-w-md",
           props.class
         )}
-        {...rest}
-        style={{
-          "box-shadow":
-            "rgba(0, 0, 0, 0.12) 0px 1px 10px, rgba(0, 0, 0, 0.14) 0px 4px 5px, rgba(0, 0, 0, 0.2) 0px 2px 4px -1px",
-          background:
-            "linear-gradient(138.16deg, rgb(49, 49, 53) -14.83%, rgb(31, 32, 36) 92.59%) padding-box padding-box, linear-gradient(94.85deg, rgb(140, 140, 147) 0.63%, rgb(63, 63, 67) 100%) border-box border-box",
-          border: "0.5px solid transparent"
-        }}>
+        {...rest}>
         {props.children}
-        <DialogPrimitive.CloseButton class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[expanded]:bg-accent data-[expanded]:text-muted-foreground">
+        <DialogPrimitive.CloseButton class="absolute right-3 top-3 rounded-sm opacity-50 transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"

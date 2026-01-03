@@ -4,7 +4,6 @@ import type { ObjCache, ObjCacheEvent } from "../objcache/objcache"
 import type { Card } from "../common/types/card"
 import type { TaskEntry, TaskType } from "./types"
 import { extractTasksFromContent, isTaskVisible, getEffectiveDate } from "./parser"
-import { settingsStore } from "../settings/SettingsStore"
 
 export type TaskGroup = {
   id: string
@@ -38,29 +37,23 @@ export class TaskIndex {
     this.unsubscribe = objCache.subscribe(this.handleEvent)
   }
 
-  private getTimestampFormat(): string {
-    return settingsStore.getTimestampFormat()
-  }
-
   private buildFullIndex() {
     if (!this.objCache) return
 
     this.tasksByCard.clear()
     this.allTasks = []
 
-    const format = this.getTimestampFormat()
-
     for (const [id, signal] of this.objCache.cache) {
       const obj = signal[0]()
       if (!obj || obj.type !== "card") continue
-      this.indexCard(id, obj as Card, format)
+      this.indexCard(id, obj as Card)
     }
 
     this.rebuildAllTasks()
   }
 
-  private indexCard(cardId: StObjectId, card: Card, format: string) {
-    const tasks = extractTasksFromContent(card.data?.content, cardId, format)
+  private indexCard(cardId: StObjectId, card: Card) {
+    const tasks = extractTasksFromContent(card.data?.content, cardId)
     if (tasks.length > 0) {
       this.tasksByCard.set(cardId, tasks)
     } else {
@@ -96,13 +89,11 @@ export class TaskIndex {
   private processPendingUpdates() {
     if (!this.objCache) return
 
-    const format = this.getTimestampFormat()
-
     for (const cardId of this.pendingUpdates) {
       this.tasksByCard.delete(cardId)
       const obj = this.objCache.get(cardId)()
       if (obj && obj.type === "card") {
-        this.indexCard(cardId, obj as Card, format)
+        this.indexCard(cardId, obj as Card)
       }
     }
 

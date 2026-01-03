@@ -56,13 +56,12 @@ const TextFieldInput = <T extends ValidComponent = "input">(
     <TextFieldPrimitive.Input
       type={local.type}
       class={cn(
-        "flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none",
-        "text-base md:text-sm placeholder:text-sm placeholder:text-muted-foreground/50 selection:bg-primary selection:text-primary-foreground",
-        "dark:bg-input/30 file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
+        "flex h-9 w-full min-w-0 rounded-md border border-border/50 bg-input px-3 py-1",
+        "transition-colors outline-none text-sm text-foreground",
+        "placeholder:text-muted-foreground/60",
+        "focus:border-ring focus:ring-1 focus:ring-ring/30",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-        "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
-        "data-[invalid]:border-destructive data-[invalid]:text-destructive",
-        "text-sm",
+        "file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
         local.class
       )}
       {...others}
@@ -80,14 +79,11 @@ const TextFieldTextArea = <T extends ValidComponent = "textarea">(
   return (
     <TextFieldPrimitive.TextArea
       class={cn(
-        "flex min-h-[80px] w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 shadow-xs transition-[color,box-shadow] outline-none",
-        "text-base md:text-sm placeholder:text-sm placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground",
-        "dark:bg-input/30",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "flex min-h-[80px] w-full min-w-0 rounded-md border border-border/50 bg-input px-3 py-2",
+        "transition-colors outline-none text-sm text-foreground",
+        "placeholder:text-muted-foreground/60",
+        "focus:border-ring focus:ring-1 focus:ring-ring/30",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-        "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
-        "data-[invalid]:border-destructive data-[invalid]:text-destructive",
-        "text-sm",
         local.class
       )}
       {...others}

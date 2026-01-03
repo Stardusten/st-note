@@ -1,5 +1,4 @@
-import { Component, createEffect, createSignal, For, onMount, Show } from "solid-js"
-import { format } from "date-fns"
+import { Component, createEffect, createSignal, onMount, Show } from "solid-js"
 import Kbd from "@renderer/ui/solidui/kbd"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 
@@ -20,19 +19,6 @@ const thresholdOptions = [
   { value: 1, label: "AND", desc: "All tokens must match" }
 ]
 
-const timestampFormats = [
-  "HH:mm",
-  "HH:mm:ss",
-  "MM-dd HH:mm",
-  "MM/dd HH:mm",
-  "yyyy-MM-dd",
-  "yyyy/MM/dd",
-  "yyyy-MM-dd HH:mm",
-  "yyyy/MM/dd HH:mm",
-  "yyyy-MM-dd HH:mm:ss",
-  "dd/MM/yyyy HH:mm"
-]
-
 const SettingsWindow: Component = () => {
   const [shortcut, setShortcut] = createSignal("")
   const [isRecording, setIsRecording] = createSignal(false)
@@ -40,7 +26,6 @@ const SettingsWindow: Component = () => {
   const [dbPath, setDbPath] = createSignal("")
   const [theme, setTheme] = createSignal<"light" | "dark" | "system">("dark")
   const [searchThreshold, setSearchThreshold] = createSignal(1)
-  const [timestampFormat, setTimestampFormat] = createSignal("MM-dd HH:mm")
 
   onMount(async () => {
     await settingsStore.init()
@@ -49,7 +34,6 @@ const SettingsWindow: Component = () => {
     setDbPath(settings.lastDatabase || "")
     setTheme(settingsStore.getTheme())
     setSearchThreshold(settingsStore.getSearchMatchThreshold())
-    setTimestampFormat(settingsStore.getTimestampFormat())
   })
 
   createEffect(() => {
@@ -159,11 +143,6 @@ const SettingsWindow: Component = () => {
     await settingsStore.setSearchMatchThreshold(value)
   }
 
-  const handleTimestampFormatChange = async (value: string) => {
-    setTimestampFormat(value)
-    await settingsStore.setTimestampFormat(value)
-  }
-
   return (
     <div class="h-screen w-full flex flex-col overflow-hidden bg-surface text-foreground">
       <div
@@ -267,22 +246,6 @@ const SettingsWindow: Component = () => {
                 </button>
               ))}
             </div>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Timestamp Format</label>
-            <p class="text-[10px] text-muted-foreground">
-              Format for inserting timestamps (Cmd+T). Preview:{" "}
-              <span class="font-mono text-foreground">{format(new Date(), timestampFormat())}</span>
-            </p>
-            <select
-              value={timestampFormat()}
-              onChange={(e) => handleTimestampFormatChange(e.currentTarget.value)}
-              class="h-[26px] px-2 text-xs bg-input border border-border/50 rounded outline-none">
-              <For each={timestampFormats}>
-                {(fmt) => <option value={fmt}>{fmt}</option>}
-              </For>
-            </select>
           </div>
 
           <div class="space-y-1">

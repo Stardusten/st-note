@@ -12,7 +12,6 @@ const defaultSettings: Settings = {
   searchShortcut: "CommandOrControl+Shift+P",
   language: "zh-CN",
   autoSave: true,
-  timestampFormat: "MM-dd HH:mm",
   autoLayout: true,
   preferredLayout: "horizontal",
   searchMatchThreshold: 1
@@ -54,7 +53,6 @@ class SettingsStore {
   getSearchShortcut = () => this._settings().searchShortcut
   getLanguage = () => this._settings().language
   getAutoSave = () => this._settings().autoSave
-  getTimestampFormat = () => this._settings().timestampFormat
   getAutoLayout = () => this._settings().autoLayout
   getPreferredLayout = () => this._settings().preferredLayout
   getSearchMatchThreshold = () => this._settings().searchMatchThreshold
@@ -111,11 +109,6 @@ class SettingsStore {
 
   async setSearchMatchThreshold(searchMatchThreshold: number) {
     const updated = await window.api.settings.set({ searchMatchThreshold })
-    this.setSettings(updated)
-  }
-
-  async setTimestampFormat(timestampFormat: string) {
-    const updated = await window.api.settings.set({ timestampFormat })
     this.setSettings(updated)
   }
 

@@ -1,6 +1,5 @@
 import { Plugin, PluginKey } from "prosemirror-state"
 import { Decoration, DecorationSet } from "prosemirror-view"
-import { settingsStore } from "../../settings/SettingsStore"
 import { createTaskRegex, createTimestampOnlyRegex } from "../../task/parser"
 
 export const timestampHighlightPluginKey = new PluginKey("timestampHighlight")
@@ -19,41 +18,22 @@ function getTaskClass(suffix: string): string {
 }
 
 export function createTimestampHighlightPlugin(): Plugin {
-  let cachedFormat = ""
-  let cachedTaskRegex: RegExp | null = null
-  let cachedTimestampRegex: RegExp | null = null
+  const taskRegex = createTaskRegex()
+  const timestampRegex = createTimestampOnlyRegex()
 
   return new Plugin({
     key: timestampHighlightPluginKey,
     props: {
       decorations(state) {
-        const fmt = settingsStore.getTimestampFormat()
-        if (!fmt.trim()) return DecorationSet.empty
-
-        if (fmt !== cachedFormat) {
-          cachedFormat = fmt
-          try {
-            cachedTaskRegex = createTaskRegex(fmt)
-            cachedTimestampRegex = createTimestampOnlyRegex(fmt)
-          } catch {
-            cachedTaskRegex = null
-            cachedTimestampRegex = null
-          }
-        }
-
-        if (!cachedTaskRegex || !cachedTimestampRegex) return DecorationSet.empty
-
         const decorations: Decoration[] = []
-        const taskRegex = new RegExp(cachedTaskRegex.source, "g")
-        const timestampRegex = new RegExp(cachedTimestampRegex.source, "g")
-
         const taskPositions = new Set<string>()
 
         state.doc.descendants((node, pos) => {
           if (!node.isText || !node.text) return
 
+          const regex = new RegExp(taskRegex.source, "g")
           let match: RegExpExecArray | null
-          while ((match = taskRegex.exec(node.text)) !== null) {
+          while ((match = regex.exec(node.text)) !== null) {
             const start = pos + match.index
             const end = start + match[0].length
             const suffix = match[2]
@@ -70,8 +50,9 @@ export function createTimestampHighlightPlugin(): Plugin {
         state.doc.descendants((node, pos) => {
           if (!node.isText || !node.text) return
 
+          const regex = new RegExp(timestampRegex.source, "g")
           let match: RegExpExecArray | null
-          while ((match = timestampRegex.exec(node.text)) !== null) {
+          while ((match = regex.exec(node.text)) !== null) {
             const start = pos + match.index
             const end = start + match[0].length
 

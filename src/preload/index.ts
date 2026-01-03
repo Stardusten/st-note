@@ -45,7 +45,6 @@ export type Settings = {
   searchShortcut: string
   language: "zh-CN" | "en-US"
   autoSave: boolean
-  timestampFormat: string
   autoLayout: boolean
   preferredLayout: "vertical" | "horizontal"
   searchMatchThreshold: number

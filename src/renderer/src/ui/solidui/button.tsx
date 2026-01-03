@@ -10,38 +10,32 @@ import { cn } from "@renderer/lib/common/utils/tailwindcss"
 
 const buttonVariants = cva(
   "cursor-pointer inline-flex items-center justify-center \
-  gap-2 whitespace-nowrap rounded-md text-sm transition-all \
+  gap-2 whitespace-nowrap rounded-md text-sm transition-colors \
   disabled:pointer-events-none disabled:opacity-50 \
   [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 \
-  shrink-0 [&_svg]:shrink-0 outline-none ",
+  shrink-0 [&_svg]:shrink-0 outline-none",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white shadow-xs hover:bg-destructive/90 dark:bg-destructive/60",
-        destructiveOutline:
-          "border border-destructive/50 text-destructive shadow-xs hover:bg-destructive/10",
+        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        destructive: "bg-destructive text-white hover:bg-destructive/80",
+        destructiveOutline: "border border-destructive/50 text-destructive hover:bg-destructive/10",
         destructiveGhost: "text-destructive hover:bg-destructive/10",
-        outline:
-          "rounded border border-transparent \
-          [background:linear-gradient(138.16deg,rgb(49,49,53)_-14.83%,rgb(31,32,36)_92.59%)_padding-box,linear-gradient(rgb(184,184,184)_-76.62%,rgba(184,184,184,0)_131.05%)_border-box] \
-          hover:[background:linear-gradient(rgb(78,79,82),rgb(78,79,82))_padding-box,linear-gradient(rgb(184,184,184)_-76.62%,rgba(184,184,184,0)_131.05%)_border-box]",
-        secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-        ghost:
-          "text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+        outline: "border border-border bg-transparent hover:bg-accent",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         "text-only": "!p-0 !h-fit bg-none"
       },
       size: {
         default: "h-8 px-4 text-[13px] py-2 has-[>svg]:px-3",
-        sm: "rounded-sm gap-1.5 px-1 py-1 has-[>svg]:px-2.5",
+        sm: "h-7 rounded-md gap-1.5 px-3 text-xs",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
-        "sm-icon": "size-8 p-0 rounded-sm",
-        "xs-icon": "size-7 p-0 rounded-sm",
-        "2xs-icon": "size-6 p-0 rounded-sm",
-        "3xs-icon": "size-5 p-0 rounded-sm"
+        "sm-icon": "size-8 p-0 rounded-md",
+        "xs-icon": "size-7 p-0 rounded-md",
+        "2xs-icon": "size-6 p-0 rounded-md",
+        "3xs-icon": "size-5 p-0 rounded-md"
       }
     },
     defaultVariants: {

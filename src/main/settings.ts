@@ -16,7 +16,6 @@ export const defaultVaultSettings: VaultSettings = {
   searchShortcut: "CommandOrControl+Shift+P",
   language: "zh-CN",
   autoSave: true,
-  timestampFormat: "MM-dd HH:mm",
   autoLayout: true,
   preferredLayout: "horizontal",
   searchMatchThreshold: 1

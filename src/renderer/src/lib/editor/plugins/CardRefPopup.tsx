@@ -1,7 +1,11 @@
 import { Component, createSignal, createMemo, createEffect, For, Show, Setter, JSX } from "solid-js"
 import { render } from "solid-js/web"
 import { Plus } from "lucide-solid"
-import type { CardSuggestionItem, SuggestionProps, SuggestionRenderer } from "./cardref-suggestion-plugin"
+import type {
+  CardSuggestionItem,
+  SuggestionProps,
+  SuggestionRenderer
+} from "./cardref-suggestion-plugin"
 
 type CardRefPopupProps = {
   items: () => CardSuggestionItem[]
@@ -85,7 +89,7 @@ const CardRefPopupUI: Component<CardRefPopupProps> = (props) => {
   return (
     <Show when={showPopup()}>
       <div
-        class="fixed z-[9999] flex flex-col rounded border border-border/50 overflow-hidden text-xs bg-popover shadow-lg"
+        class="fixed z-[9999] flex flex-col rounded-sm border border-border/50 overflow-hidden text-xs bg-surface shadow-xl"
         style={{
           width: `${POPUP_WIDTH}px`,
           ...popupStyle()
@@ -135,7 +139,11 @@ export function createCardRefPopupRenderer(
   const [items, setItems] = createSignal<CardSuggestionItem[]>([])
   const [query, setQuery] = createSignal("")
   const [selectedIndex, setSelectedIndex] = createSignal(0)
-  const [position, setPosition] = createSignal<{ left: number; top: number; lineHeight: number } | null>(null)
+  const [position, setPosition] = createSignal<{
+    left: number
+    top: number
+    lineHeight: number
+  } | null>(null)
 
   const handleSelect = (item: CardSuggestionItem) => {
     currentCommand?.(item)

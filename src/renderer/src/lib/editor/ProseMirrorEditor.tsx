@@ -25,6 +25,7 @@ import { createImagePlugin, createImageSelectionPlugin } from "./plugins/image-p
 import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
 import { createTimestampHighlightPlugin } from "./plugins/timestamp-highlight-plugin"
 import { createClickBelowPlugin } from "./plugins/click-below-plugin"
+import { createContextMenuPlugin } from "./plugins/context-menu-plugin"
 import { findHighlightRanges } from "@renderer/lib/common/utils/highlight"
 import type { EditorContext } from "./EditorContext"
 import "./note-editor.css"
@@ -238,7 +239,8 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       createImageSelectionPlugin(),
       createSearchHighlightPlugin(),
       createTimestampHighlightPlugin(),
-      createClickBelowPlugin()
+      createClickBelowPlugin(),
+      createContextMenuPlugin()
     )
 
     plugins.push(createImagePlugin({ getDbPath: () => ctx.dbPath }))
