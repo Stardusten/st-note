@@ -25,9 +25,8 @@ const SettingsWindow: Component = () => {
   const [error, setError] = createSignal("")
   const [dbPath, setDbPath] = createSignal("")
   const [theme, setTheme] = createSignal<"light" | "dark" | "system">("dark")
-  const [fontSize, setFontSize] = createSignal(16)
-  const [fontFamily, setFontFamily] = createSignal("")
   const [searchThreshold, setSearchThreshold] = createSignal(1)
+  const [customCSS, setCustomCSS] = createSignal("")
 
   onMount(async () => {
     await settingsStore.init()
@@ -35,9 +34,8 @@ const SettingsWindow: Component = () => {
     setShortcut(settings.bringToFrontShortcut)
     setDbPath(settings.lastDatabase || "")
     setTheme(settingsStore.getTheme())
-    setFontSize(settingsStore.getFontSize())
-    setFontFamily(settingsStore.getFontFamily())
     setSearchThreshold(settingsStore.getSearchMatchThreshold())
+    setCustomCSS(settingsStore.getCustomCSS())
   })
 
   createEffect(() => {
@@ -142,20 +140,14 @@ const SettingsWindow: Component = () => {
     await settingsStore.setTheme(newTheme)
   }
 
-  const handleFontSizeChange = async (value: number) => {
-    const clamped = Math.max(10, Math.min(32, value))
-    setFontSize(clamped)
-    await settingsStore.setFontSize(clamped)
-  }
-
-  const handleFontFamilyChange = async (value: string) => {
-    setFontFamily(value)
-    await settingsStore.setFontFamily(value)
-  }
-
   const handleThresholdChange = async (value: number) => {
     setSearchThreshold(value)
     await settingsStore.setSearchMatchThreshold(value)
+  }
+
+  const handleCustomCSSChange = async (value: string) => {
+    setCustomCSS(value)
+    await settingsStore.setCustomCSS(value)
   }
 
   return (
@@ -242,33 +234,6 @@ const SettingsWindow: Component = () => {
           </div>
 
           <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Font Size</label>
-            <p class="text-[10px] text-muted-foreground">Editor font size in pixels (10-32).</p>
-            <input
-              type="number"
-              min="10"
-              max="32"
-              value={fontSize()}
-              onInput={(e) => handleFontSizeChange(parseInt(e.currentTarget.value) || 16)}
-              class="w-20 h-[26px] px-2 text-xs bg-input border border-border/50 rounded outline-none focus:border-ring"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Font Family</label>
-            <p class="text-[10px] text-muted-foreground">
-              CSS font-family value. Leave empty for default.
-            </p>
-            <input
-              type="text"
-              value={fontFamily()}
-              onInput={(e) => handleFontFamilyChange(e.currentTarget.value)}
-              placeholder="e.g. Georgia, serif"
-              class="w-full h-[26px] px-2 text-xs bg-input border border-border/50 rounded outline-none focus:border-ring"
-            />
-          </div>
-
-          <div class="space-y-1">
             <label class="text-xs font-medium text-muted-foreground">Search Match Mode</label>
             <p class="text-[10px] text-muted-foreground">
               Controls how multiple search terms are matched. OR: any term matches. AND: all terms
@@ -288,6 +253,20 @@ const SettingsWindow: Component = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Custom CSS</label>
+            <p class="text-[10px] text-muted-foreground">
+              Add custom CSS to customize the appearance. Changes apply immediately.
+            </p>
+            <textarea
+              value={customCSS()}
+              onInput={(e) => handleCustomCSSChange(e.currentTarget.value)}
+              placeholder="/* Your custom CSS here */&#10;.editor { }&#10;:root { --accent: #ff0000; }"
+              spellcheck={false}
+              class="w-full h-24 px-2 py-1.5 text-xs font-mono bg-input border border-border/50 rounded outline-none focus:border-ring resize-none"
+            />
           </div>
 
           <div class="space-y-1">

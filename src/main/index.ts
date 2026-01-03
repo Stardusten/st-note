@@ -7,7 +7,8 @@ import {
   net,
   dialog,
   Menu,
-  globalShortcut
+  globalShortcut,
+  session
 } from "electron"
 import { join } from "path"
 import { copyFileSync, existsSync } from "fs"
@@ -47,6 +48,40 @@ let mainWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
 let currentBringToFrontShortcut: string | null = null
 const editorWindows: Map<string, BrowserWindow> = new Map()
+
+function setupSpellcheckContextMenu(win: BrowserWindow): void {
+  win.webContents.on("context-menu", (event, params) => {
+    // Only handle spellcheck context menu when there's a misspelled word
+    if (!params.misspelledWord) return
+
+    const menuItems: Electron.MenuItemConstructorOptions[] = []
+
+    // Add spelling suggestions
+    if (params.dictionarySuggestions && params.dictionarySuggestions.length > 0) {
+      for (const suggestion of params.dictionarySuggestions.slice(0, 5)) {
+        menuItems.push({
+          label: suggestion,
+          click: () => {
+            win.webContents.replaceMisspelling(suggestion)
+          }
+        })
+      }
+      menuItems.push({ type: "separator" })
+    }
+
+    // Add "Add to Dictionary" option
+    menuItems.push({
+      label: "Add to Dictionary",
+      click: () => {
+        session.defaultSession.addWordToSpellCheckerDictionary(params.misspelledWord)
+      }
+    })
+
+    // Show the menu
+    const menu = Menu.buildFromTemplate(menuItems)
+    menu.popup({ window: win })
+  })
+}
 
 function registerBringToFrontShortcut(shortcut: string | null): boolean {
   if (currentBringToFrontShortcut) {
@@ -177,6 +212,9 @@ function createEditorWindow(params: EditorWindowParams): void {
 
   editorWindows.set(params.cardId, editorWindow)
 
+  // Setup spellcheck context menu for editor window
+  setupSpellcheckContextMenu(editorWindow)
+
   editorWindow.on("ready-to-show", () => {
     editorWindow.show()
   })
@@ -227,6 +265,9 @@ function createWindow(): void {
     return { action: "deny" }
   })
 
+  // Setup spellcheck context menu for main window
+  setupSpellcheckContextMenu(mainWindow)
+
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
     mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"])
   } else {
@@ -272,6 +313,14 @@ app.whenReady().then(() => {
     migrateOldSettingsToVault(path)
     setCurrentDatabase(path)
     addRecentDatabase(path)
+    // Initialize spellcheck based on settings
+    const settings = loadSettings()
+    session.defaultSession.setSpellCheckerEnabled(settings.spellCheck)
+    // Set default spellcheck languages if not set
+    if (settings.spellCheck && session.defaultSession.getSpellCheckerLanguages().length === 0) {
+      const defaultLangs = settings.language === "zh-CN" ? ["en-US"] : ["en-US"]
+      session.defaultSession.setSpellCheckerLanguages(defaultLangs)
+    }
   })
   ipcMain.handle("storage:close", (_e, path: string) => {
     closeStorage(path)
@@ -497,6 +546,10 @@ app.whenReady().then(() => {
     BrowserWindow.getAllWindows().forEach((win) => {
       win.webContents.send("settings:changed", updated)
     })
+    // Update spellcheck enabled state
+    if ("spellCheck" in partial) {
+      session.defaultSession.setSpellCheckerEnabled(updated.spellCheck)
+    }
     rebuildMenu(updated)
     return updated
   })
@@ -508,6 +561,26 @@ app.whenReady().then(() => {
     })
     rebuildMenu(updated)
     return updated
+  })
+
+  // Spellcheck IPC
+  ipcMain.handle("spellcheck:addWord", (_e, word: string) => {
+    return session.defaultSession.addWordToSpellCheckerDictionary(word)
+  })
+  ipcMain.handle("spellcheck:removeWord", (_e, word: string) => {
+    return session.defaultSession.removeWordFromSpellCheckerDictionary(word)
+  })
+  ipcMain.handle("spellcheck:listWords", () => {
+    return session.defaultSession.listWordsInSpellCheckerDictionary()
+  })
+  ipcMain.handle("spellcheck:getLanguages", () => {
+    return session.defaultSession.getSpellCheckerLanguages()
+  })
+  ipcMain.handle("spellcheck:setLanguages", (_e, languages: string[]) => {
+    session.defaultSession.setSpellCheckerLanguages(languages)
+  })
+  ipcMain.handle("spellcheck:getAvailableLanguages", () => {
+    return session.defaultSession.availableSpellCheckerLanguages
   })
 
   createWindow()

@@ -38,8 +38,6 @@ export type StorageAPI = {
 
 export type Settings = {
   theme: "light" | "dark" | "system"
-  fontSize: number
-  fontFamily: string
   showLineNumbers: boolean
   spellCheck: boolean
   quickCaptureShortcut: string
@@ -49,6 +47,7 @@ export type Settings = {
   autoLayout: boolean
   preferredLayout: "vertical" | "horizontal"
   searchMatchThreshold: number
+  customCSS: string
 }
 
 export type SettingsAPI = {
@@ -152,6 +151,15 @@ export type ContextMenuAPI = {
   show: (items: ContextMenuItem[]) => Promise<string | null>
 }
 
+export type SpellcheckAPI = {
+  addWord: (word: string) => Promise<boolean>
+  removeWord: (word: string) => Promise<boolean>
+  listWords: () => Promise<string[]>
+  getLanguages: () => Promise<string[]>
+  setLanguages: (languages: string[]) => Promise<void>
+  getAvailableLanguages: () => Promise<string[]>
+}
+
 export type CardSuggestionItem = {
   id: string
   title: string
@@ -242,6 +250,14 @@ const api = {
   contextMenu: {
     show: (items) => ipcRenderer.invoke("contextMenu:show", items)
   } satisfies ContextMenuAPI,
+  spellcheck: {
+    addWord: (word) => ipcRenderer.invoke("spellcheck:addWord", word),
+    removeWord: (word) => ipcRenderer.invoke("spellcheck:removeWord", word),
+    listWords: () => ipcRenderer.invoke("spellcheck:listWords"),
+    getLanguages: () => ipcRenderer.invoke("spellcheck:getLanguages"),
+    setLanguages: (languages) => ipcRenderer.invoke("spellcheck:setLanguages", languages),
+    getAvailableLanguages: () => ipcRenderer.invoke("spellcheck:getAvailableLanguages")
+  } satisfies SpellcheckAPI,
   editorWindow: (() => {
     let handlers: {
       getCard?: (dbPath: string, cardId: string) => any | null

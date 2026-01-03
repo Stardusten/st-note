@@ -85,7 +85,7 @@ const EditorWindow: Component = () => {
         </Show>
       </div>
 
-      <div class="flex-1 overflow-auto" style={{ zoom: "0.8" }}>
+      <div class="flex-1 overflow-auto">
         <Show when={editorContext()} fallback={<div class="p-4 text-muted-foreground">Loading...</div>}>
           <NoteEditor context={editorContext()!} />
         </Show>

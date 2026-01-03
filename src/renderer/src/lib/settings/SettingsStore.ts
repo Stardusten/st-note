@@ -5,8 +5,6 @@ export type { Settings }
 
 const defaultSettings: Settings = {
   theme: "dark",
-  fontSize: 16,
-  fontFamily: "",
   showLineNumbers: false,
   spellCheck: false,
   quickCaptureShortcut: "CommandOrControl+Shift+C",
@@ -15,7 +13,8 @@ const defaultSettings: Settings = {
   autoSave: true,
   autoLayout: true,
   preferredLayout: "horizontal",
-  searchMatchThreshold: 1
+  searchMatchThreshold: 1,
+  customCSS: ""
 }
 
 class SettingsStore {
@@ -47,8 +46,6 @@ class SettingsStore {
 
   getSettings = (): Settings => this._settings()
   getTheme = (): Settings["theme"] => this._settings().theme
-  getFontSize = () => this._settings().fontSize
-  getFontFamily = () => this._settings().fontFamily
   getShowLineNumbers = () => this._settings().showLineNumbers
   getSpellCheck = () => this._settings().spellCheck
   getQuickCaptureShortcut = () => this._settings().quickCaptureShortcut
@@ -58,19 +55,10 @@ class SettingsStore {
   getAutoLayout = () => this._settings().autoLayout
   getPreferredLayout = () => this._settings().preferredLayout
   getSearchMatchThreshold = () => this._settings().searchMatchThreshold
+  getCustomCSS = () => this._settings().customCSS
 
   async setTheme(theme: Settings["theme"]) {
     const updated = await window.api.settings.set({ theme })
-    this.setSettings(updated)
-  }
-
-  async setFontSize(fontSize: number) {
-    const updated = await window.api.settings.set({ fontSize })
-    this.setSettings(updated)
-  }
-
-  async setFontFamily(fontFamily: string) {
-    const updated = await window.api.settings.set({ fontFamily })
     this.setSettings(updated)
   }
 
@@ -116,6 +104,11 @@ class SettingsStore {
 
   async setSearchMatchThreshold(searchMatchThreshold: number) {
     const updated = await window.api.settings.set({ searchMatchThreshold })
+    this.setSettings(updated)
+  }
+
+  async setCustomCSS(customCSS: string) {
+    const updated = await window.api.settings.set({ customCSS })
     this.setSettings(updated)
   }
 

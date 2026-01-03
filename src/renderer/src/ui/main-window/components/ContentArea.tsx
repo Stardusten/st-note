@@ -33,7 +33,7 @@ const ContentArea: Component<ContentAreaProps> = (props) => {
     <>
       <Show when={context()} keyed>
         {(ctx) => (
-          <div class="flex-1 min-h-0 overflow-auto bg-surface" style={{ zoom: "0.8" }}>
+          <div class="flex-1 min-h-0 pl-1 overflow-auto bg-surface">
             <NoteEditor ref={props.editorRef} context={ctx} />
           </div>
         )}

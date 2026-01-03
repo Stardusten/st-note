@@ -1,6 +1,8 @@
 import { createEffect } from "solid-js"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 
+const CUSTOM_CSS_STYLE_ID = "st-note-custom-css"
+
 export function useTheme() {
   createEffect(() => {
     const theme = settingsStore.settings().theme
@@ -14,16 +16,18 @@ export function useTheme() {
   })
 
   createEffect(() => {
-    const fontSize = settingsStore.settings().fontSize
-    document.documentElement.style.setProperty("--editor-font-size", `${fontSize}px`)
-  })
-
-  createEffect(() => {
-    const fontFamily = settingsStore.settings().fontFamily
-    if (fontFamily) {
-      document.documentElement.style.setProperty("--editor-font-family", fontFamily)
-    } else {
-      document.documentElement.style.removeProperty("--editor-font-family")
+    const customCSS = settingsStore.settings().customCSS
+    let styleEl = document.getElementById(CUSTOM_CSS_STYLE_ID) as HTMLStyleElement | null
+    
+    if (customCSS) {
+      if (!styleEl) {
+        styleEl = document.createElement("style")
+        styleEl.id = CUSTOM_CSS_STYLE_ID
+        document.head.appendChild(styleEl)
+      }
+      styleEl.textContent = customCSS
+    } else if (styleEl) {
+      styleEl.remove()
     }
   })
 }

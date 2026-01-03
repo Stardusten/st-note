@@ -9,8 +9,6 @@ export type VaultSettings = Settings
 
 export const defaultVaultSettings: VaultSettings = {
   theme: "dark",
-  fontSize: 16,
-  fontFamily: "",
   showLineNumbers: false,
   spellCheck: false,
   quickCaptureShortcut: "CommandOrControl+Shift+C",
@@ -19,7 +17,8 @@ export const defaultVaultSettings: VaultSettings = {
   autoSave: true,
   autoLayout: true,
   preferredLayout: "horizontal",
-  searchMatchThreshold: 1
+  searchMatchThreshold: 1,
+  customCSS: ""
 }
 
 export function loadVaultSettings(dbPath: string): VaultSettings {

@@ -8,6 +8,11 @@
   display: flex;
   flex-direction: column;
 
+  /* ========== Line Spacing ========== */
+  --p-line-spacing: 0.2em;
+  --list-line-spacing: 0.1em;
+  --quote-line-spacing: 0.5em;
+
   /* ========== Indent Configuration ========== */
   /* Top-level block indent */
   --indent-top-paragraph: 0;
@@ -210,19 +215,19 @@
   min-height: 1.5em;
   line-height: 1.5;
   /* Line spacing */
-  padding: 0.2em 0;
+  padding: var(--p-line-spacing) 0;
 }
 
 /* Quote line spacing */
 .prosemirror-editor .block[data-kind="quote"] {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: var(--quote-line-spacing);
+  margin-bottom: var(--quote-line-spacing);
 }
 
 /* Bullet & ordered line spacing */
 .prosemirror-editor .block[data-kind="bullet"] p,
 .prosemirror-editor .block[data-kind="ordered"] p {
-  padding: 0.1em 0;
+  padding: var(--list-line-spacing) 0;
 }
 
 /* bullet list - use native list-style */
@@ -264,7 +269,7 @@
 .prosemirror-editor .block[data-kind="ordered"]:not([data-marker-hidden])::before {
   position: absolute;
   right: 100%;
-  top: 0.15em;
+  top: calc(var(--list-line-spacing) + 0.05em);
   margin-right: 0.3em;
   font-variant-numeric: tabular-nums;
   content: counter(ol) ".";
