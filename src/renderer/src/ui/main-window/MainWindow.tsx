@@ -3,6 +3,7 @@ import { appStore } from "@renderer/lib/state/AppStore"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 import type { NoteEditorHandle } from "@renderer/lib/editor/NoteEditor"
 import NoteList from "./NoteList"
+import AgendaView from "./AgendaView"
 import TitleBar from "./components/TitleBar"
 import SearchInput from "./components/SearchInput"
 import ContentArea from "./components/ContentArea"
@@ -12,6 +13,8 @@ import { useTheme } from "./hooks/useTheme"
 import { useMenuHandlers } from "./hooks/useMenuHandlers"
 import { useKeyboard } from "./hooks/useKeyboard"
 
+type SidebarTab = "cards" | "agenda"
+
 const HORIZONTAL_BREAKPOINT = 600
 
 const MainWindow: Component = () => {
@@ -19,6 +22,7 @@ const MainWindow: Component = () => {
   let editorRef: NoteEditorHandle | undefined
 
   const [windowWidth, setWindowWidth] = createSignal(window.innerWidth)
+  const [sidebarTab, setSidebarTab] = createSignal<SidebarTab>("cards")
 
   const search = useSearch()
   const nav = useNavigation(search.filteredCards)
@@ -58,6 +62,10 @@ const MainWindow: Component = () => {
 
     window.api.editorWindow.onNavigateRequest((cardId) => {
       appStore.selectCard(cardId)
+    })
+
+    window.api.menu.onToggleAgenda(() => {
+      setSidebarTab((prev) => prev === "cards" ? "agenda" : "cards")
     })
 
     const unsubscribe = appStore.subscribeToUpdates((event) => {
@@ -111,6 +119,13 @@ const MainWindow: Component = () => {
     await appStore.togglePinCard(card.id)
   }
 
+  const handleTaskClick = (cardId: string, pos: number) => {
+    appStore.selectCard(cardId)
+    setTimeout(() => {
+      editorRef?.scrollToPos(pos)
+    }, 100)
+  }
+
   useKeyboard({
     search,
     nav,
@@ -132,20 +147,38 @@ const MainWindow: Component = () => {
       />
       {effectiveLayout() === "vertical" ? (
         <>
-          <NoteList
-            query={search.query()}
-            highlightQuery={search.highlightQuery()}
-            cards={search.filteredCards()}
-            focusedIndex={nav.focusedIndex()}
-            listHasFocus={nav.listHasFocus()}
-            compact={true}
-            onFocusIndex={nav.setFocusedIndex}
-            onFocusList={nav.focusList}
-            onCreateNote={handleCreateNote}
-            onOpenInNewWindow={handleOpenInNewWindow}
-            onDeleteCard={handleDeleteCard}
-            onTogglePin={handleTogglePin}
-          />
+          <div class="flex border-b border-border/40 text-xs">
+            <button
+              class={`flex-1 py-1.5 ${sidebarTab() === "cards" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
+              onClick={() => setSidebarTab("cards")}>
+              Cards
+            </button>
+            <button
+              class={`flex-1 py-1.5 ${sidebarTab() === "agenda" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
+              onClick={() => setSidebarTab("agenda")}>
+              Agenda
+            </button>
+          </div>
+          {sidebarTab() === "cards" ? (
+            <NoteList
+              query={search.query()}
+              highlightQuery={search.highlightQuery()}
+              cards={search.filteredCards()}
+              focusedIndex={nav.focusedIndex()}
+              listHasFocus={nav.listHasFocus()}
+              compact={true}
+              onFocusIndex={nav.setFocusedIndex}
+              onFocusList={nav.focusList}
+              onCreateNote={handleCreateNote}
+              onOpenInNewWindow={handleOpenInNewWindow}
+              onDeleteCard={handleDeleteCard}
+              onTogglePin={handleTogglePin}
+            />
+          ) : (
+            <div class="h-[200px] shrink-0 border-b overflow-hidden">
+              <AgendaView onTaskClick={handleTaskClick} />
+            </div>
+          )}
           <div class="h-1.5 border-b bg-background"></div>
           <ContentArea
             focusedCard={nav.focusedCard()}
@@ -158,20 +191,36 @@ const MainWindow: Component = () => {
       ) : (
         <div class="flex-1 flex min-h-0">
           <div class="w-[240px] shrink-0 flex flex-col border-r border-border/40">
-            <NoteList
-              query={search.query()}
-              highlightQuery={search.highlightQuery()}
-              cards={search.filteredCards()}
-              focusedIndex={nav.focusedIndex()}
-              listHasFocus={nav.listHasFocus()}
-              compact={false}
-              onFocusIndex={nav.setFocusedIndex}
-              onFocusList={nav.focusList}
-              onCreateNote={handleCreateNote}
-              onOpenInNewWindow={handleOpenInNewWindow}
-              onDeleteCard={handleDeleteCard}
-              onTogglePin={handleTogglePin}
-            />
+            <div class="flex border-b border-border/40 text-xs">
+              <button
+                class={`flex-1 py-1.5 ${sidebarTab() === "cards" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
+                onClick={() => setSidebarTab("cards")}>
+                Cards
+              </button>
+              <button
+                class={`flex-1 py-1.5 ${sidebarTab() === "agenda" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
+                onClick={() => setSidebarTab("agenda")}>
+                Agenda
+              </button>
+            </div>
+            {sidebarTab() === "cards" ? (
+              <NoteList
+                query={search.query()}
+                highlightQuery={search.highlightQuery()}
+                cards={search.filteredCards()}
+                focusedIndex={nav.focusedIndex()}
+                listHasFocus={nav.listHasFocus()}
+                compact={false}
+                onFocusIndex={nav.setFocusedIndex}
+                onFocusList={nav.focusList}
+                onCreateNote={handleCreateNote}
+                onOpenInNewWindow={handleOpenInNewWindow}
+                onDeleteCard={handleDeleteCard}
+                onTogglePin={handleTogglePin}
+              />
+            ) : (
+              <AgendaView onTaskClick={handleTaskClick} />
+            )}
           </div>
           <ContentArea
             focusedCard={nav.focusedCard()}

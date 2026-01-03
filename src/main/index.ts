@@ -677,6 +677,12 @@ app.whenReady().then(() => {
             ]
           },
           { type: "separator" },
+          {
+            label: "Toggle Agenda",
+            accelerator: "CmdOrCtrl+Shift+A",
+            click: () => mainWindow?.webContents.send("menu:toggleAgenda")
+          },
+          { type: "separator" },
           { role: "reload" },
           { role: "forceReload" },
           { role: "toggleDevTools" },

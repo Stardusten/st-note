@@ -99,6 +99,7 @@ export type MenuAPI = {
   onNewDatabase: (callback: () => void) => void
   onOpenDatabase: (callback: () => void) => void
   onSettings: (callback: () => void) => void
+  onToggleAgenda: (callback: () => void) => void
 }
 
 export type FileRecord = {
@@ -215,7 +216,8 @@ const api = {
     onExport: (callback) => ipcRenderer.on("menu:export", () => callback()),
     onNewDatabase: (callback) => ipcRenderer.on("menu:newDatabase", () => callback()),
     onOpenDatabase: (callback) => ipcRenderer.on("menu:openDatabase", () => callback()),
-    onSettings: (callback) => ipcRenderer.on("menu:settings", () => callback())
+    onSettings: (callback) => ipcRenderer.on("menu:settings", () => callback()),
+    onToggleAgenda: (callback) => ipcRenderer.on("menu:toggleAgenda", () => callback())
   } satisfies MenuAPI,
   file: {
     insert: async (path, id, filename, mimeType, data) => {

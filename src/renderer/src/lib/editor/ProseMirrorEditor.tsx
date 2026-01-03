@@ -37,6 +37,7 @@ export type ProseMirrorEditorHandle = {
   focusFirstMatch: () => void
   focusEndOfTitle: () => void
   selectTitle: () => void
+  scrollToPos: (pos: number) => void
 }
 
 export type ProseMirrorEditorProps = {
@@ -185,6 +186,13 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
         const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, start, end))
         view.dispatch(tr)
       }
+    },
+    scrollToPos: (pos: number) => {
+      if (!view) return
+      view.focus()
+      const resolvedPos = Math.min(pos, view.state.doc.content.size)
+      const tr = view.state.tr.setSelection(Selection.near(view.state.doc.resolve(resolvedPos)))
+      view.dispatch(tr.scrollIntoView())
     }
   }
 
