@@ -148,6 +148,16 @@ const textSpec: NodeSpec = {
   group: "inline"
 }
 
+const hardBreakSpec: NodeSpec = {
+  inline: true,
+  group: "inline",
+  selectable: false,
+  parseDOM: [{ tag: "br" }],
+  toDOM(): DOMOutputSpec {
+    return ["br"]
+  }
+}
+
 export type CardRefVariant = "link" | "tag"
 
 const cardRefSpec: NodeSpec = {
@@ -275,7 +285,8 @@ export const schema = new Schema({
     code_block: codeBlockSpec,
     image: imageSpec,
     cardRef: cardRefSpec,
-    text: textSpec
+    text: textSpec,
+    hard_break: hardBreakSpec
   },
   marks: {
     bold: boldSpec,

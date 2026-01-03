@@ -247,6 +247,11 @@ const imageArrowUp: Command = (state, dispatch) => {
 
 const enterCommand = chainCommands(exitImageNode, codeBlockEnter, splitBlock)
 
+const insertHardBreak: Command = (state, dispatch) => {
+  if (dispatch) dispatch(state.tr.replaceSelectionWith(schema.nodes.hard_break.create()).scrollIntoView())
+  return true
+}
+
 const backspaceCommand = chainCommands(
   deleteSelectionPreserveTitle,
   removeCheckboxOnEmpty,
@@ -315,6 +320,7 @@ const toggleCheckbox: Command = (state, dispatch) => {
 export function buildKeymap(): Plugin {
   return keymap({
     Enter: enterCommand,
+    "Shift-Enter": insertHardBreak,
     Backspace: backspaceCommand,
     Delete: deleteCommand,
     "Mod-[": dedent,
