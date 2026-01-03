@@ -8,8 +8,7 @@ import {
   joinTextblockForward,
   selectNodeBackward,
   selectNodeForward,
-  toggleMark,
-  exitCode
+  toggleMark
 } from "prosemirror-commands"
 import { undo, redo } from "prosemirror-history"
 import { inputRules } from "prosemirror-inputrules"
@@ -114,6 +113,30 @@ const deleteSelectionPreserveTitle: Command = (state, dispatch) => {
   }
 
   return deleteSelection(state, dispatch)
+}
+
+const removeCheckboxOnEmpty: Command = (state, dispatch) => {
+  const $cursor = atTextblockStart(state)
+  if (!$cursor) return false
+  if ($cursor.parent.type !== schema.nodes.paragraph) return false
+  if ($cursor.parent.content.size !== 0) return false
+
+  const blockDepth = $cursor.depth - 1
+  if (blockDepth < 1) return false
+
+  const block = $cursor.node(blockDepth)
+  if (!isBlockNode(block)) return false
+  if (block.attrs.checked === null) return false
+
+  if (dispatch) {
+    const blockPos = $cursor.before(blockDepth)
+    const tr = state.tr.setNodeMarkup(blockPos, undefined, {
+      ...block.attrs,
+      checked: null
+    })
+    dispatch(tr)
+  }
+  return true
 }
 
 const convertBlockToParagraph: Command = (state, dispatch) => {
@@ -226,6 +249,7 @@ const enterCommand = chainCommands(exitImageNode, codeBlockEnter, splitBlock)
 
 const backspaceCommand = chainCommands(
   deleteSelectionPreserveTitle,
+  removeCheckboxOnEmpty,
   convertBlockToParagraph,
   joinBlockUp,
   joinTextblockBackward,
@@ -264,6 +288,30 @@ const exitCodeBlockDown: Command = (state, dispatch) => {
   return true
 }
 
+const toggleCheckbox: Command = (state, dispatch) => {
+  const { $head } = state.selection
+
+  for (let d = $head.depth; d >= 1; d--) {
+    const node = $head.node(d)
+    if (!isBlockNode(node)) continue
+
+    const pos = $head.before(d)
+    const currentChecked = node.attrs.checked
+    // cycle: null -> false -> true -> null
+    const newChecked = currentChecked === null ? false : currentChecked === false ? true : null
+
+    if (dispatch) {
+      const tr = state.tr.setNodeMarkup(pos, undefined, {
+        ...node.attrs,
+        checked: newChecked
+      })
+      dispatch(tr)
+    }
+    return true
+  }
+  return false
+}
+
 export function buildKeymap(): Plugin {
   return keymap({
     Enter: enterCommand,
@@ -282,9 +330,9 @@ export function buildKeymap(): Plugin {
     "Mod-a": selectAllInBlock,
     "Mod-.": toggleCollapse,
     "Mod-t": insertTimestamp,
+    "Mod-Enter": toggleCheckbox,
     ArrowDown: chainCommands(imageArrowDown, exitCodeBlockDown),
-    ArrowUp: imageArrowUp,
-    "Mod-Enter": exitCode
+    ArrowUp: imageArrowUp
   })
 }
 

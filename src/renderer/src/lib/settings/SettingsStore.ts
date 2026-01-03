@@ -5,7 +5,7 @@ export type { Settings }
 
 const defaultSettings: Settings = {
   theme: "dark",
-  fontSize: "medium",
+  fontSize: 16,
   fontFamily: "",
   showLineNumbers: false,
   spellCheck: false,
@@ -64,7 +64,7 @@ class SettingsStore {
     this.setSettings(updated)
   }
 
-  async setFontSize(fontSize: Settings["fontSize"]) {
+  async setFontSize(fontSize: number) {
     const updated = await window.api.settings.set({ fontSize })
     this.setSettings(updated)
   }

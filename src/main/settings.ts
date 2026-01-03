@@ -9,7 +9,7 @@ export type VaultSettings = Settings
 
 export const defaultVaultSettings: VaultSettings = {
   theme: "dark",
-  fontSize: "medium",
+  fontSize: 16,
   fontFamily: "",
   showLineNumbers: false,
   spellCheck: false,

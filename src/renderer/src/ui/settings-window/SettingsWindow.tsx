@@ -25,7 +25,7 @@ const SettingsWindow: Component = () => {
   const [error, setError] = createSignal("")
   const [dbPath, setDbPath] = createSignal("")
   const [theme, setTheme] = createSignal<"light" | "dark" | "system">("dark")
-  const [fontSize, setFontSize] = createSignal<"small" | "medium" | "large">("medium")
+  const [fontSize, setFontSize] = createSignal(16)
   const [fontFamily, setFontFamily] = createSignal("")
   const [searchThreshold, setSearchThreshold] = createSignal(1)
 
@@ -142,9 +142,10 @@ const SettingsWindow: Component = () => {
     await settingsStore.setTheme(newTheme)
   }
 
-  const handleFontSizeChange = async (newSize: "small" | "medium" | "large") => {
-    setFontSize(newSize)
-    await settingsStore.setFontSize(newSize)
+  const handleFontSizeChange = async (value: number) => {
+    const clamped = Math.max(10, Math.min(32, value))
+    setFontSize(clamped)
+    await settingsStore.setFontSize(clamped)
   }
 
   const handleFontFamilyChange = async (value: string) => {
@@ -242,35 +243,15 @@ const SettingsWindow: Component = () => {
 
           <div class="space-y-1">
             <label class="text-xs font-medium text-muted-foreground">Font Size</label>
-            <div class="flex gap-2">
-              <button
-                class={`h-[26px] px-3 rounded border text-xs ${
-                  fontSize() === "small"
-                    ? "border-ring bg-accent text-foreground"
-                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}
-                onClick={() => handleFontSizeChange("small")}>
-                Small
-              </button>
-              <button
-                class={`h-[26px] px-3 rounded border text-xs ${
-                  fontSize() === "medium"
-                    ? "border-ring bg-accent text-foreground"
-                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}
-                onClick={() => handleFontSizeChange("medium")}>
-                Medium
-              </button>
-              <button
-                class={`h-[26px] px-3 rounded border text-xs ${
-                  fontSize() === "large"
-                    ? "border-ring bg-accent text-foreground"
-                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}
-                onClick={() => handleFontSizeChange("large")}>
-                Large
-              </button>
-            </div>
+            <p class="text-[10px] text-muted-foreground">Editor font size in pixels (10-32).</p>
+            <input
+              type="number"
+              min="10"
+              max="32"
+              value={fontSize()}
+              onInput={(e) => handleFontSizeChange(parseInt(e.currentTarget.value) || 16)}
+              class="w-20 h-[26px] px-2 text-xs bg-input border border-border/50 rounded outline-none focus:border-ring"
+            />
           </div>
 
           <div class="space-y-1">

@@ -7,7 +7,7 @@ import { dedentNodeRange } from "./dedent"
 import { fixBlocks } from "./auto-fix"
 
 function deriveBlockAttrs(blockNode: PMNode): BlockAttrs {
-  return { kind: (blockNode.attrs as BlockAttrs).kind, order: null, collapsed: false }
+  return { kind: (blockNode.attrs as BlockAttrs).kind, order: null, collapsed: false, checked: null }
 }
 
 export const splitBlock: Command = (state, dispatch): boolean => {

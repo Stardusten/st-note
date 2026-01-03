@@ -624,3 +624,69 @@
   background-color: rgba(237, 137, 54, 0.2);
   color: #ed8936;
 }
+
+/* checkbox */
+.prosemirror-editor .block-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.4em;
+  border: 1.5px solid var(--color-muted-foreground);
+  border-radius: 3px;
+  cursor: pointer;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: background-color 0.1s, border-color 0.1s;
+}
+
+.prosemirror-editor .block-checkbox:hover {
+  border-color: var(--color-foreground);
+}
+
+.prosemirror-editor .block-checkbox[data-checked="true"] {
+  background-color: var(--color-ring);
+  border-color: var(--color-ring);
+}
+
+.prosemirror-editor .block-checkbox[data-checked="true"]::after {
+  content: "";
+  width: 0.3em;
+  height: 0.55em;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+/* block with checkbox uses inline layout */
+.prosemirror-editor .block[data-checked] {
+  display: flex;
+  align-items: center;
+}
+
+.prosemirror-editor .block[data-checked] > .block-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* restore list-item display for bullet with checkbox */
+.prosemirror-editor .block[data-kind="bullet"][data-checked]:not([data-marker-hidden]) {
+  display: list-item;
+}
+
+.prosemirror-editor .block[data-kind="bullet"][data-checked]:not([data-marker-hidden]) > .block-checkbox {
+  float: left;
+  margin-top: 0.35em;
+}
+
+/* ordered list with checkbox */
+.prosemirror-editor .block[data-kind="ordered"][data-checked]:not([data-marker-hidden]) > .block-checkbox {
+  margin-left: 0.3em;
+}
+
+/* checked block text style */
+.prosemirror-editor .block[data-checked="true"] > .block-content > p {
+  text-decoration: line-through;
+  color: var(--color-muted-foreground);
+}

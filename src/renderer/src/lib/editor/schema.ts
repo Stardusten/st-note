@@ -13,6 +13,7 @@ export type BlockAttrs = {
   kind: BlockKind
   order: number | null
   collapsed: boolean
+  checked: boolean | null
 }
 
 export const flatBlockGroup = "flatBlock"
@@ -75,7 +76,8 @@ const blockSpec: NodeSpec = {
   attrs: {
     kind: { default: "paragraph" as BlockKind },
     order: { default: null as number | null },
-    collapsed: { default: false }
+    collapsed: { default: false },
+    checked: { default: null as boolean | null }
   },
   parseDOM: [
     {
@@ -86,12 +88,14 @@ const blockSpec: NodeSpec = {
         const orderStr = el.getAttribute("data-order")
         const order = orderStr ? parseInt(orderStr, 10) : null
         const collapsed = el.getAttribute("data-collapsed") === "true"
-        return { kind, order: isNaN(order as number) ? null : order, collapsed }
+        const checkedStr = el.getAttribute("data-checked")
+        const checked = checkedStr === null ? null : checkedStr === "true"
+        return { kind, order: isNaN(order as number) ? null : order, collapsed, checked }
       }
     },
     {
       tag: "ul > li",
-      getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null, collapsed: false })
+      getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null, collapsed: false, checked: null })
     },
     {
       tag: "ol > li",
@@ -99,16 +103,16 @@ const blockSpec: NodeSpec = {
         const el = dom as HTMLElement
         const orderStr = el.getAttribute("value")
         const order = orderStr ? parseInt(orderStr, 10) : null
-        return { kind: "ordered", order: isNaN(order as number) ? null : order, collapsed: false }
+        return { kind: "ordered", order: isNaN(order as number) ? null : order, collapsed: false, checked: null }
       }
     },
     {
       tag: ":is(ul, ol) > :is(ul, ol)",
-      getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null, collapsed: false })
+      getAttrs: (): BlockAttrs => ({ kind: "bullet", order: null, collapsed: false, checked: null })
     },
     {
       tag: "blockquote",
-      getAttrs: (): BlockAttrs => ({ kind: "quote", order: null, collapsed: false })
+      getAttrs: (): BlockAttrs => ({ kind: "quote", order: null, collapsed: false, checked: null })
     }
   ],
   toDOM(node): DOMOutputSpec {
@@ -125,6 +129,7 @@ const blockSpec: NodeSpec = {
     }
     if (attrs.collapsed) domAttrs["data-collapsed"] = "true"
     if (node.childCount >= 2) domAttrs["data-collapsable"] = "true"
+    if (attrs.checked !== null) domAttrs["data-checked"] = String(attrs.checked)
 
     return [
       "div",

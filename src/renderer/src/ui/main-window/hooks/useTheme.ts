@@ -1,12 +1,6 @@
 import { createEffect } from "solid-js"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 
-const fontSizeMap = {
-  small: "14px",
-  medium: "16px",
-  large: "18px"
-}
-
 export function useTheme() {
   createEffect(() => {
     const theme = settingsStore.settings().theme
@@ -21,7 +15,7 @@ export function useTheme() {
 
   createEffect(() => {
     const fontSize = settingsStore.settings().fontSize
-    document.documentElement.style.setProperty("--editor-font-size", fontSizeMap[fontSize])
+    document.documentElement.style.setProperty("--editor-font-size", `${fontSize}px`)
   })
 
   createEffect(() => {

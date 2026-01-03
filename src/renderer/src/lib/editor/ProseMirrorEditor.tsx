@@ -258,7 +258,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
     view = new EditorView(containerRef, {
       state,
       nodeViews: {
-        block: (node) => createBlockNodeView(node),
+        block: (node, view, getPos) => createBlockNodeView(node, view, getPos),
         code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos),
         cardRef: (node, view, getPos) => new CardRefView(node, view, getPos, cardRefOptions),
         image: (node, view, getPos) => new ImageView(node, view, getPos, { getDbPath: () => ctx.dbPath })
