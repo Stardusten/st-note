@@ -151,7 +151,7 @@ function createImageViewerWindow(params: ImageViewerParams): void {
     width: 800,
     height: 600,
     minWidth: 400,
-    minHeight: 200,
+    minHeight: 184, // TITLE_BAR_HEIGHT(34) + TOOLBAR_HEIGHT(50) + 100
     show: false,
     titleBarStyle: "hidden",
     ...(process.platform === "darwin"
@@ -276,6 +276,10 @@ function createWindow(): void {
 
   mainWindow.on("closed", () => {
     mainWindow = null
+  })
+
+  mainWindow.on("focus", () => {
+    mainWindow?.webContents.send("window:focus")
   })
 }
 

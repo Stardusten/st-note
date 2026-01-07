@@ -27,6 +27,7 @@ const SettingsWindow: Component = () => {
   const [theme, setTheme] = createSignal<"light" | "dark" | "system">("dark")
   const [searchThreshold, setSearchThreshold] = createSignal(1)
   const [customCSS, setCustomCSS] = createSignal("")
+  const [codeBlockWrap, setCodeBlockWrap] = createSignal(false)
 
   onMount(async () => {
     await settingsStore.init()
@@ -36,6 +37,7 @@ const SettingsWindow: Component = () => {
     setTheme(settingsStore.getTheme())
     setSearchThreshold(settingsStore.getSearchMatchThreshold())
     setCustomCSS(settingsStore.getCustomCSS())
+    setCodeBlockWrap(settingsStore.getCodeBlockWrap())
   })
 
   createEffect(() => {
@@ -150,6 +152,11 @@ const SettingsWindow: Component = () => {
     await settingsStore.setCustomCSS(value)
   }
 
+  const handleCodeBlockWrapChange = async (enabled: boolean) => {
+    setCodeBlockWrap(enabled)
+    await settingsStore.setCodeBlockWrap(enabled)
+  }
+
   return (
     <div class="h-screen w-full flex flex-col overflow-hidden bg-surface text-foreground">
       <div
@@ -253,6 +260,22 @@ const SettingsWindow: Component = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Code Block Wrap</label>
+            <p class="text-[10px] text-muted-foreground">
+              Wrap long lines in code blocks instead of horizontal scrolling.
+            </p>
+            <label class="inline-flex items-center gap-2 text-xs text-muted-foreground select-none">
+              <input
+                type="checkbox"
+                checked={codeBlockWrap()}
+                onChange={(e) => handleCodeBlockWrapChange(e.currentTarget.checked)}
+                class="h-4 w-4 rounded border border-border/50 bg-input"
+              />
+              <span>Enable</span>
+            </label>
           </div>
 
           <div class="space-y-1">

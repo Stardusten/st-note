@@ -5,6 +5,8 @@ import { Node as ProseMirrorNode } from "prosemirror-model"
 import { history } from "prosemirror-history"
 import { gapCursor } from "prosemirror-gapcursor"
 import { dropCursor } from "prosemirror-dropcursor"
+import { createVirtualCursor } from "prosemirror-virtual-cursor"
+import "prosemirror-virtual-cursor/style/virtual-cursor.css"
 import { common, createLowlight } from "lowlight"
 import { schema } from "./schema"
 import { buildKeymap, buildInputRules } from "./keymap"
@@ -24,6 +26,7 @@ import { createClipboardPlugin } from "./plugins/clipboard-plugin"
 import { createImagePlugin, createImageSelectionPlugin } from "./plugins/image-plugin"
 import { createSearchHighlightPlugin, searchHighlightPluginKey } from "./plugins/search-highlight-plugin"
 import { createTimestampHighlightPlugin } from "./plugins/timestamp-highlight-plugin"
+import { createTaskNormalizePlugin } from "./plugins/task-normalize-plugin"
 import { createClickBelowPlugin } from "./plugins/click-below-plugin"
 import { createContextMenuPlugin } from "./plugins/context-menu-plugin"
 import { findHighlightRanges } from "@renderer/lib/common/utils/highlight"
@@ -227,8 +230,9 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       buildInputRules(),
       buildKeymap(),
       history(),
-      gapCursor(),
+      // gapCursor(),
       dropCursor({ color: "var(--color-ring)" }),
+      createVirtualCursor(),
       createPlaceholderPlugin(ctx.placeholder || ""),
       createLowlightPlugin("code_block", lowlight),
       createAutoLinkPlugin(),
@@ -239,6 +243,7 @@ export const ProseMirrorEditor = (props: ProseMirrorEditorProps): JSX.Element =>
       createImageSelectionPlugin(),
       createSearchHighlightPlugin(),
       createTimestampHighlightPlugin(),
+      createTaskNormalizePlugin(),
       createClickBelowPlugin(),
       createContextMenuPlugin()
     )

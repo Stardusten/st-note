@@ -16,7 +16,7 @@ import { format } from "date-fns"
 import { splitBlock, joinBlockUp } from "./commands/split"
 import { indent } from "./commands/indent"
 import { dedent } from "./commands/dedent"
-import { toggleCollapse } from "./commands/collapse"
+import { toggleCollapse, collapseBlock, expandBlock } from "./commands/collapse"
 import { atTextblockStart } from "./commands/utils"
 import { bulletListRule, orderedListRule, quoteRule } from "./input-rules/wrapping-block"
 import { codeBlockRule } from "./input-rules/code-block"
@@ -335,6 +335,8 @@ export function buildKeymap(): Plugin {
     "Mod-`": toggleMark(schema.marks.code),
     "Mod-a": selectAllInBlock,
     "Mod-.": toggleCollapse,
+    "Mod-ArrowUp": collapseBlock,
+    "Mod-ArrowDown": expandBlock,
     "Mod-t": insertTimestamp,
     "Mod-Enter": toggleCheckbox,
     ArrowDown: chainCommands(imageArrowDown, exitCodeBlockDown),

@@ -119,7 +119,7 @@ export class TextContentCache {
       parts.push(node.text)
     } else if (node.type === 'cardRef' && node.attrs?.cardId) {
       const refCardId = node.attrs.cardId as StObjectId
-      const title = this.getTitleInternal(refCardId, visited)
+      const title = this.getTitleFromText(refCardId, visited)
       parts.push(`[[${title}]]`)
     }
 
@@ -134,59 +134,44 @@ export class TextContentCache {
     }
   }
 
-  private getTitleInternal(cardId: StObjectId, visited: Set<StObjectId>): string {
+  private getTitleFromText(cardId: StObjectId, visited: Set<StObjectId>): string {
     if (visited.has(cardId)) return 'Untitled'
     visited.add(cardId)
 
-    if (!this.objCache) return 'Untitled'
+    const text = this.getTextInternal(cardId, visited)
+    const newlineIndex = text.indexOf('\n')
+    const title = newlineIndex === -1 ? text : text.slice(0, newlineIndex)
+    return title || 'Untitled'
+  }
 
-    const obj = this.objCache.get(cardId)()
-    if (!obj || obj.type !== 'card') return 'Untitled'
-
-    const card = obj as Card
-    const content = card.data?.content?.content
-    if (!Array.isArray(content) || content.length === 0) return 'Untitled'
-
-    const titleNode = content[0]
-    if (titleNode?.type !== 'title' || !Array.isArray(titleNode.content)) return 'Untitled'
-
-    const parts: string[] = []
-    for (const child of titleNode.content) {
-      if (child.type === 'text' && child.text) {
-        parts.push(child.text)
-      } else if (child.type === 'cardRef' && child.attrs?.cardId) {
-        const refTitle = this.getTitleInternal(child.attrs.cardId, visited)
-        parts.push(refTitle)
-      }
+  private getTextInternal(cardId: StObjectId, visited: Set<StObjectId>): string {
+    // Check cache first
+    if (!this.dirty.has(cardId) && this.textCache.has(cardId)) {
+      return this.textCache.get(cardId)!
     }
 
-    const result = parts.join('').trim()
-    return result || 'Untitled'
+    const text = this.computeText(cardId, visited)
+    this.textCache.set(cardId, text)
+    this.dirty.delete(cardId)
+    return text
   }
 
   getText(cardId: StObjectId): Accessor<string> {
     return () => {
       this.cacheVersion()
 
-      if (!this.dirty.has(cardId) && this.textCache.has(cardId)) {
-        return this.textCache.get(cardId)!
-      }
-
       const visited = new Set<StObjectId>()
       visited.add(cardId)
-      const text = this.computeText(cardId, visited)
-      this.textCache.set(cardId, text)
-      this.dirty.delete(cardId)
-      return text
+      return this.getTextInternal(cardId, visited)
     }
   }
 
   getTitle(cardId: StObjectId): Accessor<string> {
     return () => {
-      this.cacheVersion()
-
-      const visited = new Set<StObjectId>()
-      return this.getTitleInternal(cardId, visited)
+      const text = this.getText(cardId)()
+      const newlineIndex = text.indexOf('\n')
+      const title = newlineIndex === -1 ? text : text.slice(0, newlineIndex)
+      return title || 'Untitled'
     }
   }
 

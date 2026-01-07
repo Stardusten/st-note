@@ -4,16 +4,12 @@ import type { Card } from "@renderer/lib/common/types/card"
 import { Plus } from "lucide-solid"
 import { Component, createEffect, For, Show } from "solid-js"
 import HighlightedText from "./components/HighlightedText"
-
-const getCardBody = (cardId: string) => {
-  const text = appStore.getCardText(cardId)() || ""
-  return text.split("\n").slice(1).join(" ").trim()
-}
+import type { SearchListItem } from "./hooks/useSearch"
 
 type NoteListProps = {
   query: string
   highlightQuery: string
-  cards: Card[]
+  items: SearchListItem[]
   focusedIndex: number
   listHasFocus: boolean
   compact?: boolean
@@ -28,7 +24,7 @@ type NoteListProps = {
 const NoteList: Component<NoteListProps> = (props) => {
   let listRef: HTMLDivElement | undefined
 
-  const isNewNoteItem = (index: number) => index === props.cards.length
+  const isNewNoteItem = (index: number) => index === props.items.length
 
   createEffect(() => {
     const idx = props.focusedIndex
@@ -73,13 +69,13 @@ const NoteList: Component<NoteListProps> = (props) => {
         ref={listRef}
         class="flex-1 overflow-y-auto min-h-0"
         style={{ transform: "translate3d(0, 0, 0)", "will-change": "transform" }}>
-        <For each={props.cards}>
-          {(card, index) => (
+        <For each={props.items}>
+          {(item, index) => (
             <div
               data-index={index()}
               class={`group flex border-b border-border/40 cursor-pointer px-2 ${compact() ? "items-center gap-2 py-0.5" : "flex-col py-1.5"} ${getItemClass(props.focusedIndex === index())}`}
               onClick={() => handleItemClick(index())}
-              onContextMenu={(e) => handleContextMenu(e, card)}>
+              onContextMenu={(e) => handleContextMenu(e, item.card)}>
               <Show
                 when={compact()}
                 fallback={
@@ -87,19 +83,16 @@ const NoteList: Component<NoteListProps> = (props) => {
                     <div class="flex items-center justify-between gap-2">
                       <div class="flex items-center gap-1.5 min-w-0">
                         <span class="truncate text-foreground">
-                          <HighlightedText
-                            text={appStore.getCardTitle(card.id)() || "Untitled"}
-                            query={props.highlightQuery}
-                          />
+                          <HighlightedText text={item.title || "Untitled"} query={props.highlightQuery} />
                         </span>
                       </div>
                       <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
-                        {formatRelativeTime(card.updatedAt)}
+                        {formatRelativeTime(item.card.updatedAt)}
                       </div>
                     </div>
-                    <Show when={getCardBody(card.id)}>
+                    <Show when={item.body}>
                       <div class="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
-                        <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
+                        <HighlightedText text={item.body} query={props.highlightQuery} />
                       </div>
                     </Show>
                   </>
@@ -107,19 +100,16 @@ const NoteList: Component<NoteListProps> = (props) => {
                 <div class="flex-1 min-w-0 flex items-center gap-1.5">
                   <div class="flex-1 min-w-0 flex items-center">
                     <span class="shrink-0 text-foreground">
-                      <HighlightedText
-                        text={appStore.getCardTitle(card.id)() || "Untitled"}
-                        query={props.highlightQuery}
-                      />
+                      <HighlightedText text={item.title || "Untitled"} query={props.highlightQuery} />
                     </span>
-                    <Show when={getCardBody(card.id)}>
+                    <Show when={item.body}>
                       <span class="truncate ml-2 text-muted-foreground">
-                        - <HighlightedText text={getCardBody(card.id)} query={props.highlightQuery} />
+                        - <HighlightedText text={item.body} query={props.highlightQuery} />
                       </span>
                     </Show>
                   </div>
                   <div class="text-muted-foreground whitespace-nowrap shrink-0 text-[10px]">
-                    {formatRelativeTime(card.updatedAt)}
+                    {formatRelativeTime(item.card.updatedAt)}
                   </div>
                 </div>
               </Show>
@@ -127,9 +117,9 @@ const NoteList: Component<NoteListProps> = (props) => {
           )}
         </For>
         <div
-          data-index={props.cards.length}
+          data-index={props.items.length}
           class={`flex items-center gap-3 border-b border-border/40 cursor-pointer px-2 ${compact() ? "py-0.5" : "py-1.5"} ${getItemClass(isNewNoteItem(props.focusedIndex))}`}
-          onClick={() => handleItemClick(props.cards.length)}>
+          onClick={() => handleItemClick(props.items.length)}>
           <Plus class="size-3.5 stroke-[1.5px] text-muted-foreground ml-0.5" />
           <span class="text-muted-foreground">
             New note: "<span class="text-foreground">{props.query || "Untitled"}</span>"

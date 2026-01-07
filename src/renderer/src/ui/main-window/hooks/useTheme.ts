@@ -18,7 +18,7 @@ export function useTheme() {
   createEffect(() => {
     const customCSS = settingsStore.settings().customCSS
     let styleEl = document.getElementById(CUSTOM_CSS_STYLE_ID) as HTMLStyleElement | null
-    
+
     if (customCSS) {
       if (!styleEl) {
         styleEl = document.createElement("style")
@@ -29,5 +29,10 @@ export function useTheme() {
     } else if (styleEl) {
       styleEl.remove()
     }
+  })
+
+  createEffect(() => {
+    const enabled = settingsStore.settings().codeBlockWrap
+    document.documentElement.setAttribute("data-code-block-wrap", enabled ? "true" : "false")
   })
 }

@@ -21,3 +21,45 @@ export const toggleCollapse: Command = (state, dispatch) => {
 
   return false
 }
+
+export const collapseBlock: Command = (state, dispatch) => {
+  const { $head } = state.selection as TextSelection
+
+  for (let d = $head.depth; d >= 1; d--) {
+    const node = $head.node(d)
+    if (isBlockNode(node)) {
+      if (node.attrs.collapsed) return false // Already collapsed
+      const pos = $head.before(d)
+      if (dispatch) {
+        dispatch(state.tr.setNodeMarkup(pos, undefined, {
+          ...node.attrs,
+          collapsed: true
+        }))
+      }
+      return true
+    }
+  }
+
+  return false
+}
+
+export const expandBlock: Command = (state, dispatch) => {
+  const { $head } = state.selection as TextSelection
+
+  for (let d = $head.depth; d >= 1; d--) {
+    const node = $head.node(d)
+    if (isBlockNode(node)) {
+      if (!node.attrs.collapsed) return false // Already expanded
+      const pos = $head.before(d)
+      if (dispatch) {
+        dispatch(state.tr.setNodeMarkup(pos, undefined, {
+          ...node.attrs,
+          collapsed: false
+        }))
+      }
+      return true
+    }
+  }
+
+  return false
+}

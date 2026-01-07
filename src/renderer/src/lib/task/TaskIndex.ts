@@ -3,7 +3,7 @@ import type { StObjectId } from "@renderer/lib/common/storage-types"
 import type { ObjCache, ObjCacheEvent } from "../objcache/objcache"
 import type { Card } from "../common/types/card"
 import type { TaskEntry, TaskType } from "./types"
-import { extractTasksFromContent, isTaskVisible, getEffectiveDate } from "./parser"
+import { extractTasksFromContent, isTaskVisible, getTaskPriority, getDaysDiff } from "./parser"
 
 export type TaskGroup = {
   id: string
@@ -66,6 +66,7 @@ export class TaskIndex {
     for (const tasks of this.tasksByCard.values()) {
       this.allTasks.push(...tasks)
     }
+    // Sort by timestamp as base order
     this.allTasks.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
   }
 
@@ -112,7 +113,8 @@ export class TaskIndex {
   getTasksInRange(start: Date, end: Date): Accessor<TaskEntry[]> {
     return () => {
       this.indexVersion()
-      return this.allTasks.filter((t) => isTaskVisible(t, start, end))
+      const today = new Date()
+      return this.allTasks.filter((t) => isTaskVisible(t, today))
     }
   }
 
@@ -130,48 +132,105 @@ export class TaskIndex {
     }
   }
 
+  /**
+   * Get visible tasks sorted by priority (howm floating mechanism).
+   * Higher priority tasks "float" to the top.
+   */
+  getVisibleTasksSorted(): Accessor<TaskEntry[]> {
+    return () => {
+      this.indexVersion()
+      const today = new Date()
+
+      return this.allTasks
+        .filter((t) => isTaskVisible(t, today))
+        .sort((a, b) => {
+          const pa = getTaskPriority(a, today)
+          const pb = getTaskPriority(b, today)
+          if (pa !== pb) return pb - pa // Higher priority first
+          return a.timestamp.getTime() - b.timestamp.getTime() // Same priority: by date
+        })
+    }
+  }
+
+  /**
+   * Get tasks grouped by urgency level.
+   * Groups: Overdue, Today, This Week, Later
+   */
   getGroupedTasks(): Accessor<TaskGroup[]> {
     return () => {
       this.indexVersion()
 
       const now = new Date()
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const weekEnd = new Date(today)
-      weekEnd.setDate(weekEnd.getDate() + 7)
 
       const overdue: TaskEntry[] = []
       const todayTasks: TaskEntry[] = []
       const thisWeek: TaskEntry[] = []
       const later: TaskEntry[] = []
 
-      for (const task of this.allTasks) {
-        if (task.type === "done") continue
+      // Get visible tasks sorted by priority
+      const visibleTasks = this.allTasks
+        .filter((t) => isTaskVisible(t, today))
+        .sort((a, b) => {
+          const pa = getTaskPriority(a, today)
+          const pb = getTaskPriority(b, today)
+          if (pa !== pb) return pb - pa
+          return a.timestamp.getTime() - b.timestamp.getTime()
+        })
 
-        const effective = getEffectiveDate(task)
-        const ts = task.timestamp
+      for (const task of visibleTasks) {
+        const daysDiff = getDaysDiff(task, today)
 
-        if (task.type === "reminder") {
-          if (effective < today) {
-            overdue.push(task)
-          } else if (ts <= today && effective >= today) {
+        switch (task.type) {
+          case "schedule":
+            // Schedule is always today (since it's only visible today)
             todayTasks.push(task)
-          } else if (ts <= weekEnd) {
-            thisWeek.push(task)
-          } else {
-            later.push(task)
-          }
-        } else {
-          if (ts < today) {
-            overdue.push(task)
-          } else if (ts < tomorrow) {
+            break
+
+          case "deadline":
+            if (daysDiff < 0) {
+              overdue.push(task)
+            } else if (daysDiff === 0) {
+              todayTasks.push(task)
+            } else if (daysDiff <= 7) {
+              thisWeek.push(task)
+            } else {
+              later.push(task)
+            }
+            break
+
+          case "todo":
+            // Todo: group by how long it's been floating
+            if (daysDiff <= -7) {
+              // Floating for more than a week = urgent
+              overdue.push(task)
+            } else if (daysDiff <= -1) {
+              // Floating for a few days
+              thisWeek.push(task)
+            } else {
+              // Just started floating
+              todayTasks.push(task)
+            }
+            break
+
+          case "reminder":
+            // Reminder: sinking, less urgent as time passes
+            if (daysDiff === 0) {
+              todayTasks.push(task)
+            } else if (daysDiff >= -7) {
+              thisWeek.push(task)
+            } else {
+              later.push(task)
+            }
+            break
+
+          case "defer":
+            // Defer: periodic tasks go to today when in active window
             todayTasks.push(task)
-          } else if (ts < weekEnd) {
-            thisWeek.push(task)
-          } else {
-            later.push(task)
-          }
+            break
+
+          default:
+            break
         }
       }
 

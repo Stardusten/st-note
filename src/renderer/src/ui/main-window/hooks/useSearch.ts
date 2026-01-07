@@ -1,7 +1,16 @@
 import { createMemo, createSignal, untrack } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
-import { prepareSearch } from "@renderer/lib/common/utils/search"
+import { prepareSearchWithTitle } from "@renderer/lib/common/utils/search"
+import type { Card } from "@renderer/lib/common/types/card"
+
+export type SearchListItem = {
+  card: Card
+  title: string
+  body: string
+}
+
+const getBodyFromText = (text: string) => text.split("\n").slice(1).join(" ").trim()
 
 export function useSearch() {
   const [query, setQuery] = createSignal("")
@@ -11,37 +20,56 @@ export function useSearch() {
 
   const searchQuery = createMemo(() => (isComposing() ? lastCommittedQuery() : query()))
 
-  // Track card IDs only (not content) to trigger recalc on add/delete
-  const cardIds = createMemo(() => appStore.getCards().map((c) => c.id).join(","))
+  // Only change the list when:
+  // - query changes, or
+  // - cards are added/removed (ID set changes)
+  // Reordering due to updatedAt/content updates should NOT affect this.
+  const cardIds = createMemo(() => appStore.getCards().map((c) => c.id).sort().join(","))
 
-  const filteredCards = createMemo(() => {
+  const filteredItems = createMemo<SearchListItem[]>(() => {
     const q = searchQuery()
-    cardIds() // subscribe to card list changes
+    cardIds() // subscribe to add/delete only
+
     const threshold = untrack(() => settingsStore.getSearchMatchThreshold())
     const cards = untrack(() => appStore.getCards())
+
     if (q.trim()) {
-      const scorer = prepareSearch(q, threshold)
+      const scorer = prepareSearchWithTitle(q, threshold)
       const results = cards
         .map((card) => {
+          const title = untrack(() => appStore.getCardTitle(card.id)()) || ""
           const text = untrack(() => appStore.getCardText(card.id)()) || ""
-          const score = scorer(text)
-          return { card, text, score }
+          const body = getBodyFromText(text)
+          const result = scorer(title, text)
+          return { card, title, body, ...result }
         })
         .filter(({ score }) => score > 0)
         .sort((a, b) => {
+          if (a.titleMatched !== b.titleMatched) return a.titleMatched ? -1 : 1
           if (b.score !== a.score) return b.score - a.score
           const timeA = a.card.updatedAt ? new Date(a.card.updatedAt).getTime() : 0
           const timeB = b.card.updatedAt ? new Date(b.card.updatedAt).getTime() : 0
           return timeB - timeA
         })
-      return results.map(({ card }) => card)
+
+      return results.map(({ card, title, body }) => ({ card, title, body }))
     }
-    return [...cards].sort((a, b) => {
-      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
-      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-      return timeB - timeA
-    })
+
+    return [...cards]
+      .sort((a, b) => {
+        const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+        const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+        return timeB - timeA
+      })
+      .map((card) => {
+        const title = untrack(() => appStore.getCardTitle(card.id)()) || ""
+        const text = untrack(() => appStore.getCardText(card.id)()) || ""
+        const body = getBodyFromText(text)
+        return { card, title, body }
+      })
   })
+
+  const filteredCards = createMemo(() => filteredItems().map((i) => i.card))
 
   const highlightQuery = createMemo(() => (showHighlight() ? searchQuery() : ""))
 
@@ -66,6 +94,7 @@ export function useSearch() {
 
   return {
     query,
+    filteredItems,
     filteredCards,
     highlightQuery,
     updateQuery,

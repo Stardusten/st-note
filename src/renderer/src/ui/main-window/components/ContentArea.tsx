@@ -1,6 +1,7 @@
 import { Component, Show, createMemo } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
 import NoteEditor from "@renderer/lib/editor/NoteEditor"
+import BacklinkPanel from "./BacklinkPanel"
 import type { Card } from "@renderer/lib/common/types/card"
 import type { EditorContext } from "@renderer/lib/editor/EditorContext"
 
@@ -10,6 +11,7 @@ export type ContentAreaProps = {
   editorRef?: (ref: any) => void
   highlightQuery: () => string
   onDocChange?: () => void
+  onNavigate?: (cardId: string, pos?: number) => void
 }
 
 const ContentArea: Component<ContentAreaProps> = (props) => {
@@ -25,16 +27,27 @@ const ContentArea: Component<ContentAreaProps> = (props) => {
       get searchQuery() {
         return props.highlightQuery()
       },
-      class: "w-full h-full p-4"
+      class: "w-full p-4"
     }
   })
+
+  const handleNavigate = (targetCardId: string, pos?: number) => {
+    if (props.onNavigate) {
+      props.onNavigate(targetCardId, pos)
+    } else {
+      appStore.selectCard(targetCardId)
+    }
+  }
 
   return (
     <>
       <Show when={context()} keyed>
         {(ctx) => (
-          <div class="flex-1 min-h-0 pl-1 overflow-auto bg-surface">
+          <div class="flex-1 min-h-0 pl-[.8em] pt-.5 overflow-auto bg-surface">
             <NoteEditor ref={props.editorRef} context={ctx} />
+            <div class="px-4 pb-[40vh]">
+              <BacklinkPanel cardId={ctx.cardId} onNavigate={handleNavigate} />
+            </div>
           </div>
         )}
       </Show>

@@ -123,7 +123,47 @@ export const calcMatchScore = (queryTokens: string[], target: string, threshold 
   return coverage * 0.7 + density * 0.3
 }
 
+/**
+ * Search result with title match priority info
+ */
+export type SearchResult = {
+  titleMatched: boolean
+  score: number
+}
+
+/**
+ * Calculate match score with title priority.
+ * Returns both whether title matched and the combined score.
+ */
+export const calcMatchScoreWithTitle = (
+  queryTokens: string[],
+  title: string,
+  body: string,
+  threshold = 1
+): SearchResult => {
+  if (queryTokens.length === 0) return { titleMatched: false, score: 0 }
+
+  const titleScore = calcMatchScore(queryTokens, title, threshold)
+  const bodyScore = calcMatchScore(queryTokens, body, threshold)
+
+  // If neither matches, return 0
+  if (titleScore === 0 && bodyScore === 0) return { titleMatched: false, score: 0 }
+
+  // Combined score for sorting within same group
+  const score = titleScore > 0 ? titleScore * 0.7 + bodyScore * 0.3 : bodyScore
+
+  return {
+    titleMatched: titleScore > 0,
+    score
+  }
+}
+
 export const prepareSearch = (query: string, threshold = 1) => {
   const tokens = hybridTokenize(query, { includePrefix: false, cjkNGram: 2 })
   return (text: string) => calcMatchScore(tokens, text, threshold)
+}
+
+export const prepareSearchWithTitle = (query: string, threshold = 1) => {
+  const tokens = hybridTokenize(query, { includePrefix: false, cjkNGram: 2 })
+  return (title: string, body: string) => calcMatchScoreWithTitle(tokens, title, body, threshold)
 }

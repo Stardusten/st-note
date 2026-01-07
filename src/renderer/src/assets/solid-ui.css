@@ -81,6 +81,7 @@
   --list-active: oklch(0.5399 0.1906 257.48 / 30%);
   --list-active-muted: oklch(0.5 0 0 / 15%);
   --scrollbar: oklch(0.75 0 0);
+  --cursor: oklch(0.5399 0.1906 257.48);
 
   --editor-font-family: Inter, sans-serif;
   --code-font-family: Menlo, -apple-system;
@@ -121,6 +122,7 @@ html[data-kb-theme="dark"] {
   --list-active: oklch(0.6 0.18 255 / 30%);
   --list-active-muted: oklch(0.5 0 0 / 20%);
   --scrollbar: oklch(0.35 0 0);
+  --cursor: oklch(0.7153 0.1518 253.31);
 }
 
 @layer base {

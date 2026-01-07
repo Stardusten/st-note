@@ -14,7 +14,8 @@ const defaultSettings: Settings = {
   autoLayout: true,
   preferredLayout: "horizontal",
   searchMatchThreshold: 1,
-  customCSS: ""
+  customCSS: "",
+  codeBlockWrap: false
 }
 
 class SettingsStore {
@@ -56,6 +57,7 @@ class SettingsStore {
   getPreferredLayout = () => this._settings().preferredLayout
   getSearchMatchThreshold = () => this._settings().searchMatchThreshold
   getCustomCSS = () => this._settings().customCSS
+  getCodeBlockWrap = () => this._settings().codeBlockWrap
 
   async setTheme(theme: Settings["theme"]) {
     const updated = await window.api.settings.set({ theme })
@@ -109,6 +111,11 @@ class SettingsStore {
 
   async setCustomCSS(customCSS: string) {
     const updated = await window.api.settings.set({ customCSS })
+    this.setSettings(updated)
+  }
+
+  async setCodeBlockWrap(codeBlockWrap: boolean) {
+    const updated = await window.api.settings.set({ codeBlockWrap })
     this.setSettings(updated)
   }
 

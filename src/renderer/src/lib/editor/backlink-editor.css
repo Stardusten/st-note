@@ -2,10 +2,6 @@
   display: none;
 }
 
-.backlink-editor .backlink-highlight {
-  background-color: rgba(234, 179, 8, 0.2);
-}
-
 .backlink-editor .backlink-collapsed-indicator {
   color: rgb(100, 100, 100);
   font-size: 12px;
@@ -34,4 +30,18 @@
 .backlink-editor .ProseMirror .block[data-kind="bullet"],
 .backlink-editor .ProseMirror .block[data-kind="ordered"] {
   margin: 0.25em 0;
+}
+
+/* Backlink Panel Styles */
+.backlink-panel {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.875rem;
+}
+
+.backlink-card {
+  transition: border-color 0.15s ease;
+}
+
+.backlink-card:hover {
+  border-color: var(--border);
 }

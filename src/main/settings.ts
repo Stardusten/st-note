@@ -18,7 +18,8 @@ export const defaultVaultSettings: VaultSettings = {
   autoLayout: true,
   preferredLayout: "horizontal",
   searchMatchThreshold: 1,
-  customCSS: ""
+  customCSS: "",
+  codeBlockWrap: false
 }
 
 export function loadVaultSettings(dbPath: string): VaultSettings {

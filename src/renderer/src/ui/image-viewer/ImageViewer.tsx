@@ -2,7 +2,9 @@ import { Component, createSignal, onMount, Show, createEffect } from "solid-js"
 import { Pin } from "lucide-solid"
 
 const TITLE_BAR_HEIGHT = 34
+const TOOLBAR_HEIGHT = 50 // bottom toolbar fixed height
 const MIN_WIDTH = 400
+const MIN_HEIGHT = TITLE_BAR_HEIGHT + TOOLBAR_HEIGHT + 100 // ensure toolbar is always visible
 
 const ImageViewer: Component = () => {
   const [imageUrl, setImageUrl] = createSignal("")
@@ -56,16 +58,49 @@ const ImageViewer: Component = () => {
 
     if (isFirstLoad()) {
       setIsFirstLoad(false)
-      const maxW = window.screen.availWidth * 0.8
-      const maxH = window.screen.availHeight * 0.8 - TITLE_BAR_HEIGHT
-      let w = img.naturalWidth
-      let h = img.naturalHeight
-      if (w > maxW || h > maxH) {
-        const ratio = Math.min(maxW / w, maxH / h)
-        w = Math.round(w * ratio)
-        h = Math.round(h * ratio)
+
+      const imgW = img.naturalWidth
+      const imgH = img.naturalHeight
+      const imgRatio = imgW / imgH
+
+      // Maximum window size
+      const maxWinW = window.screen.availWidth * 0.8
+      const maxWinH = window.screen.availHeight * 0.8
+
+      // Available space for image (excluding title bar and toolbar)
+      const availableImgH = maxWinH - TITLE_BAR_HEIGHT - TOOLBAR_HEIGHT
+
+      // Calculate best display size for image
+      let displayImgW: number
+      let displayImgH: number
+
+      if (imgW > maxWinW || imgH > availableImgH) {
+        // Image is larger than available space, need to scale down
+        const ratio = Math.min(maxWinW / imgW, availableImgH / imgH)
+        displayImgW = Math.round(imgW * ratio)
+        displayImgH = Math.round(imgH * ratio)
+      } else {
+        // Image fits, use original size
+        displayImgW = imgW
+        displayImgH = imgH
       }
-      window.api.image.resizeAndShow(Math.max(MIN_WIDTH, w), Math.max(200, h + TITLE_BAR_HEIGHT))
+
+      // Ensure minimum window dimensions
+      let winW = Math.max(MIN_WIDTH, displayImgW)
+      let winH = Math.max(MIN_HEIGHT, displayImgH + TITLE_BAR_HEIGHT + TOOLBAR_HEIGHT)
+
+      // If window height was increased to MIN_HEIGHT, adjust image display height proportionally
+      if (winH > displayImgH + TITLE_BAR_HEIGHT + TOOLBAR_HEIGHT) {
+        displayImgH = winH - TITLE_BAR_HEIGHT - TOOLBAR_HEIGHT
+        displayImgW = Math.round(displayImgH * imgRatio)
+      }
+
+      // Set initial scale to fit image in window
+      const initialScale = displayImgW / imgW
+      setScale(initialScale)
+
+      // Resize and show window
+      window.api.image.resizeAndShow(winW, winH)
     }
   }
 
@@ -116,6 +151,7 @@ const ImageViewer: Component = () => {
 
   return (
     <div class="h-screen w-full flex flex-col bg-black/95 select-none overflow-hidden">
+      {/* Title bar */}
       <div
         class="shrink-0 h-[34px] flex items-center justify-center bg-black/80 relative"
         style={{ "-webkit-app-region": "drag" }}
@@ -126,8 +162,9 @@ const ImageViewer: Component = () => {
         )}
       </div>
 
+      {/* Image area */}
       <div
-        class="flex-1 relative"
+        class="flex-1 min-h-0 relative"
         style={{ cursor: isDragging() ? "grabbing" : "grab" }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -153,8 +190,11 @@ const ImageViewer: Component = () => {
             />
           </Show>
         </div>
+      </div>
 
-        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm opacity-60 hover:opacity-100 transition-opacity">
+      {/* Bottom toolbar - fixed height */}
+      <div class="shrink-0 h-[50px] flex items-center justify-center bg-black/80">
+        <div class="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm">
           <button
             class="w-7 h-7 flex items-center justify-center rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
             onClick={goPrev}

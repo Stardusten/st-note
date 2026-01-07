@@ -48,6 +48,7 @@ export type Settings = {
   preferredLayout: "vertical" | "horizontal"
   searchMatchThreshold: number
   customCSS: string
+  codeBlockWrap: boolean
 }
 
 export type SettingsAPI = {
@@ -136,6 +137,7 @@ export type ImageAPI = {
 
 export type WindowAPI = {
   onPinChanged: (callback: (isPinned: boolean) => void) => void
+  onFocus: (callback: () => void) => void
 }
 
 export type ContextMenuItem = {
@@ -245,7 +247,8 @@ const api = {
     saveFile: (data, mimeType) => ipcRenderer.invoke("image:saveFile", data, mimeType)
   } satisfies ImageAPI,
   window: {
-    onPinChanged: (callback) => ipcRenderer.on("window:pinChanged", (_e, isPinned) => callback(isPinned))
+    onPinChanged: (callback) => ipcRenderer.on("window:pinChanged", (_e, isPinned) => callback(isPinned)),
+    onFocus: (callback) => ipcRenderer.on("window:focus", () => callback())
   } satisfies WindowAPI,
   contextMenu: {
     show: (items) => ipcRenderer.invoke("contextMenu:show", items)

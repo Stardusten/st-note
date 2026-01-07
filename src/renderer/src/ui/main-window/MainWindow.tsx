@@ -24,8 +24,39 @@ const MainWindow: Component = () => {
   const [windowWidth, setWindowWidth] = createSignal(window.innerWidth)
   const [sidebarTab, setSidebarTab] = createSignal<SidebarTab>("cards")
 
+  // Single source of truth for which card is displayed in the editor
+  // Only explicit navigation actions should change this
+  const [currentCardId, setCurrentCardId] = createSignal<string | null>(null)
+  // Track if we're in "new note" mode (typing in search to create)
+  const [isNewNoteMode, setIsNewNoteMode] = createSignal(false)
+
   const search = useSearch()
   const nav = useNavigation(search.filteredCards)
+
+  // Navigate to a card - the only way to change what's shown in editor
+  const navigateToCard = (cardId: string | null, scrollPos?: number) => {
+    setCurrentCardId(cardId)
+    setIsNewNoteMode(false)
+    if (scrollPos !== undefined) {
+      setTimeout(() => {
+        editorRef?.scrollToPos(scrollPos)
+      }, 100)
+    }
+  }
+
+  // Sync navigation from NoteList focusedIndex changes (user clicks or keyboard nav)
+  createEffect(() => {
+    const card = nav.focusedCard()
+    const isNew = nav.isNewNoteIndex(nav.focusedIndex())
+
+    if (isNew) {
+      setIsNewNoteMode(true)
+      setCurrentCardId(null)
+    } else if (card) {
+      setCurrentCardId(card.id)
+      setIsNewNoteMode(false)
+    }
+  })
 
   const focusSearchInput = () => {
     searchInputRef?.focus()
@@ -41,6 +72,11 @@ const MainWindow: Component = () => {
     await appStore.initWithPath(dbPath)
     await settingsStore.init()
     focusSearchInput()
+
+    // Focus search input when window gains focus
+    window.api.window.onFocus(() => {
+      focusSearchInput()
+    })
 
     const handleResize = () => setWindowWidth(window.innerWidth)
     window.addEventListener("resize", handleResize)
@@ -61,7 +97,7 @@ const MainWindow: Component = () => {
     })
 
     window.api.editorWindow.onNavigateRequest((cardId) => {
-      appStore.selectCard(cardId)
+      navigateToCard(cardId)
     })
 
     window.api.menu.onToggleAgenda(() => {
@@ -88,16 +124,19 @@ const MainWindow: Component = () => {
     return preferredLayout
   })
 
+  // Reset focusedIndex when search query changes, but don't auto-navigate
   createEffect(() => {
     search.query()
     nav.setFocusedIndex(0)
   })
+
 
   const handleCreateNote = async (title: string) => {
     const card = await appStore.createCard(title)
     if (card) {
       const idx = search.filteredCards().findIndex((c) => c.id === card.id)
       if (idx >= 0) nav.setFocusedIndex(idx)
+      navigateToCard(card.id)
     }
   }
 
@@ -112,6 +151,10 @@ const MainWindow: Component = () => {
     const title = appStore.getCardTitle(card.id)() || "Untitled"
     if (confirm(`Delete "${title}"?`)) {
       await appStore.deleteCard(card.id)
+      // If we deleted the current card, clear the editor
+      if (currentCardId() === card.id) {
+        setCurrentCardId(null)
+      }
     }
   }
 
@@ -120,11 +163,15 @@ const MainWindow: Component = () => {
   }
 
   const handleTaskClick = (cardId: string, pos: number) => {
-    appStore.selectCard(cardId)
-    setTimeout(() => {
-      editorRef?.scrollToPos(pos)
-    }, 100)
+    navigateToCard(cardId, pos)
   }
+
+  // Get the card object for ContentArea
+  const activeCard = createMemo(() => {
+    const id = currentCardId()
+    if (!id) return null
+    return appStore.getCard(id) ?? null
+  })
 
   useKeyboard({
     search,
@@ -163,7 +210,7 @@ const MainWindow: Component = () => {
             <NoteList
               query={search.query()}
               highlightQuery={search.highlightQuery()}
-              cards={search.filteredCards()}
+              items={search.filteredItems()}
               focusedIndex={nav.focusedIndex()}
               listHasFocus={nav.listHasFocus()}
               compact={true}
@@ -181,11 +228,12 @@ const MainWindow: Component = () => {
           )}
           <div class="h-1.5 border-b bg-background"></div>
           <ContentArea
-            focusedCard={nav.focusedCard()}
-            isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
+            focusedCard={activeCard()}
+            isNewNote={isNewNoteMode()}
             editorRef={(r) => { editorRef = r }}
             highlightQuery={search.highlightQuery}
             onDocChange={search.hideHighlight}
+            onNavigate={navigateToCard}
           />
         </>
       ) : (
@@ -207,7 +255,7 @@ const MainWindow: Component = () => {
               <NoteList
                 query={search.query()}
                 highlightQuery={search.highlightQuery()}
-                cards={search.filteredCards()}
+                items={search.filteredItems()}
                 focusedIndex={nav.focusedIndex()}
                 listHasFocus={nav.listHasFocus()}
                 compact={false}
@@ -223,11 +271,12 @@ const MainWindow: Component = () => {
             )}
           </div>
           <ContentArea
-            focusedCard={nav.focusedCard()}
-            isNewNote={nav.isNewNoteIndex(nav.focusedIndex())}
+            focusedCard={activeCard()}
+            isNewNote={isNewNoteMode()}
             editorRef={(r) => { editorRef = r }}
             highlightQuery={search.highlightQuery}
             onDocChange={search.hideHighlight}
+            onNavigate={navigateToCard}
           />
         </div>
       )}

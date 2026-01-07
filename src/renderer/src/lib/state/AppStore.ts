@@ -3,10 +3,11 @@ import { ObjCache, type ObjCacheEvent } from "../objcache/objcache"
 import { SQLiteStorage } from "../storage/sqlite"
 import type { Card } from "../common/types/card"
 import type { StObjectId } from "../common/storage-types"
-import { prepareSearch } from "../common/utils/search"
+import { prepareSearchWithTitle } from "../common/utils/search"
 import { BacklinkIndex } from "../backlink/BacklinkIndex"
 import { TextContentCache } from "../textcontent/TextContentCache"
 import { TaskIndex } from "../task/TaskIndex"
+import { notificationScheduler } from "../notification/NotificationScheduler"
 import type { EditorContext } from "../editor/EditorContext"
 
 type CardSuggestion = {
@@ -96,6 +97,16 @@ class AppStore {
     await this.loadCards()
     await this.loadPinnedCards()
     await this.loadLastOpenedCard()
+
+    // Initialize notification scheduler
+    await notificationScheduler.init(
+      {
+        getSetting: (key) => this.storage.getSetting(key),
+        setSetting: (key, value) => this.storage.setSetting(key, value)
+      },
+      () => this.taskIndex.getAllTasks()(),
+      (cardId) => this.getCardTitle(cardId)() || "Task"
+    )
   }
 
   async initWithPath(dbPath: string) {
@@ -107,6 +118,7 @@ class AppStore {
   }
 
   async close() {
+    notificationScheduler.stop()
     this.taskIndex.dispose()
     this.backlinkIndex.dispose()
     this.textContentCache.dispose()
@@ -312,15 +324,23 @@ class AppStore {
       return
     }
 
-    const search = prepareSearch(query)
+    const search = prepareSearchWithTitle(query)
     const results = this.cards()
       .map((card) => {
+        const title = this.textContentCache.getTitle(card.id)()
         const text = this.textContentCache.getText(card.id)()
-        const score = search(text)
-        return { ...card, searchScore: score }
+        const result = search(title, text)
+        return { ...card, ...result }
       })
-      .filter((card) => card.searchScore > 0)
-      .sort((a, b) => b.searchScore - a.searchScore)
+      .filter((card) => card.score > 0)
+      .sort((a, b) => {
+        // Title matches always come first
+        if (a.titleMatched !== b.titleMatched) {
+          return a.titleMatched ? -1 : 1
+        }
+        // Within same group, sort by score
+        return b.score - a.score
+      })
 
     this.setSearchResults(results)
   }

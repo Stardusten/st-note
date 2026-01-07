@@ -1,5 +1,46 @@
 @import "prosemirror-view/style/prosemirror.css";
 @import "prosemirror-gapcursor/style/gapcursor.css";
+@import "./backlink-editor.css";
+
+/* Virtual cursor - hide native caret */
+.prosemirror-editor .ProseMirror {
+  caret-color: transparent;
+}
+
+/* Virtual cursor color */
+.prosemirror-editor .ProseMirror-focused {
+  --prosemirror-virtual-cursor-color: var(--cursor);
+}
+
+/* Virtual cursor rounded corners */
+.prosemirror-editor .ProseMirror 
+.prosemirror-virtual-cursor {
+  border-radius: 2px;
+}
+
+/* Override virtual cursor blink animation: fade in -> stay -> fade out */
+.prosemirror-editor .ProseMirror-focused .prosemirror-virtual-cursor-animation {
+  animation: cursor-blink 1.4s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+@keyframes cursor-blink {
+  0% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 
 .prosemirror-editor {
   font-family: var(--editor-font-family);
@@ -34,13 +75,12 @@
   --quote-border-width: 3px;
   --quote-padding: 0.75em;
   /* Collapse toggle */
-  --toggle-offset: 1.125em;
+  --toggle-offset: 1.5em;
   --toggle-offset-top: 1.25em;
 }
 
 .prosemirror-editor .ProseMirror {
   flex: 1;
-  padding-bottom: 40vh;
   cursor: text;
 }
 
@@ -425,6 +465,12 @@
   box-sizing: border-box;
 }
 
+:root[data-code-block-wrap="true"] .prosemirror-editor .code-block,
+:root[data-code-block-wrap="true"] .prosemirror-editor .code-block code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* highlight.js theme - dark */
 .prosemirror-editor .hljs {
   color: #abb2bf;
@@ -551,7 +597,8 @@
 .prosemirror-editor .editor-image-wrapper {
   position: relative;
   display: inline-block;
-  margin: 0.5em 0;
+  margin-top: 0.5em;
+  margin-bottom: 0;
   line-height: 0;
 }
 
@@ -593,7 +640,7 @@
 .prosemirror-editor .timestamp-highlight {
   font-style: italic;
   color: var(--color-muted-foreground);
-  background-color: var(--color-muted);
+  background-color: rgba(100, 100, 100, 0.2);
   border-radius: 2px;
 }
 
@@ -603,31 +650,36 @@
   border-radius: 2px;
 }
 
-/* task types */
-.prosemirror-editor .task-reminder {
-  background-color: rgba(99, 179, 237, 0.2);
-  color: #63b3ed;
+/* task types - howm style */
+.prosemirror-editor .task-schedule {
+  background-color: rgba(72, 187, 120, 0.2);
+  color: #48bb78; /* Green - confirmed events */
+}
+
+.prosemirror-editor .task-todo {
+  background-color: rgba(237, 137, 54, 0.2);
+  color: #ed8936; /* Orange - floating up */
 }
 
 .prosemirror-editor .task-deadline {
   background-color: rgba(245, 101, 101, 0.2);
-  color: #f56565;
+  color: #f56565; /* Red - urgent */
 }
 
-.prosemirror-editor .task-scheduled {
-  background-color: rgba(72, 187, 120, 0.2);
-  color: #48bb78;
+.prosemirror-editor .task-reminder {
+  background-color: rgba(56, 178, 172, 0.2);
+  color: #38b2ac; /* Cyan/Teal - sinking */
+}
+
+.prosemirror-editor .task-defer {
+  background-color: rgba(66, 153, 225, 0.2);
+  color: #4299e1; /* Blue - periodic */
 }
 
 .prosemirror-editor .task-done {
-  background-color: rgba(160, 174, 192, 0.15);
-  color: #a0aec0;
+  background-color: rgba(113, 128, 150, 0.15);
+  color: #718096; /* Gray - completed */
   text-decoration: line-through;
-}
-
-.prosemirror-editor .task-memo {
-  background-color: rgba(237, 137, 54, 0.2);
-  color: #ed8936;
 }
 
 /* checkbox */

@@ -1,20 +1,14 @@
 import { Plugin, PluginKey } from "prosemirror-state"
 import { Decoration, DecorationSet } from "prosemirror-view"
 import { createTaskRegex, createTimestampOnlyRegex } from "../../task/parser"
+import { TASK_CONFIG, SYMBOL_TO_TYPE } from "../../task/types"
 
 export const timestampHighlightPluginKey = new PluginKey("timestampHighlight")
 
-const TASK_TYPE_CLASSES: Record<string, string> = {
-  "+": "task-reminder",
-  "!": "task-deadline",
-  "@": "task-scheduled",
-  "-": "task-done",
-  ".": "task-memo"
-}
-
 function getTaskClass(suffix: string): string {
-  if (suffix.startsWith("+")) return TASK_TYPE_CLASSES["+"]
-  return TASK_TYPE_CLASSES[suffix] || "task-memo"
+  const symbol = suffix.startsWith("~") ? "~" : suffix
+  const type = SYMBOL_TO_TYPE[symbol]
+  return type ? TASK_CONFIG[type].cssClass : TASK_CONFIG.done.cssClass
 }
 
 export function createTimestampHighlightPlugin(): Plugin {
