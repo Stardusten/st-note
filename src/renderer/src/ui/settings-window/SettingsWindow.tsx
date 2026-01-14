@@ -1,5 +1,7 @@
-import { Component, createEffect, createSignal, onMount, Show } from "solid-js"
+import { Component, createEffect, createSignal, For, onMount, Show } from "solid-js"
 import Kbd from "@renderer/ui/solidui/kbd"
+import { Button } from "@renderer/ui/solidui/button"
+import { Checkbox } from "@renderer/ui/solidui/checkbox"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
 
 const formatShortcut = (shortcut: string) => {
@@ -19,7 +21,186 @@ const thresholdOptions = [
   { value: 1, label: "AND", desc: "All tokens must match" }
 ]
 
+type TabId = "general" | "database" | "appearance"
+const tabs: { id: TabId; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "database", label: "Database" },
+  { id: "appearance", label: "Appearance" }
+]
+
+type GeneralTabProps = {
+  shortcut: () => string
+  isRecording: () => boolean
+  error: () => string
+  theme: () => "light" | "dark" | "system"
+  searchThreshold: () => number
+  codeBlockWrap: () => boolean
+  setIsRecording: (v: boolean) => void
+  handleKeyDown: (e: KeyboardEvent) => void
+  handleClear: () => void
+  handleThemeChange: (v: "light" | "dark" | "system") => void
+  handleThresholdChange: (v: number) => void
+  handleCodeBlockWrapChange: (v: boolean) => void
+}
+
+const GeneralTab: Component<GeneralTabProps> = (props) => (
+  <div class="space-y-3">
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-foreground">Bring-to-Front Hotkey</label>
+      <p class="text-[10px] text-muted-foreground">Global shortcut to bring the window to front.</p>
+      <div
+        class={`flex items-center gap-2 h-[26px] px-2 rounded border cursor-pointer bg-input text-xs ${
+          props.isRecording() ? "border-ring ring-1 ring-ring/50" : "border-border/50"
+        }`}
+        onClick={() => props.setIsRecording(true)}
+        onKeyDown={props.handleKeyDown}
+        tabIndex={0}>
+        <Show when={props.isRecording()}>
+          <span class="text-muted-foreground">Press a key combination...</span>
+        </Show>
+        <Show when={!props.isRecording() && props.shortcut()}>
+          <div class="flex items-center gap-1">
+            {formatShortcut(props.shortcut()).map((part) => (
+              <Kbd>{part}</Kbd>
+            ))}
+          </div>
+        </Show>
+        <Show when={!props.isRecording() && !props.shortcut()}>
+          <span class="text-muted-foreground">Click to set shortcut</span>
+        </Show>
+        <Show when={props.shortcut() && !props.isRecording()}>
+          <Button
+            variant="text-only"
+            class="ml-auto text-[10px] text-muted-foreground hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation()
+              props.handleClear()
+            }}>
+            Clear
+          </Button>
+        </Show>
+      </div>
+      <Show when={props.error()}>
+        <p class="text-[10px] text-destructive">{props.error()}</p>
+      </Show>
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-foreground">Theme</label>
+      <div class="flex gap-2">
+        <For each={["light", "dark", "system"] as const}>
+          {(t) => (
+            <Button
+              variant="soft"
+              size="xs"
+              class={props.theme() === t ? "capitalize border-ring bg-accent text-foreground" : "capitalize"}
+              onClick={() => props.handleThemeChange(t)}>
+              {t}
+            </Button>
+          )}
+        </For>
+      </div>
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-foreground">Search Match Mode</label>
+      <p class="text-[10px] text-muted-foreground">
+        OR: any term matches. AND: all terms must match. 50%: at least half match.
+      </p>
+      <div class="flex gap-2">
+        <For each={thresholdOptions}>
+          {(opt) => (
+            <Button
+              variant="soft"
+              size="xs"
+              class={props.searchThreshold() === opt.value ? "border-ring bg-accent text-foreground" : ""}
+              onClick={() => props.handleThresholdChange(opt.value)}
+              title={opt.desc}>
+              {opt.label}
+            </Button>
+          )}
+        </For>
+      </div>
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-foreground">Code Block Wrap</label>
+      <p class="text-[10px] text-muted-foreground">
+        Wrap long lines in code blocks instead of horizontal scrolling.
+      </p>
+      <Checkbox
+        checked={props.codeBlockWrap()}
+        onChange={props.handleCodeBlockWrapChange}
+        class="text-xs text-muted-foreground">
+        Enable
+      </Checkbox>
+    </div>
+  </div>
+)
+
+type DatabaseTabProps = {
+  dbPath: () => string
+  handleSwitch: () => void
+  handleNew: () => void
+  handleExport: () => void
+  handleImport: () => void
+}
+
+const getFileName = (path: string) => path.split("/").pop() || path
+
+const DatabaseTab: Component<DatabaseTabProps> = (props) => (
+  <div class="space-y-3">
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-foreground">Database</label>
+      <p class="text-xs text-muted-foreground truncate py-1" title={props.dbPath()}>
+        Current DB:{" "}
+        <span class="text-foreground font-mono font-medium">
+          {props.dbPath() ? getFileName(props.dbPath()) : "No database"}
+        </span>
+      </p>
+      <div class="flex flex-row flex-wrap gap-2">
+        <Button variant="outline" size="xs" onClick={props.handleSwitch}>
+          Switch Database
+        </Button>
+        <Button variant="outline" size="xs" onClick={props.handleNew}>
+          New Empty Database
+        </Button>
+        <Button variant="outline" size="xs" onClick={props.handleExport}>
+          Export Database
+        </Button>
+        <Button variant="outline" size="xs" onClick={props.handleImport}>
+          Import Database
+        </Button>
+      </div>
+    </div>
+  </div>
+)
+
+type AppearanceTabProps = {
+  customCSS: () => string
+  handleCustomCSSChange: (v: string) => void
+}
+
+const AppearanceTab: Component<AppearanceTabProps> = (props) => (
+  <div class="space-y-3">
+    <div class="space-y-1">
+      <label class="text-xs font-medium text-foreground">Custom CSS</label>
+      <p class="text-[10px] text-muted-foreground">
+        Add custom CSS to customize the appearance. Changes apply immediately.
+      </p>
+      <textarea
+        value={props.customCSS()}
+        onInput={(e) => props.handleCustomCSSChange(e.currentTarget.value)}
+        placeholder="/* Your custom CSS here */&#10;.editor { }&#10;:root { --accent: #ff0000; }"
+        spellcheck={false}
+        class="w-full h-64 px-2 py-1.5 text-xs font-mono bg-input border border-border/50 rounded outline-none focus:border-ring resize-none"
+      />
+    </div>
+  </div>
+)
+
 const SettingsWindow: Component = () => {
+  const [activeTab, setActiveTab] = createSignal<TabId>("general")
   const [shortcut, setShortcut] = createSignal("")
   const [isRecording, setIsRecording] = createSignal(false)
   const [error, setError] = createSignal("")
@@ -135,8 +316,6 @@ const SettingsWindow: Component = () => {
     }
   }
 
-  const getFileName = (path: string) => path.split("/").pop() || path
-
   const handleThemeChange = async (newTheme: "light" | "dark" | "system") => {
     setTheme(newTheme)
     await settingsStore.setTheme(newTheme)
@@ -164,165 +343,51 @@ const SettingsWindow: Component = () => {
         style={{ "-webkit-app-region": "drag" }}>
         <span class="text-[13px] font-medium text-muted-foreground">Settings</span>
       </div>
-      <div class="flex-1 overflow-auto px-4 pb-2">
-        <div class="space-y-3">
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Bring-to-Front Hotkey</label>
-            <p class="text-[10px] text-muted-foreground">
-              Global shortcut to bring the window to front.
-            </p>
-            <div
-              class={`flex items-center gap-2 h-[26px] px-2 rounded border cursor-pointer bg-input text-xs ${
-                isRecording() ? "border-ring ring-1 ring-ring/50" : "border-border/50"
-              }`}
-              onClick={() => setIsRecording(true)}
-              onKeyDown={handleKeyDown}
-              tabIndex={0}>
-              <Show when={isRecording()}>
-                <span class="text-muted-foreground">Press a key combination...</span>
-              </Show>
-              <Show when={!isRecording() && shortcut()}>
-                <div class="flex items-center gap-1">
-                  {formatShortcut(shortcut()).map((part) => (
-                    <Kbd>{part}</Kbd>
-                  ))}
-                </div>
-              </Show>
-              <Show when={!isRecording() && !shortcut()}>
-                <span class="text-muted-foreground">Click to set shortcut</span>
-              </Show>
-              <Show when={shortcut() && !isRecording()}>
-                <button
-                  class="ml-auto text-[10px] text-muted-foreground hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleClear()
-                  }}>
-                  Clear
-                </button>
-              </Show>
-            </div>
-            <Show when={error()}>
-              <p class="text-[10px] text-destructive">{error()}</p>
-            </Show>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Theme</label>
-            <div class="flex gap-2">
+      <div class="flex-1 flex overflow-hidden">
+        <div class="w-28 shrink-0 border-r border-border/30 py-2 px-2">
+          <For each={tabs}>
+            {(tab) => (
               <button
-                class={`h-[26px] px-3 rounded border text-xs ${
-                  theme() === "light"
-                    ? "border-ring bg-accent text-foreground"
-                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                class={`w-full text-left px-2 py-1.5 rounded text-xs mb-0.5 ${
+                  activeTab() === tab.id
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                 }`}
-                onClick={() => handleThemeChange("light")}>
-                Light
+                onClick={() => setActiveTab(tab.id)}>
+                {tab.label}
               </button>
-              <button
-                class={`h-[26px] px-3 rounded border text-xs ${
-                  theme() === "dark"
-                    ? "border-ring bg-accent text-foreground"
-                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}
-                onClick={() => handleThemeChange("dark")}>
-                Dark
-              </button>
-              <button
-                class={`h-[26px] px-3 rounded border text-xs ${
-                  theme() === "system"
-                    ? "border-ring bg-accent text-foreground"
-                    : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}
-                onClick={() => handleThemeChange("system")}>
-                System
-              </button>
-            </div>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Search Match Mode</label>
-            <p class="text-[10px] text-muted-foreground">
-              Controls how multiple search terms are matched. OR: any term matches. AND: all terms
-              must match. 50%: at least half of the terms must match.
-            </p>
-            <div class="flex gap-2">
-              {thresholdOptions.map((opt) => (
-                <button
-                  class={`h-[26px] px-3 rounded border text-xs ${
-                    searchThreshold() === opt.value
-                      ? "border-ring bg-accent text-foreground"
-                      : "border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                  }`}
-                  onClick={() => handleThresholdChange(opt.value)}
-                  title={opt.desc}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Code Block Wrap</label>
-            <p class="text-[10px] text-muted-foreground">
-              Wrap long lines in code blocks instead of horizontal scrolling.
-            </p>
-            <label class="inline-flex items-center gap-2 text-xs text-muted-foreground select-none">
-              <input
-                type="checkbox"
-                checked={codeBlockWrap()}
-                onChange={(e) => handleCodeBlockWrapChange(e.currentTarget.checked)}
-                class="h-4 w-4 rounded border border-border/50 bg-input"
-              />
-              <span>Enable</span>
-            </label>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Custom CSS</label>
-            <p class="text-[10px] text-muted-foreground">
-              Add custom CSS to customize the appearance. Changes apply immediately.
-            </p>
-            <textarea
-              value={customCSS()}
-              onInput={(e) => handleCustomCSSChange(e.currentTarget.value)}
-              placeholder="/* Your custom CSS here */&#10;.editor { }&#10;:root { --accent: #ff0000; }"
-              spellcheck={false}
-              class="w-full h-24 px-2 py-1.5 text-xs font-mono bg-input border border-border/50 rounded outline-none focus:border-ring resize-none"
+            )}
+          </For>
+        </div>
+        <div class="flex-1 overflow-auto px-4 py-2">
+          <Show when={activeTab() === "general"}>
+            <GeneralTab
+              shortcut={shortcut}
+              isRecording={isRecording}
+              error={error}
+              theme={theme}
+              searchThreshold={searchThreshold}
+              codeBlockWrap={codeBlockWrap}
+              setIsRecording={setIsRecording}
+              handleKeyDown={handleKeyDown}
+              handleClear={handleClear}
+              handleThemeChange={handleThemeChange}
+              handleThresholdChange={handleThresholdChange}
+              handleCodeBlockWrapChange={handleCodeBlockWrapChange}
             />
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Database</label>
-            <p class="text-xs text-muted-foreground truncate py-1" title={dbPath()}>
-              Current DB:{" "}
-              <span class="text-foreground font-mono font-medium">
-                {dbPath() ? getFileName(dbPath()) : "No database"}
-              </span>
-            </p>
-            <div class="flex flex-row flex-wrap gap-2">
-              <button
-                class="h-[26px] px-2 rounded border border-border/50 bg-input text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                onClick={handleSwitch}>
-                Switch Database
-              </button>
-              <button
-                class="h-[26px] px-2 rounded border border-border/50 bg-input text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                onClick={handleNew}>
-                New Empty Database
-              </button>
-              <button
-                class="h-[26px] px-2 rounded border border-border/50 bg-input text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                onClick={handleExport}>
-                Export Database
-              </button>
-              <button
-                class="h-[26px] px-2 rounded border border-border/50 bg-input text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                onClick={handleImport}>
-                Import Database
-              </button>
-            </div>
-          </div>
+          </Show>
+          <Show when={activeTab() === "database"}>
+            <DatabaseTab
+              dbPath={dbPath}
+              handleSwitch={handleSwitch}
+              handleNew={handleNew}
+              handleExport={handleExport}
+              handleImport={handleImport}
+            />
+          </Show>
+          <Show when={activeTab() === "appearance"}>
+            <AppearanceTab customCSS={customCSS} handleCustomCSSChange={handleCustomCSSChange} />
+          </Show>
         </div>
       </div>
     </div>

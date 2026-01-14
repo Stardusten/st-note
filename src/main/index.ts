@@ -50,7 +50,7 @@ let currentBringToFrontShortcut: string | null = null
 const editorWindows: Map<string, BrowserWindow> = new Map()
 
 function setupSpellcheckContextMenu(win: BrowserWindow): void {
-  win.webContents.on("context-menu", (event, params) => {
+  win.webContents.on("context-menu", (_event, params) => {
     // Only handle spellcheck context menu when there's a misspelled word
     if (!params.misspelledWord) return
 
@@ -111,8 +111,8 @@ function createSettingsWindow(): void {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 300,
-    height: 500,
+    width: 520,
+    height: 400,
     show: false,
     resizable: false,
     titleBarStyle: "hidden",
@@ -446,7 +446,10 @@ app.whenReady().then(() => {
     submenu?: ContextMenuItem[]
   }
 
-  const buildMenuItems = (items: ContextMenuItem[], resolve: (id: string | null) => void): Electron.MenuItemConstructorOptions[] => {
+  const buildMenuItems = (
+    items: ContextMenuItem[],
+    resolve: (id: string | null) => void
+  ): Electron.MenuItemConstructorOptions[] => {
     return items.map((item) => {
       if (item.type === "separator") return { type: "separator" as const }
       if (item.type === "submenu" && item.submenu) {
@@ -457,7 +460,7 @@ app.whenReady().then(() => {
       }
       return {
         label: item.label,
-        type: item.checked !== undefined ? "checkbox" as const : "normal" as const,
+        type: item.checked !== undefined ? ("checkbox" as const) : ("normal" as const),
         checked: item.checked,
         click: () => resolve(item.id)
       }

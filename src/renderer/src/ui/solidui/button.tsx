@@ -25,11 +25,13 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        "text-only": "!p-0 !h-fit bg-none"
+        "text-only": "!p-0 !h-fit bg-none",
+        soft: "border border-border/50 bg-input text-muted-foreground hover:text-foreground hover:bg-muted/30"
       },
       size: {
         default: "h-8 px-4 text-[13px] py-2 has-[>svg]:px-3",
         sm: "h-7 rounded-md gap-1.5 px-3 text-xs",
+        xs: "h-[26px] rounded px-3 text-xs",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
         "sm-icon": "size-8 p-0 rounded-md",
