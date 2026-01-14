@@ -254,26 +254,24 @@ const AgendaView: Component<AgendaViewProps> = (props) => {
       </Show>
       <For each={groups()}>
         {(group: TaskGroup) => (
-          <div class="mb-2">
-            <div class="sticky top-0 px-2 py-1 text-[10px] font-medium text-muted-foreground bg-surface/95 border-b border-border/40">
+          <div>
+            <div class="sticky top-0 px-2 py-1 text-[10px] font-medium text-muted-foreground bg-muted/50 border-b border-border/40">
               {group.label}
             </div>
             <For each={group.tasks}>
               {(task: TaskEntry) => (
                 <div
-                  class="flex flex-col gap-0.5 px-2 py-1.5 border-b border-border/40 cursor-pointer hover:bg-muted/30"
+                  class="flex items-center gap-2 px-2 py-1.5 border-b border-border/40 cursor-pointer hover:bg-muted/30"
                   classList={{ "bg-primary/5 border-l-2 border-l-primary": isInProgress(task, now()) }}
                   onClick={() => handleClick(task)}>
-                  <div class="flex items-center gap-2">
-                    <span class="shrink-0" style={{ color: TASK_CONFIG[task.type].color }}>
-                      {formatTaskTime(task)}
-                    </span>
-                    <span class="text-muted-foreground text-[10px] font-mono">
-                      {getTaskSuffix(task)}
-                    </span>
-                    <span class="text-muted-foreground text-[10px]">{getTaskExtraInfo(task, now())}</span>
-                  </div>
-                  <div class="text-foreground truncate">{getDisplayTitle(task)}</div>
+                  <span class="shrink-0" style={{ color: TASK_CONFIG[task.type].color }}>
+                    {formatTaskTime(task)}
+                  </span>
+                  <span class="text-muted-foreground text-[10px] font-mono shrink-0">
+                    {getTaskSuffix(task)}
+                  </span>
+                  <span class="text-foreground truncate flex-1">{getDisplayTitle(task)}</span>
+                  <span class="text-muted-foreground text-[10px] shrink-0">{getTaskExtraInfo(task, now())}</span>
                 </div>
               )}
             </For>

@@ -1,5 +1,6 @@
 import { onCleanup, onMount } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
+import { keymapManager, bindings } from "@renderer/lib/keymap"
 import type { NoteEditorHandle } from "@renderer/lib/editor/NoteEditor"
 import type { SearchState } from "./useSearch"
 import type { NavigationState } from "./useNavigation"
@@ -23,82 +24,110 @@ export function useKeyboard(deps: KeyboardHandlerDeps) {
     editorRef()?.focusEndOfTitle()
   }
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.isComposing || e.keyCode === 229) return
+  onMount(() => {
+    // Initialize keymap manager
+    keymapManager.init()
 
-    if (e.key === "Escape") {
-      e.preventDefault()
-      if (document.activeElement === searchInputRef()) {
-        search.clearQuery()
-      } else {
-        searchInputRef()?.focus()
-        searchInputRef()?.select()
-        nav.blurList()
-      }
-      return
-    }
+    // Push the app layer (contextual - active when editor is not focused)
+    const appLayer = keymapManager.pushLayer({
+      id: "app",
+      type: "contextual",
+      isActive: () => !isEditorFocused(),
+      bindings: bindings({
+        Escape: () => {
+          if (document.activeElement === searchInputRef()) {
+            search.clearQuery()
+          } else {
+            searchInputRef()?.focus()
+            searchInputRef()?.select()
+            nav.blurList()
+          }
+          return true
+        },
 
-    if (isEditorFocused()) return
+        ArrowDown: () => {
+          nav.moveDown()
+          nav.focusList()
+          searchInputRef()?.blur()
+          return true
+        },
 
-    if (e.key === "Backspace" && nav.listHasFocus() && nav.focusedCard()) {
-      e.preventDefault()
-      const card = nav.focusedCard()
-      if (card && confirm(`Delete "${appStore.getCardTitle(card.id)()}"?`)) {
-        appStore.deleteCard(card.id)
-      }
-      return
-    }
+        ArrowUp: () => {
+          nav.moveUp()
+          nav.focusList()
+          searchInputRef()?.blur()
+          return true
+        },
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      nav.moveDown()
-      nav.focusList()
-      searchInputRef()?.blur()
-      return
-    }
+        Backspace: () => {
+          if (nav.listHasFocus() && nav.focusedCard()) {
+            const card = nav.focusedCard()
+            if (card && confirm(`Delete "${appStore.getCardTitle(card.id)()}"?`)) {
+              appStore.deleteCard(card.id)
+            }
+            return true
+          }
+          return false
+        },
 
-    if (e.key === "ArrowUp") {
-      e.preventDefault()
-      nav.moveUp()
-      nav.focusList()
-      searchInputRef()?.blur()
-      return
-    }
+        Enter: (e) => {
+          if (nav.focusedIndex() < 0) return false
 
-    if (e.key === "Enter" && nav.focusedIndex() >= 0) {
-      e.preventDefault()
+          const isSearchFocused = document.activeElement === searchInputRef()
 
-      const isSearchFocused = document.activeElement === searchInputRef()
+          if (e.metaKey && isSearchFocused) {
+            onCreateNote(search.query() || "Untitled").then(() => {
+              requestAnimationFrame(() => editorRef()?.selectTitle())
+            })
+            return true
+          }
 
-      if (e.metaKey && isSearchFocused) {
-        onCreateNote(search.query() || "Untitled").then(() => {
-          requestAnimationFrame(() => editorRef()?.selectTitle())
-        })
-        return
-      }
+          if (e.metaKey) return false
 
-      if (e.metaKey) return
+          if (nav.isNewNoteIndex(nav.focusedIndex())) {
+            onCreateNote(search.query() || "Untitled").then(() => {
+              requestAnimationFrame(() => editorRef()?.selectTitle())
+            })
+            return true
+          }
 
-      if (nav.isNewNoteIndex(nav.focusedIndex())) {
-        onCreateNote(search.query() || "Untitled").then(() => {
-          requestAnimationFrame(() => editorRef()?.selectTitle())
-        })
-        return
-      }
+          const card = nav.focusedCard()
+          if (!card) return false
 
-      const card = nav.focusedCard()
-      if (!card) return
+          if (e.shiftKey) {
+            onOpenInNewWindow(card)
+            return true
+          }
 
-      if (e.shiftKey) {
-        onOpenInNewWindow(card)
-        return
-      }
+          appStore.selectCard(card.id)
+          focusEditor()
+          return true
+        },
 
-      appStore.selectCard(card.id)
-      focusEditor()
-    }
-  }
+        "Cmd-Enter": () => {
+          const isSearchFocused = document.activeElement === searchInputRef()
+          if (isSearchFocused) {
+            onCreateNote(search.query() || "Untitled").then(() => {
+              requestAnimationFrame(() => editorRef()?.selectTitle())
+            })
+            return true
+          }
+          return false
+        },
 
-  onMount(() => window.addEventListener("keydown", handleKeyDown))
-  onCleanup(() => window.removeEventListener("keydown", handleKeyDown))
+        "Shift-Enter": () => {
+          const card = nav.focusedCard()
+          if (card) {
+            onOpenInNewWindow(card)
+            return true
+          }
+          return false
+        }
+      })
+    })
+
+    onCleanup(() => {
+      keymapManager.popLayer(appLayer.id)
+    })
+  })
 }

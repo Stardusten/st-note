@@ -1,6 +1,7 @@
-import { Component, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js"
 import { appStore } from "@renderer/lib/state/AppStore"
 import { settingsStore } from "@renderer/lib/settings/SettingsStore"
+import { keymapManager, bindings } from "@renderer/lib/keymap"
 import type { NoteEditorHandle } from "@renderer/lib/editor/NoteEditor"
 import NoteList from "./NoteList"
 import AgendaView from "./AgendaView"
@@ -13,8 +14,6 @@ import { useTheme } from "./hooks/useTheme"
 import { useMenuHandlers } from "./hooks/useMenuHandlers"
 import { useKeyboard } from "./hooks/useKeyboard"
 
-type SidebarTab = "cards" | "agenda"
-
 const HORIZONTAL_BREAKPOINT = 600
 
 const MainWindow: Component = () => {
@@ -22,7 +21,7 @@ const MainWindow: Component = () => {
   let editorRef: NoteEditorHandle | undefined
 
   const [windowWidth, setWindowWidth] = createSignal(window.innerWidth)
-  const [sidebarTab, setSidebarTab] = createSignal<SidebarTab>("cards")
+  const [showAgendaModal, setShowAgendaModal] = createSignal(false)
 
   // Single source of truth for which card is displayed in the editor
   // Only explicit navigation actions should change this
@@ -101,7 +100,7 @@ const MainWindow: Component = () => {
     })
 
     window.api.menu.onToggleAgenda(() => {
-      setSidebarTab((prev) => prev === "cards" ? "agenda" : "cards")
+      setShowAgendaModal((prev) => !prev)
     })
 
     const unsubscribe = appStore.subscribeToUpdates((event) => {
@@ -163,6 +162,7 @@ const MainWindow: Component = () => {
   }
 
   const handleTaskClick = (cardId: string, pos: number) => {
+    setShowAgendaModal(false)
     navigateToCard(cardId, pos)
   }
 
@@ -182,6 +182,24 @@ const MainWindow: Component = () => {
     onOpenInNewWindow: handleOpenInNewWindow
   })
 
+  // Push/pop modal layer when agenda modal opens/closes
+  createEffect(() => {
+    if (showAgendaModal()) {
+      keymapManager.pushLayer({
+        id: "agenda-modal",
+        type: "exclusive",
+        bindings: bindings({
+          Escape: () => {
+            setShowAgendaModal(false)
+            return true
+          }
+        })
+      })
+    } else {
+      keymapManager.popLayer("agenda-modal")
+    }
+  })
+
   return (
     <div class="h-screen w-full flex flex-col overflow-hidden">
       <TitleBar />
@@ -194,38 +212,20 @@ const MainWindow: Component = () => {
       />
       {effectiveLayout() === "vertical" ? (
         <>
-          <div class="flex border-b border-border/40 text-xs">
-            <button
-              class={`flex-1 py-1.5 ${sidebarTab() === "cards" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
-              onClick={() => setSidebarTab("cards")}>
-              Cards
-            </button>
-            <button
-              class={`flex-1 py-1.5 ${sidebarTab() === "agenda" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
-              onClick={() => setSidebarTab("agenda")}>
-              Agenda
-            </button>
-          </div>
-          {sidebarTab() === "cards" ? (
-            <NoteList
-              query={search.query()}
-              highlightQuery={search.highlightQuery()}
-              items={search.filteredItems()}
-              focusedIndex={nav.focusedIndex()}
-              listHasFocus={nav.listHasFocus()}
-              compact={true}
-              onFocusIndex={nav.setFocusedIndex}
-              onFocusList={nav.focusList}
-              onCreateNote={handleCreateNote}
-              onOpenInNewWindow={handleOpenInNewWindow}
-              onDeleteCard={handleDeleteCard}
-              onTogglePin={handleTogglePin}
-            />
-          ) : (
-            <div class="h-[200px] shrink-0 border-b overflow-hidden">
-              <AgendaView onTaskClick={handleTaskClick} />
-            </div>
-          )}
+          <NoteList
+            query={search.query()}
+            highlightQuery={search.highlightQuery()}
+            items={search.filteredItems()}
+            focusedIndex={nav.focusedIndex()}
+            listHasFocus={nav.listHasFocus()}
+            compact={true}
+            onFocusIndex={nav.setFocusedIndex}
+            onFocusList={nav.focusList}
+            onCreateNote={handleCreateNote}
+            onOpenInNewWindow={handleOpenInNewWindow}
+            onDeleteCard={handleDeleteCard}
+            onTogglePin={handleTogglePin}
+          />
           <div class="h-1.5 border-b bg-background"></div>
           <ContentArea
             focusedCard={activeCard()}
@@ -239,36 +239,20 @@ const MainWindow: Component = () => {
       ) : (
         <div class="flex-1 flex min-h-0">
           <div class="w-[240px] shrink-0 flex flex-col border-r border-border/40">
-            <div class="flex border-b border-border/40 text-xs">
-              <button
-                class={`flex-1 py-1.5 ${sidebarTab() === "cards" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
-                onClick={() => setSidebarTab("cards")}>
-                Cards
-              </button>
-              <button
-                class={`flex-1 py-1.5 ${sidebarTab() === "agenda" ? "text-foreground bg-muted/30" : "text-muted-foreground hover:bg-muted/20"}`}
-                onClick={() => setSidebarTab("agenda")}>
-                Agenda
-              </button>
-            </div>
-            {sidebarTab() === "cards" ? (
-              <NoteList
-                query={search.query()}
-                highlightQuery={search.highlightQuery()}
-                items={search.filteredItems()}
-                focusedIndex={nav.focusedIndex()}
-                listHasFocus={nav.listHasFocus()}
-                compact={false}
-                onFocusIndex={nav.setFocusedIndex}
-                onFocusList={nav.focusList}
-                onCreateNote={handleCreateNote}
-                onOpenInNewWindow={handleOpenInNewWindow}
-                onDeleteCard={handleDeleteCard}
-                onTogglePin={handleTogglePin}
-              />
-            ) : (
-              <AgendaView onTaskClick={handleTaskClick} />
-            )}
+            <NoteList
+              query={search.query()}
+              highlightQuery={search.highlightQuery()}
+              items={search.filteredItems()}
+              focusedIndex={nav.focusedIndex()}
+              listHasFocus={nav.listHasFocus()}
+              compact={false}
+              onFocusIndex={nav.setFocusedIndex}
+              onFocusList={nav.focusList}
+              onCreateNote={handleCreateNote}
+              onOpenInNewWindow={handleOpenInNewWindow}
+              onDeleteCard={handleDeleteCard}
+              onTogglePin={handleTogglePin}
+            />
           </div>
           <ContentArea
             focusedCard={activeCard()}
@@ -280,6 +264,18 @@ const MainWindow: Component = () => {
           />
         </div>
       )}
+      {/* Agenda Modal */}
+      <Show when={showAgendaModal()}>
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setShowAgendaModal(false)}>
+          <div
+            class="bg-surface border border-border rounded-lg shadow-xl w-[600px] max-w-[90vw] max-h-[80vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}>
+            <AgendaView onTaskClick={handleTaskClick} />
+          </div>
+        </div>
+      </Show>
     </div>
   )
 }
